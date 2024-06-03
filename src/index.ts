@@ -1,1 +1,1 @@
-export {};
+export { XTerm } from "./XTerm";
