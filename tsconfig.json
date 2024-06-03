@@ -18,6 +18,7 @@
     "outDir": "./dist",
     "removeComments": false,
     /* Interop Constraints */
+    "verbatimModuleSyntax": true,
     /* Type Checking */
     "strict": true
     /* Completeness */
