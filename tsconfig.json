@@ -1,0 +1,25 @@
+{
+  "compilerOptions": {
+    /* Projects */
+    /* Language and Environment */
+    "target": "es2020",
+    "lib": ["dom", "ESNext"],
+    "jsx": "react-jsx",
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    /* Modules */
+    "module": "ESNext",
+    "rootDir": "./src",
+    "declaration": true,
+    "moduleResolution": "Node",
+    /* JavaScript Support */
+    /* Emit */
+    "sourceMap": true,
+    "outDir": "./dist",
+    "removeComments": false,
+    /* Interop Constraints */
+    /* Type Checking */
+    "strict": true
+    /* Completeness */
+  }
+}
