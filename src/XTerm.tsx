@@ -4,9 +4,11 @@ import * as React from "react";
 
 // We are using these as types.
 // eslint-disable-next-line no-unused-vars
-import { ITerminalAddon, ITerminalOptions, Terminal } from "xterm";
-
-import PropTypes from "prop-types";
+import {
+  type ITerminalAddon,
+  type ITerminalOptions,
+  Terminal,
+} from "@xterm/xterm";
 
 interface IProps {
   /**
@@ -103,7 +105,7 @@ interface IProps {
   customKeyEventHandler?(event: KeyboardEvent): boolean;
 }
 
-export default class Xterm extends React.Component<IProps> {
+export class XTerm extends React.Component<IProps> {
   /**
    * The ref for the containing element.
    */
@@ -113,23 +115,6 @@ export default class Xterm extends React.Component<IProps> {
    * XTerm.js Terminal object.
    */
   terminal!: Terminal; // This is assigned in the setupTerminal() which is called from the constructor
-
-  static propTypes = {
-    className: PropTypes.string,
-    options: PropTypes.object,
-    addons: PropTypes.array,
-    onBinary: PropTypes.func,
-    onCursorMove: PropTypes.func,
-    onData: PropTypes.func,
-    onKey: PropTypes.func,
-    onLineFeed: PropTypes.func,
-    onScroll: PropTypes.func,
-    onSelectionChange: PropTypes.func,
-    onRender: PropTypes.func,
-    onResize: PropTypes.func,
-    onTitleChange: PropTypes.func,
-    customKeyEventHandler: PropTypes.func,
-  };
 
   constructor(props: IProps) {
     super(props);
