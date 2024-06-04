@@ -1,4 +1,4 @@
-import "xterm/css/xterm.css";
+import "@xterm/xterm/css/xterm.css";
 
 import * as React from "react";
 
@@ -7,10 +7,11 @@ import * as React from "react";
 import {
   type ITerminalAddon,
   type ITerminalOptions,
+  type ITerminalInitOnlyOptions,
   Terminal,
 } from "@xterm/xterm";
 
-interface IProps {
+interface XTermProps {
   /**
    * Class name to add to the terminal container.
    */
@@ -19,7 +20,7 @@ interface IProps {
   /**
    * Options to initialize the terminal with.
    */
-  options?: ITerminalOptions;
+  options?: ITerminalOptions & ITerminalInitOnlyOptions;
 
   /**
    * An array of XTerm addons to load along with the terminal.
@@ -104,22 +105,36 @@ interface IProps {
    */
   customKeyEventHandler?(event: KeyboardEvent): boolean;
 }
-
-export class XTerm extends React.Component<IProps> {
+export class XTerm extends React.Component<XTermProps> {
   /**
-   * The ref for the containing element.
+   * The ref to the element containing the terminal.
+   * This replaces the `element` property in the `@xterm/xterm` class `Terminal`.
    */
-  terminalRef: React.RefObject<HTMLDivElement>;
+  readonly elementRef!: React.RefObject<HTMLDivElement>; // Assigned in constructor
 
   /**
    * XTerm.js Terminal object.
    */
-  terminal!: Terminal; // This is assigned in the setupTerminal() which is called from the constructor
+  public terminal!: Terminal; // Assigned in constructor
 
-  constructor(props: IProps) {
+  /**
+   * Creates a new `XTerm` component which contains an instance of `@xterm/xterm` class `Terminal`.
+   *
+   * @param options An object containing a set of options.
+   */
+  constructor(props: XTermProps) {
     super(props);
+    this.elementRef = React.createRef();
 
-    this.terminalRef = React.createRef();
+    // Setup the XTerm terminal.
+    this.terminal = new Terminal(this.props.options);
+
+    // Load addons if the prop exists.
+    if (this.props.addons) {
+      this.props.addons.forEach((addon) => {
+        this.terminal.loadAddon(addon);
+      });
+    }
 
     // Bind Methods
     this.onData = this.onData.bind(this);
@@ -132,20 +147,6 @@ export class XTerm extends React.Component<IProps> {
     this.onRender = this.onRender.bind(this);
     this.onResize = this.onResize.bind(this);
     this.onTitleChange = this.onTitleChange.bind(this);
-
-    this.setupTerminal();
-  }
-
-  setupTerminal() {
-    // Setup the XTerm terminal.
-    this.terminal = new Terminal(this.props.options);
-
-    // Load addons if the prop exists.
-    if (this.props.addons) {
-      this.props.addons.forEach((addon) => {
-        this.terminal.loadAddon(addon);
-      });
-    }
 
     // Create Listeners
     this.terminal.onBinary(this.onBinary);
@@ -168,9 +169,9 @@ export class XTerm extends React.Component<IProps> {
   }
 
   componentDidMount() {
-    if (this.terminalRef.current) {
+    if (this.elementRef.current) {
       // Creates the terminal within the container element.
-      this.terminal.open(this.terminalRef.current);
+      this.terminal.open(this.elementRef.current);
     }
   }
 
@@ -220,6 +221,6 @@ export class XTerm extends React.Component<IProps> {
   }
 
   render() {
-    return <div className={this.props.className} ref={this.terminalRef} />;
+    return <div className={this.props.className} ref={this.elementRef} />;
   }
 }
