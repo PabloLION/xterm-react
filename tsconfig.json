@@ -10,13 +10,15 @@
     /* Modules */
     "module": "ESNext",
     "rootDir": "./src",
-    "declaration": true,
     "moduleResolution": "Node",
     /* JavaScript Support */
     /* Emit */
+    "declaration": true,
+    "declarationMap": true,
     "sourceMap": true,
     "outDir": "./dist",
     "removeComments": false,
+    "declarationDir": "./dist/types",
     /* Interop Constraints */
     "verbatimModuleSyntax": true,
     /* Type Checking */
