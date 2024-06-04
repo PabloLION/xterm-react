@@ -1,3 +1,4 @@
 node_modules/
 dist/
 .git-ignored
+.DS_Store

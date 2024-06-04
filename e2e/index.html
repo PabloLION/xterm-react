@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>XTerm Component Testing</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="./main.jsx"></script>
+
+    <h1 style="font-family: monospace">Directly From Original XTermJS</h1>
+    <div id="terminal"></div>
+
+    <script type="module">
+      import { Terminal } from "@xterm/xterm";
+      import "@xterm/xterm/css/xterm.css";
+
+      const terminalElement = document.getElementById("terminal");
+      if (terminalElement) {
+        const term = new Terminal();
+        term.onData((data) => {
+          term.write(data);
+        });
+        term.open(terminalElement);
+        term.writeln("Hello from \x1B[1;3;31mxterm.js\x1B[0m ");
+        term.write("$ ");
+      } else {
+        console.error("Terminal element not found");
+      }
+    </script>
+    <img src="/Lenna.webp" alt="Lenna" />
+  </body>
+</html>
