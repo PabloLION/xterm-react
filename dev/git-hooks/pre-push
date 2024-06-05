@@ -1,0 +1,12 @@
+#!/bin/sh
+# Add husky if needed
+# . "$(dirname "$0")/_/husky.sh"
+
+pnpm run lint:fix
+pnpm run format
+
+# Check for uncommitted changes after running the format script
+if ! git diff --exit-code; then
+  echo "There are uncommitted changes after running format. Please commit the changes and push again."
+  exit 1
+fi

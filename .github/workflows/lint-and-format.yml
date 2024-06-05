@@ -1,0 +1,38 @@
+name: Lint and Format
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  lint-and-format:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: "18" # Specify the Node.js version you are using
+
+      - name: Install dependencies
+        run: npm install --legacy-peer-deps
+
+      - name: Run lint
+        run: npm run lint
+
+      - name: Run format
+        run: npm run format
+
+      - name: Check for uncommitted changes
+        run: git diff --exit-code
+        id: git_diff
+
+      - name: Fail if there are uncommitted changes
+        if: steps.git_diff.outcome != 'success'
+        run: |
+          echo "There are uncommitted changes after running format. Please commit the changes and push again."
+          exit 1
