@@ -3,7 +3,7 @@ import "@xterm/xterm/css/xterm.css";
 import * as React from "react";
 
 // We are using these as types.
-// eslint-disable-next-line no-unused-vars
+
 import {
   type IBufferRange,
   type ILinkProvider,
@@ -13,7 +13,8 @@ import {
   Terminal,
 } from "@xterm/xterm";
 
-// listener of `@xterm/xterm` `IEvent`
+// Listener of `@xterm/xterm` `IEvent`
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type IEventListener<T, U = void> = (arg1: T, arg2: U) => any;
 
 interface XTermProps {
@@ -30,7 +31,7 @@ interface XTermProps {
   /**
    * An array of XTerm addons to load along with the terminal.
    */
-  addons?: Array<ITerminalAddon>;
+  addons?: ITerminalAddon[];
 
   /**
    * Adds an event listener for when the bell is triggered.
@@ -206,8 +207,8 @@ interface XTermProps {
    * NOTE: character joiners are only used by the canvas renderer.
    */
   // Just not implemented. For dynamic characterJoiner, user should register it
-  // via `.terminal` property with the `.registeredCharacterJoiner()` method.
-  // deregisterCharacterJoiner?: (joinerId: number) => void;
+  // Via `.terminal` property with the `.registeredCharacterJoiner()` method.
+  // DeregisterCharacterJoiner?: (joinerId: number) => void;
 
   /**
    * Adds a marker to the normal buffer and returns it.
@@ -215,8 +216,8 @@ interface XTermProps {
    * @returns The new marker or undefined.
    */
   // Not implemented. It requires to manipulate the dom element directly, which
-  // is not recommended in React.
-  // registerMarker?: (cursorYOffset?: number) => IMarker;
+  // Is not recommended in React.
+  // RegisterMarker?: (cursorYOffset?: number) => IMarker;
 
   /**
    * (EXPERIMENTAL) Adds a decoration to the terminal using
@@ -227,30 +228,24 @@ interface XTermProps {
    * @throws when options include a negative x offset.
    */
   // Not implemented. It requires to manipulate the dom element directly, which
-  // is not recommended in React.
-  // registerDecoration?: (decorationOptions: IDecorationOptions) =>
+  // Is not recommended in React.
+  // RegisterDecoration?: (decorationOptions: IDecorationOptions) =>
   // IDecoration | undefined;
 }
 
-interface XTermInstance {
-  terminal: Terminal;
-  elementRef: React.RefObject<HTMLDivElement>;
-  columnCount: number;
-  rowCount: number;
-  blur: () => void;
-  focus: () => void;
-}
 export class XTerm extends React.Component<XTermProps> {
   /**
    * The ref to the element containing the terminal.
    * This replaces the `element` property in the `@xterm/xterm` class `Terminal`.
    */
-  readonly elementRef!: React.RefObject<HTMLDivElement>; // Assigned in constructor
+  // Assigned in constructor
+  readonly elementRef!: React.RefObject<HTMLDivElement>;
 
   /**
    * XTerm.js Terminal object.
    */
-  public terminal!: Terminal; // Assigned in constructor
+  // Assigned in constructor
+  public terminal!: Terminal;
 
   /**
    * Creates a new `XTerm` component which contains an instance of `@xterm/xterm` class `Terminal`.
@@ -263,11 +258,6 @@ export class XTerm extends React.Component<XTermProps> {
 
     // Setup the XTerm terminal.
     this.terminal = new Terminal(this.props.options);
-
-    // Load addons if the prop exists.
-    this.props.addons?.forEach((addon) => {
-      this.terminal.loadAddon(addon);
-    });
 
     // Bind Methods. The class methods are not bound by default.
     this.onBell = this.onBell.bind(this);
@@ -296,6 +286,11 @@ export class XTerm extends React.Component<XTermProps> {
     this.terminal.onRender(this.onRender);
     this.terminal.onResize(this.onResize);
     this.terminal.onTitleChange(this.onTitleChange);
+
+    // Load addons if the prop exists.
+    this.props.addons?.forEach((addon) => {
+      this.terminal.loadAddon(addon);
+    });
 
     // Add Custom Key Event Handler
     if (this.props.customKeyEventHandler) {
@@ -384,8 +379,8 @@ export class XTerm extends React.Component<XTermProps> {
    * must be visible (have dimensions) when `open` is called as several DOM-
    * based measurements need to be performed when this function is called.
    */
-  // this is not implemented in the XTerm class, only in `@xterm/xterm` class `Terminal`.
-  // open(parent: HTMLElement): void;
+  // This is not implemented in the XTerm class, only in `@xterm/xterm` class `Terminal`.
+  // Open(parent: HTMLElement): void;
 
   /**
    * Gets whether the terminal has an active selection.
@@ -448,7 +443,7 @@ export class XTerm extends React.Component<XTermProps> {
    * again.
    */
   // Implemented in the lifecycle method `componentWillUnmount`.
-  // dispose(): void;
+  // Dispose(): void;
 
   /**
    * Scroll the display of the terminal
@@ -560,7 +555,7 @@ export class XTerm extends React.Component<XTermProps> {
    * @param addon The addon to load.
    */
   // Implemented by `props.addons` in the constructor.
-  // loadAddon(addon: ITerminalAddon): void;
+  // LoadAddon(addon: ITerminalAddon): void;
 
   private onBell() {
     if (this.props.onBell) this.props.onBell();
