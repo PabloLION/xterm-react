@@ -7,6 +7,7 @@
    - Naming (`XTerm` instead of `Xterm`, etc.)
    - expose more methods like `.write()`, `blur()`, etc. from the XTerm class with docstrings. So we no longer need to say `.current.terminal.write()` any more, as they become `.current.write()`
      This (exposing many methods) generally has minimal impact on performance but can affect memory usage slightly if many instances are created.
+     Although it's not recommended to have dead code in the production (the exposed methods are all dead code), having them here is beneficial for development.
    - Use `@typescript-eslint` instead of `tslint`.
 4. Functionality.
    - Hook new event listeners from XTerm like `onBell()` and `onWriteParsed()`.
