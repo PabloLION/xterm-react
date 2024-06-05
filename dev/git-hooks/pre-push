@@ -2,7 +2,7 @@
 # Add husky if needed
 # . "$(dirname "$0")/_/husky.sh"
 
-pnpm run lint
+pnpm run lint:fix
 pnpm run format
 
 # Check for uncommitted changes after running the format script
