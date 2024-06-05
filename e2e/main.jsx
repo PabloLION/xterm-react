@@ -7,7 +7,7 @@ const App = () => {
   const xTermRef = useRef(null);
   useEffect(() => {
     xTermRef.current?.terminal.writeln(
-      "Hello from \x1B[1;3;31mxterm.js\x1B[0m $ ",
+      "Hello from \x1B[1;3;31mxterm-react\x1B[0m",
     );
     xTermRef.current?.terminal.write("$ ");
   }, []);

@@ -5,10 +5,11 @@ import * as React from "react";
 // We are using these as types.
 // eslint-disable-next-line no-unused-vars
 import {
-  type ITerminalAddon,
-  type ITerminalOptions,
-  type ITerminalInitOnlyOptions,
   type IBufferRange,
+  type ILinkProvider,
+  type ITerminalAddon,
+  type ITerminalInitOnlyOptions,
+  type ITerminalOptions,
   Terminal,
 } from "@xterm/xterm";
 
@@ -117,12 +118,118 @@ interface XTermProps {
    * processed, giving consumers of xterm.js ultimate control as to what keys
    * should be processed by the terminal and what keys should not.
    *
-   * @param event The custom KeyboardEvent handler to attach.
-   * This is a function that takes a KeyboardEvent, allowing consumers to stop
+   * This prop defines the custom KeyboardEvent handler to attach, which is a
+   * function that takes a KeyboardEvent, allowing consumers to stop
    * propagation and/or prevent the default action. The function returns
    * whether the event should be processed by xterm.js.
+   *
+   * @example A custom keymap that overrides the backspace key
+   * ```ts
+   * const keymap = [
+   *   { "key": "Backspace", "shiftKey": false, "mapCode": 8 },
+   *   { "key": "Backspace", "shiftKey": true, "mapCode": 127 }
+   * ];
+   *
+   * const keyEventHandler = (ev => {
+   *   if (ev.type === 'keydown') {
+   *     for (let i in keymap) {
+   *       if (keymap[i].key == ev.key && keymap[i].shiftKey == ev.shiftKey) {
+   *         socket.send(String.fromCharCode(keymap[i].mapCode));
+   *         return false;
+   *       }
+   *     }
+   *   }
+   * });
+   *
+   * <XTerm customKeyEventHandler={keyEventHandler} />
+   * ```
    */
   customKeyEventHandler?(event: KeyboardEvent): boolean;
+
+  /**
+   * Attaches a custom wheel event handler which is run before wheel events are
+   * processed, giving consumers of xterm.js control over whether to proceed
+   * or cancel terminal wheel events.
+   *
+   * This prop defines the custom WheelEvent handler to attach, which is a
+   * function that takes a WheelEvent, allowing consumers to stop propagation
+   * and/or prevent the default action. The function returns whether the event
+   * should be processed by xterm.js.
+   */
+  customWheelEventHandler?(event: WheelEvent): boolean;
+
+  /**
+   * Registers a link provider, allowing a custom parser to be used to match
+   * and handle links. Multiple link providers can be used, they will be asked
+   * in the order in which they are registered.
+   * This props is the link provider to use to detect links in the terminal.
+   */
+  linkProvider?: ILinkProvider;
+
+  /**
+   * (EXPERIMENTAL) Registers a character joiner, allowing custom sequences of
+   * characters to be rendered as a single unit. This is useful in particular
+   * for rendering ligatures and graphemes, among other things.
+   *
+   * Each registered character joiner is called with a string of text
+   * representing a portion of a line in the terminal that can be rendered as
+   * a single unit. The joiner must return a sorted array, where each entry is
+   * itself an array of length two, containing the start (inclusive) and end
+   * (exclusive) index of a substring of the input that should be rendered as
+   * a single unit. When multiple joiners are provided, the results of each
+   * are collected. If there are any overlapping substrings between them, they
+   * are combined into one larger unit that is drawn together.
+   *
+   * All character joiners that are registered get called every time a line is
+   * rendered in the terminal, so it is essential for the handler function to
+   * run as quickly as possible to avoid slowdowns when rendering. Similarly,
+   * joiners should strive to return the smallest possible substrings to
+   * render together, since they aren't drawn as optimally as individual
+   * characters.
+   *
+   * NOTE: character joiners are only used by the canvas renderer.
+   *
+   * This props is the function that determines character joins. It is called
+   * with a string of text that is eligible for joining and returns an array
+   * where each entry is an array containing the start (inclusive) and end
+   * (exclusive) indexes of ranges that should be rendered as a single unit.
+   * @returns The ID of the new joiner, this can be used to deregister
+   *
+   * NOTE xterm-react: To use a dynamic character joiner, register it via the
+   * `.terminal` property with the `.terminal.registeredCharacterJoiner()` and
+   * `.terminal.deregisterCharacterJoiner()` methods.
+   */
+  characterJoiner?: (text: string) => [number, number][];
+
+  /**
+   * (EXPERIMENTAL) Deregisters the character joiner if one was registered.
+   * NOTE: character joiners are only used by the canvas renderer.
+   */
+  // Just not implemented. For dynamic characterJoiner, user should register it
+  // via `.terminal` property with the `.registeredCharacterJoiner()` method.
+  // deregisterCharacterJoiner?: (joinerId: number) => void;
+
+  /**
+   * Adds a marker to the normal buffer and returns it.
+   * @param cursorYOffset The y position offset of the marker from the cursor.
+   * @returns The new marker or undefined.
+   */
+  // Not implemented. It requires to manipulate the dom element directly, which
+  // is not recommended in React.
+  // registerMarker?: (cursorYOffset?: number) => IMarker;
+
+  /**
+   * (EXPERIMENTAL) Adds a decoration to the terminal using
+   * @param decorationOptions, which takes a marker and an optional anchor,
+   * width, height, and x offset from the anchor. Returns the decoration or
+   * undefined if the alt buffer is active or the marker has already been
+   * disposed of.
+   * @throws when options include a negative x offset.
+   */
+  // Not implemented. It requires to manipulate the dom element directly, which
+  // is not recommended in React.
+  // registerDecoration?: (decorationOptions: IDecorationOptions) =>
+  // IDecoration | undefined;
 }
 
 interface XTermInstance {
@@ -196,6 +303,23 @@ export class XTerm extends React.Component<XTermProps> {
         this.props.customKeyEventHandler,
       );
     }
+
+    // Add Custom Wheel Event Handler
+    if (this.props.customWheelEventHandler) {
+      this.terminal.attachCustomWheelEventHandler(
+        this.props.customWheelEventHandler,
+      );
+    }
+
+    // Add Link Provider
+    if (this.props.linkProvider) {
+      this.terminal.registerLinkProvider(this.props.linkProvider);
+    }
+
+    // Add Character Joiner
+    if (this.props.characterJoiner) {
+      this.terminal.registerCharacterJoiner(this.props.characterJoiner);
+    }
   }
 
   componentDidMount() {
@@ -220,12 +344,14 @@ export class XTerm extends React.Component<XTermProps> {
   public blur(): void {
     return this.terminal.blur();
   }
+
   /**
    * Focus the terminal.
    */
   public focus(): void {
     return this.terminal.focus();
   }
+
   /**
    * Input data to application side. The data is treated the same way input
    * typed into the terminal would (ie. the {@link onData} event will fire).
@@ -251,7 +377,6 @@ export class XTerm extends React.Component<XTermProps> {
     return this.terminal.resize(columns, rows);
   }
 
-  /* NOT IMPLEMENTED YET - START */
   /**
    * Opens the terminal within an element. This should also be called if the
    * xterm.js element ever changes browser window.
@@ -261,121 +386,6 @@ export class XTerm extends React.Component<XTermProps> {
    */
   // this is not implemented in the XTerm class, only in `@xterm/xterm` class `Terminal`.
   // open(parent: HTMLElement): void;
-
-  /**
-   * Attaches a custom key event handler which is run before keys are
-   * processed, giving consumers of xterm.js ultimate control as to what keys
-   * should be processed by the terminal and what keys should not.
-   * @param customKeyEventHandler The custom KeyboardEvent handler to attach.
-   * This is a function that takes a KeyboardEvent, allowing consumers to stop
-   * propagation and/or prevent the default action. The function returns
-   * whether the event should be processed by xterm.js.
-   *
-   * @example A custom keymap that overrides the backspace key
-   * ```ts
-   * const keymap = [
-   *   { "key": "Backspace", "shiftKey": false, "mapCode": 8 },
-   *   { "key": "Backspace", "shiftKey": true, "mapCode": 127 }
-   * ];
-   * term.attachCustomKeyEventHandler(ev => {
-   *   if (ev.type === 'keydown') {
-   *     for (let i in keymap) {
-   *       if (keymap[i].key == ev.key && keymap[i].shiftKey == ev.shiftKey) {
-   *         socket.send(String.fromCharCode(keymap[i].mapCode));
-   *         return false;
-   *       }
-   *     }
-   *   }
-   * });
-   * ```
-   */
-  // attachCustomKeyEventHandler(customKeyEventHandler: (event: KeyboardEvent) => boolean): void;
-
-  /**
-   * Attaches a custom wheel event handler which is run before keys are
-   * processed, giving consumers of xterm.js control over whether to proceed
-   * or cancel terminal wheel events.
-   * @param customWheelEventHandler The custom WheelEvent handler to attach.
-   * This is a function that takes a WheelEvent, allowing consumers to stop
-   * propagation and/or prevent the default action. The function returns
-   * whether the event should be processed by xterm.js.
-   *
-   * @example A handler that prevents all wheel events while ctrl is held from
-   * being processed.
-   * ```ts
-   * term.attachCustomWheelEventHandler(ev => {
-   *   if (ev.ctrlKey) {
-   *     return false;
-   *   }
-   *   return true;
-   * });
-   * ```
-   */
-  // attachCustomWheelEventHandler(customWheelEventHandler: (event: WheelEvent) => boolean): void;
-
-  /**
-   * Registers a link provider, allowing a custom parser to be used to match
-   * and handle links. Multiple link providers can be used, they will be asked
-   * in the order in which they are registered.
-   * @param linkProvider The link provider to use to detect links.
-   */
-  // registerLinkProvider(linkProvider: ILinkProvider): IDisposable;
-
-  /**
-   * (EXPERIMENTAL) Registers a character joiner, allowing custom sequences of
-   * characters to be rendered as a single unit. This is useful in particular
-   * for rendering ligatures and graphemes, among other things.
-   *
-   * Each registered character joiner is called with a string of text
-   * representing a portion of a line in the terminal that can be rendered as
-   * a single unit. The joiner must return a sorted array, where each entry is
-   * itself an array of length two, containing the start (inclusive) and end
-   * (exclusive) index of a substring of the input that should be rendered as
-   * a single unit. When multiple joiners are provided, the results of each
-   * are collected. If there are any overlapping substrings between them, they
-   * are combined into one larger unit that is drawn together.
-   *
-   * All character joiners that are registered get called every time a line is
-   * rendered in the terminal, so it is essential for the handler function to
-   * run as quickly as possible to avoid slowdowns when rendering. Similarly,
-   * joiners should strive to return the smallest possible substrings to
-   * render together, since they aren't drawn as optimally as individual
-   * characters.
-   *
-   * NOTE: character joiners are only used by the canvas renderer.
-   *
-   * @param handler The function that determines character joins. It is called
-   * with a string of text that is eligible for joining and returns an array
-   * where each entry is an array containing the start (inclusive) and end
-   * (exclusive) indexes of ranges that should be rendered as a single unit.
-   * @returns The ID of the new joiner, this can be used to deregister
-   */
-  // registerCharacterJoiner(handler: (text: string) => [number, number][]): number;
-
-  /**
-   * (EXPERIMENTAL) Deregisters the character joiner if one was registered.
-   * NOTE: character joiners are only used by the canvas renderer.
-   * @param joinerId The character joiner's ID (returned after register)
-   */
-  // deregisterCharacterJoiner(joinerId: number): void;
-
-  /**
-   * Adds a marker to the normal buffer and returns it.
-   * @param cursorYOffset The y position offset of the marker from the cursor.
-   * @returns The new marker or undefined.
-   */
-  // registerMarker(cursorYOffset?: number): IMarker;
-
-  /**
-   * (EXPERIMENTAL) Adds a decoration to the terminal using
-   * @param decorationOptions, which takes a marker and an optional anchor,
-   * width, height, and x offset from the anchor. Returns the decoration or
-   * undefined if the alt buffer is active or the marker has already been
-   * disposed of.
-   * @throws when options include a negative x offset.
-   */
-  // registerDecoration(decorationOptions: IDecorationOptions): IDecoration | undefined;
-  /* NOT IMPLEMENTED YET - END */
 
   /**
    * Gets whether the terminal has an active selection.
