@@ -23,4 +23,5 @@
      - `deregisterCharacterJoiner` (not implemented)
      - `registerMarker` (not implemented)
      - `registerDecoration` (not implemented)
-7. Development. Use `vite` for e2e test, much faster than `webpack`.
+7. Development and test. Use `vite` for e2e test, much faster than `webpack`.
+   - #TODO: test the add-ons.
