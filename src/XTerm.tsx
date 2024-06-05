@@ -56,26 +56,26 @@ interface XTermProps {
    * is whatever `string` results, in a typical setup, this should be passed
    * on to the backing pty.
    */
-  onData: IEventListener<string>;
+  onData?: IEventListener<string>;
 
   /**
    * Adds an event listener for when a key is pressed. The event value contains the
    * string that will be sent in the data event as well as the DOM event that
    * triggered it.
    */
-  onKey: IEventListener<{ key: string; domEvent: KeyboardEvent }>;
+  onKey?: IEventListener<{ key: string; domEvent: KeyboardEvent }>;
 
   /**
    * Adds an event listener for when a line feed is added.
    */
-  onLineFeed: IEventListener<void>;
+  onLineFeed?: IEventListener<void>;
 
   /**
    * Adds an event listener for when rows are rendered. The event value
    * contains the start row and end rows of the rendered area (ranges from `0`
    * to `Terminal.rows - 1`).
    */
-  onRender: IEventListener<{ start: number; end: number }>;
+  onRender?: IEventListener<{ start: number; end: number }>;
 
   /**
    * Adds an event listener for when data has been parsed by the terminal,
@@ -86,19 +86,19 @@ interface XTermProps {
    * that this can fire when there are still writes pending if there is a lot
    * of data.
    */
-  onWriteParsed: IEventListener<void>;
+  onWriteParsed?: IEventListener<void>;
 
   /**
    * Adds an event listener for when the terminal is resized. The event value
    * contains the new size.
    */
-  onResize: IEventListener<{ cols: number; rows: number }>;
+  onResize?: IEventListener<{ cols: number; rows: number }>;
 
   /**
    * Adds an event listener for when a scroll occurs. The event value is the
    * new position of the viewport.
    */
-  onScroll: IEventListener<number>;
+  onScroll?: IEventListener<number>;
 
   /**
    * Adds an event listener for when a selection change occurs.
