@@ -8,10 +8,11 @@ import {
   type ITerminalAddon,
   type ITerminalOptions,
   type ITerminalInitOnlyOptions,
-  type IEvent,
+  type IBufferRange,
   Terminal,
 } from "@xterm/xterm";
 
+// listener of `@xterm/xterm` `IEvent`
 export type IEventListener<T, U = void> = (arg1: T, arg2: U) => any;
 
 interface XTermProps {
@@ -212,6 +213,344 @@ export class XTerm extends React.Component<XTermProps> {
   render() {
     return <div className={this.props.className} ref={this.elementRef} />;
   }
+
+  /**
+   * Unfocus the terminal.
+   */
+  public blur(): void {
+    return this.terminal.blur();
+  }
+  /**
+   * Focus the terminal.
+   */
+  public focus(): void {
+    return this.terminal.focus();
+  }
+  /**
+   * Input data to application side. The data is treated the same way input
+   * typed into the terminal would (ie. the {@link onData} event will fire).
+   * @param data The data to forward to the application.
+   * @param wasUserInput Whether the input is genuine user input. This is true
+   * by default and triggers additionalbehavior like focus or selection
+   * clearing. Set this to false if the data sent should not be treated like
+   * user input would, for example passing an escape sequence to the
+   * application.
+   */
+  public input(data: string, wasUserInput?: boolean): void {
+    return this.terminal.input(data, wasUserInput);
+  }
+
+  /**
+   * Resizes the terminal. It's best practice to debounce calls to resize,
+   * this will help ensure that the pty can respond to the resize event
+   * before another one occurs.
+   * @param x The number of columns to resize to.
+   * @param y The number of rows to resize to.
+   */
+  public resize(columns: number, rows: number): void {
+    return this.terminal.resize(columns, rows);
+  }
+
+  /* NOT IMPLEMENTED YET - START */
+  /**
+   * Opens the terminal within an element. This should also be called if the
+   * xterm.js element ever changes browser window.
+   * @param parent The element to create the terminal within. This element
+   * must be visible (have dimensions) when `open` is called as several DOM-
+   * based measurements need to be performed when this function is called.
+   */
+  // this is not implemented in the XTerm class, only in `@xterm/xterm` class `Terminal`.
+  // open(parent: HTMLElement): void;
+
+  /**
+   * Attaches a custom key event handler which is run before keys are
+   * processed, giving consumers of xterm.js ultimate control as to what keys
+   * should be processed by the terminal and what keys should not.
+   * @param customKeyEventHandler The custom KeyboardEvent handler to attach.
+   * This is a function that takes a KeyboardEvent, allowing consumers to stop
+   * propagation and/or prevent the default action. The function returns
+   * whether the event should be processed by xterm.js.
+   *
+   * @example A custom keymap that overrides the backspace key
+   * ```ts
+   * const keymap = [
+   *   { "key": "Backspace", "shiftKey": false, "mapCode": 8 },
+   *   { "key": "Backspace", "shiftKey": true, "mapCode": 127 }
+   * ];
+   * term.attachCustomKeyEventHandler(ev => {
+   *   if (ev.type === 'keydown') {
+   *     for (let i in keymap) {
+   *       if (keymap[i].key == ev.key && keymap[i].shiftKey == ev.shiftKey) {
+   *         socket.send(String.fromCharCode(keymap[i].mapCode));
+   *         return false;
+   *       }
+   *     }
+   *   }
+   * });
+   * ```
+   */
+  // attachCustomKeyEventHandler(customKeyEventHandler: (event: KeyboardEvent) => boolean): void;
+
+  /**
+   * Attaches a custom wheel event handler which is run before keys are
+   * processed, giving consumers of xterm.js control over whether to proceed
+   * or cancel terminal wheel events.
+   * @param customWheelEventHandler The custom WheelEvent handler to attach.
+   * This is a function that takes a WheelEvent, allowing consumers to stop
+   * propagation and/or prevent the default action. The function returns
+   * whether the event should be processed by xterm.js.
+   *
+   * @example A handler that prevents all wheel events while ctrl is held from
+   * being processed.
+   * ```ts
+   * term.attachCustomWheelEventHandler(ev => {
+   *   if (ev.ctrlKey) {
+   *     return false;
+   *   }
+   *   return true;
+   * });
+   * ```
+   */
+  // attachCustomWheelEventHandler(customWheelEventHandler: (event: WheelEvent) => boolean): void;
+
+  /**
+   * Registers a link provider, allowing a custom parser to be used to match
+   * and handle links. Multiple link providers can be used, they will be asked
+   * in the order in which they are registered.
+   * @param linkProvider The link provider to use to detect links.
+   */
+  // registerLinkProvider(linkProvider: ILinkProvider): IDisposable;
+
+  /**
+   * (EXPERIMENTAL) Registers a character joiner, allowing custom sequences of
+   * characters to be rendered as a single unit. This is useful in particular
+   * for rendering ligatures and graphemes, among other things.
+   *
+   * Each registered character joiner is called with a string of text
+   * representing a portion of a line in the terminal that can be rendered as
+   * a single unit. The joiner must return a sorted array, where each entry is
+   * itself an array of length two, containing the start (inclusive) and end
+   * (exclusive) index of a substring of the input that should be rendered as
+   * a single unit. When multiple joiners are provided, the results of each
+   * are collected. If there are any overlapping substrings between them, they
+   * are combined into one larger unit that is drawn together.
+   *
+   * All character joiners that are registered get called every time a line is
+   * rendered in the terminal, so it is essential for the handler function to
+   * run as quickly as possible to avoid slowdowns when rendering. Similarly,
+   * joiners should strive to return the smallest possible substrings to
+   * render together, since they aren't drawn as optimally as individual
+   * characters.
+   *
+   * NOTE: character joiners are only used by the canvas renderer.
+   *
+   * @param handler The function that determines character joins. It is called
+   * with a string of text that is eligible for joining and returns an array
+   * where each entry is an array containing the start (inclusive) and end
+   * (exclusive) indexes of ranges that should be rendered as a single unit.
+   * @returns The ID of the new joiner, this can be used to deregister
+   */
+  // registerCharacterJoiner(handler: (text: string) => [number, number][]): number;
+
+  /**
+   * (EXPERIMENTAL) Deregisters the character joiner if one was registered.
+   * NOTE: character joiners are only used by the canvas renderer.
+   * @param joinerId The character joiner's ID (returned after register)
+   */
+  // deregisterCharacterJoiner(joinerId: number): void;
+
+  /**
+   * Adds a marker to the normal buffer and returns it.
+   * @param cursorYOffset The y position offset of the marker from the cursor.
+   * @returns The new marker or undefined.
+   */
+  // registerMarker(cursorYOffset?: number): IMarker;
+
+  /**
+   * (EXPERIMENTAL) Adds a decoration to the terminal using
+   * @param decorationOptions, which takes a marker and an optional anchor,
+   * width, height, and x offset from the anchor. Returns the decoration or
+   * undefined if the alt buffer is active or the marker has already been
+   * disposed of.
+   * @throws when options include a negative x offset.
+   */
+  // registerDecoration(decorationOptions: IDecorationOptions): IDecoration | undefined;
+  /* NOT IMPLEMENTED YET - END */
+
+  /**
+   * Gets whether the terminal has an active selection.
+   */
+  public hasSelection(): boolean {
+    return this.terminal.hasSelection();
+  }
+
+  /**
+   * Gets the terminal's current selection, this is useful for implementing
+   * copy behavior outside of xterm.js.
+   */
+  public getSelection(): string {
+    return this.terminal.getSelection();
+  }
+
+  /**
+   * Gets the selection position or undefined if there is no selection.
+   */
+  public getSelectionPosition(): IBufferRange | undefined {
+    return this.terminal.getSelectionPosition();
+  }
+
+  /**
+   * Clears the current terminal selection.
+   */
+  public clearSelection(): void {
+    return this.terminal.clearSelection();
+  }
+
+  /**
+   * Selects text within the terminal.
+   * @param column The column the selection starts at.
+   * @param row The row the selection starts at.
+   * @param length The length of the selection.
+   */
+  public select(column: number, row: number, length: number): void {
+    return this.terminal.select(column, row, length);
+  }
+
+  /**
+   * Selects all text within the terminal.
+   */
+  public selectAll(): void {
+    return this.terminal.selectAll();
+  }
+
+  /**
+   * Selects text in the buffer between 2 lines.
+   * @param start The 0-based line index to select from (inclusive).
+   * @param end The 0-based line index to select to (inclusive).
+   */
+  public selectLines(start: number, end: number): void {
+    return this.terminal.selectLines(start, end);
+  }
+
+  /*
+   * Disposes of the terminal, detaching it from the DOM and removing any
+   * active listeners. Once the terminal is disposed it should not be used
+   * again.
+   */
+  // Implemented in the lifecycle method `componentWillUnmount`.
+  // dispose(): void;
+
+  /**
+   * Scroll the display of the terminal
+   * @param amount The number of lines to scroll down (negative scroll up).
+   */
+  public scrollLines(amount: number): void {
+    return this.terminal.scrollLines(amount);
+  }
+
+  /**
+   * Scroll the display of the terminal by a number of pages.
+   * @param pageCount The number of pages to scroll (negative scrolls up).
+   */
+  public scrollPages(pageCount: number): void {
+    return this.terminal.scrollPages(pageCount);
+  }
+
+  /**
+   * Scrolls the display of the terminal to the top.
+   */
+  public scrollToTop(): void {
+    return this.terminal.scrollToTop();
+  }
+
+  /**
+   * Scrolls the display of the terminal to the bottom.
+   */
+  public scrollToBottom(): void {
+    return this.terminal.scrollToBottom();
+  }
+
+  /**
+   * Scrolls to a line within the buffer.
+   * @param line The 0-based line index to scroll to.
+   */
+  public scrollToLine(line: number): void {
+    return this.terminal.scrollToLine(line);
+  }
+
+  /**
+   * Clear the entire buffer, making the prompt line the new first line.
+   */
+  public clear(): void {
+    return this.terminal.clear();
+  }
+
+  /**
+   * Write data to the terminal.
+   * @param data The data to write to the terminal. This can either be raw
+   * bytes given as Uint8Array from the pty or a string. Raw bytes will always
+   * be treated as UTF-8 encoded, string data as UTF-16.
+   * @param callback Optional callback that fires when the data was processed
+   * by the parser.
+   */
+  public write(data: string | Uint8Array, callback?: () => void): void {
+    return this.terminal.write(data, callback);
+  }
+
+  /**
+   * Writes data to the terminal, followed by a break line character (\n).
+   * @param data The data to write to the terminal. This can either be raw
+   * bytes given as Uint8Array from the pty or a string. Raw bytes will always
+   * be treated as UTF-8 encoded, string data as UTF-16.
+   * @param callback Optional callback that fires when the data was processed
+   * by the parser.
+   */
+  public writeln(data: string | Uint8Array, callback?: () => void): void {
+    return this.terminal.writeln(data, callback);
+  }
+
+  /**
+   * Writes text to the terminal, performing the necessary transformations for
+   * pasted text.
+   * @param data The text to write to the terminal.
+   */
+  public paste(data: string): void {
+    return this.terminal.paste(data);
+  }
+
+  /**
+   * Tells the renderer to refresh terminal content between two rows
+   * (inclusive) at the next opportunity.
+   * @param start The row to start from (between 0 and this.rows - 1).
+   * @param end The row to end at (between start and this.rows - 1).
+   */
+  public refresh(start: number, end: number): void {
+    return this.terminal.refresh(start, end);
+  }
+
+  /**
+   * Clears the texture atlas of the canvas renderer if it's active. Doing
+   * this will force a redraw of all glyphs which can workaround issues
+   * causing the texture to become corrupt, for example Chromium/Nvidia has an
+   * issue where the texture gets messed up when resuming the OS from sleep.
+   */
+  public clearTextureAtlas(): void {
+    return this.terminal.clearTextureAtlas();
+  }
+
+  /**
+   * Perform a full reset (RIS, aka '\x1bc').
+   */
+  public reset(): void {
+    return this.terminal.reset();
+  }
+
+  /**
+   * Loads an addon into this instance of xterm.js.
+   * @param addon The addon to load.
+   */
+  // Implemented by `props.addons` in the constructor.
+  // loadAddon(addon: ITerminalAddon): void;
 
   private onBell() {
     if (this.props.onBell) this.props.onBell();
