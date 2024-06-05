@@ -1,28 +1,68 @@
-## Why
+## XTerm for React
 
-1. for my own use
-2. Outdated. Use new `@xterm/xterm` to support the deprecated add-ons.
-   The `xterm-addon-fit` is not working properly. It's not resizing the terminal when the window is resized.
-3. Code style.
-   - Naming (`XTerm` instead of `Xterm`, etc.)
-   - expose more methods like `.write()`, `blur()`, etc. from the XTerm class with docstrings. So we no longer need to say `.current.terminal.write()` any more, as they become `.current.write()`
-     This (exposing many methods) generally has minimal impact on performance but can affect memory usage slightly if many instances are created.
-     Although it's not recommended to have dead code in the production (the exposed methods are all dead code), having them here is beneficial for development.
-   - Use `@typescript-eslint` instead of `tslint`.
-4. Functionality.
-   - Hook new event listeners from XTerm like `onBell()` and `onWriteParsed()`.
-   - Expose terminal methods like `blur()`, `focus()`, etc.
-   - New props for event handlers like `attachCustomWheelEventHandler()`, `registerLinkProvider()`, etc.
-   - New link provider for `registerLinkProvider()`.
-5. Performance. Remove dynamic type checking. It's not necessary and the performance is not good.
-6. Documentation.
-   - Slightly changes the documentation to align with that from `@xterm/xterm`, with new types like `IEventListener`.
-   - Add comments for these methods:
-     - `attachCustomWheelEventHandler` (new)
-     - `registerLinkProvider` (new)
-     - `registerCharacterJoiner` (new)
-     - `deregisterCharacterJoiner` (not implemented)
-     - `registerMarker` (not implemented)
-     - `registerDecoration` (not implemented)
-7. Development and test. Use `vite` for e2e test, much faster than `webpack`.
-   - #TODO: test the add-ons.
+This project provides a React component that integrates the [xterm.js](https://xtermjs.org/) terminal emulator library. It aims to offer a more up-to-date and flexible alternative to existing [solutions](https://github.com/robert-harbison/xterm-for-react), with a focus on performance, code style, and additional functionality.
+
+## Installation
+
+To install the component, use package manager like npm, yarn or pnpm:
+
+```bash
+npm install xterm-react
+# or
+yarn add xterm-react
+# or
+pnpm add xterm-react
+```
+
+## Usage
+
+Import the `XTerm` component and use it within your React application:
+
+```jsx
+import React from "react";
+import { XTerm } from "xterm-react";
+
+export default function App() {
+  return <XTerm />;
+}
+```
+
+### Props
+
+The `XTerm` component accepts several props to customize its behavior, including `options` for terminal options, `addons` for loading XTerm addons, and various event handlers like `onData`, `onResize`, and more.
+I'll add a full docs later.
+
+## Motivations
+
+- **Personal Use**: Tailored for my own personal requirements and projects.
+- **Updated Dependencies**:
+  - Utilizes the latest `@xterm/xterm` version than `xterm` to address issues with deprecated add-ons, such as the non-functional `xterm-addon-fit` in resizing terminals.
+  - Newer `react` and `typescript` for peer dependencies.
+- **Code Style Improvements**:
+  - Adopting `XTerm` over `Xterm` for naming consistency.
+  - Exposing terminal methods like `.write()`, `.blur()`, etc., directly from the XTerm class, enhancing developer experience and code readability.
+  - Transitioning to `@typescript-eslint` for linting over `tslint`.
+- **Enhanced Functionality**:
+  - Integration of new event listeners from XTerm like `onBell()` and `onWriteParsed()`.
+  - Exposure of terminal methods such as `.blur()`, `.focus()`, and more for direct interaction.
+  - Introduction of props for custom event handlers like `attachCustomWheelEventHandler()`, `registerLinkProvider()`, etc.
+  - Implementation of a new link provider for `registerLinkProvider()`.
+- **Performance Optimization**: Removal of dynamic type checking to improve performance.
+- **Documentation Enhancements**:
+  - Updated documentation to align with `@xterm/xterm`, including new types like `IEventListener`.
+  - Detailed comments for methods such as `attachCustomWheelEventHandler`, `registerLinkProvider`, `registerCharacterJoiner`, and others.
+- **Development and Testing**: Adoption of `vite` for faster end-to-end testing, with plans to test add-ons thoroughly.
+
+## Development
+
+For development purposes, this project uses `vite` for a streamlined and efficient workflow.
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit pull requests or open issues to discuss potential improvements or features.
+
+- For dev, `pnpm` is recommended.
+
+## License
+
+This project is licensed under the MIT License. See the LICENSE file for more details.
