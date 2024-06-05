@@ -1,0 +1,13 @@
+version: 2
+updates:
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    ignore:
+      - dependency-name: "@xterm/xterm"
+        update-types: ["patch", "major"]
+      - dependency-name: "typescript"
+        update-types: ["patch", "major"]
+      - dependency-name: "react"
+        update-types: ["patch", "minor"]
