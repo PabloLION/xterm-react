@@ -4,10 +4,16 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+    assignees:
+      - "PabloLION"
     ignore:
       - dependency-name: "@xterm/xterm"
-        update-types: ["patch", "major"]
+        update-types:
+          - "version-update:semver-minor"
+          - "version-update:semver-patch"
       - dependency-name: "typescript"
-        update-types: ["patch", "major"]
+        update-types:
+          - "version-update:semver-patch"
       - dependency-name: "react"
-        update-types: ["patch", "minor"]
+        update-types:
+          - "version-update:semver-patch"
