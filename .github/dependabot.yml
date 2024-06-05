@@ -17,3 +17,15 @@ updates:
       - dependency-name: "react"
         update-types:
           - "version-update:semver-patch"
+      - dependency-name: "react-dom"
+        update-types:
+          - "version-update:semver-patch"
+      - dependency-name: "vite"
+        update-types:
+          - "version-update:semver-patch"
+      - dependency-name: "eslint*"
+        update-types:
+          - "version-update:semver-patch"
+      - dependency-name: "prettier"
+        update-types:
+          - "version-update:semver-patch"
