@@ -8,6 +8,7 @@
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
+    "postinstall": "cp dev/git-hooks/pre-push .git/hooks/pre-push",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
