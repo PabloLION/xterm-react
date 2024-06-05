@@ -1,34 +1,39 @@
-# I don't think we need 2 jobs here, preserving GCW's result
 name: Lint and Format
 
 on:
   pull_request:
-    branches: [main]
+    branches:
+      - main
+      - development # Add other branches if necessary
 
 jobs:
-  lint:
+  lint-and-format:
     runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - name: Set up Node.js
-        uses: actions/setup-node@v2
-        with:
-          node-version: '14'
-      - name: Install dependencies
-        run: npm install
-      - name: Run lint
-        run: npm run lint
 
-  format:
-    runs-on: ubuntu-latest
-    needs: lint
     steps:
-      - uses: actions/checkout@v2
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
       - name: Set up Node.js
-        uses: actions/setup-node@v2
+        uses: actions/setup-node@v3
         with:
-          node-version: '14'
+          node-version: "16" # Specify the Node.js version you are using
+
       - name: Install dependencies
-        run: npm install
+        run: pnpm install
+
+      - name: Run lint
+        run: pnpm run lint
+
       - name: Run format
-        run: npm run format
+        run: pnpm run format
+
+      - name: Check for uncommitted changes
+        run: git diff --exit-code
+        id: git_diff
+
+      - name: Fail if there are uncommitted changes
+        if: steps.git_diff.outcome != 'success'
+        run: |
+          echo "There are uncommitted changes after running format. Please commit the changes and push again."
+          exit 1
