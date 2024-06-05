@@ -16,6 +16,7 @@
       import { Terminal } from "@xterm/xterm";
       import "@xterm/xterm/css/xterm.css";
 
+      const TEST_DECORATION = false;
       const terminalElement = document.getElementById("terminal");
       if (terminalElement === null) {
         throw new Error("Terminal element not found");
@@ -27,32 +28,34 @@
       term.open(terminalElement);
       term.writeln("Hello from \x1B[1;3;31mxterm.js\x1B[0m ");
       term.write("$ ");
-      const marker = term.registerMarker(0);
-      const decoration = term.registerDecoration({
-        marker: marker,
-        anchor: "right",
-        x: 3,
-        width: 5,
-        height: 2,
-        backgroundColor: "#ff0000", // red
-        foregroundColor: "#0000ff", // blue
-        layer: "top",
-        overviewRulerOptions: {
-          color: "#ff0000",
-          position: "center",
-        },
-      });
-      if (decoration === undefined) {
-        throw new Error("Decoration not found");
+      if (TEST_DECORATION) {
+        const marker = term.registerMarker(0);
+        const decoration = term.registerDecoration({
+          marker: marker,
+          anchor: "right",
+          x: 3,
+          width: 5,
+          height: 2,
+          backgroundColor: "#ff0000", // red
+          foregroundColor: "#0000ff", // blue
+          layer: "top",
+          overviewRulerOptions: {
+            color: "#ff0000",
+            position: "center",
+          },
+        });
+        if (decoration === undefined) {
+          throw new Error("Decoration not found");
+        }
+        console.log("decoration : ", decoration); // DEV_LOG_TO_REMOVE
+        decoration.onRender((element) => {
+          element.classList.add("link-hint-decoration");
+          element.innerText = "Try clicking italic text";
+          // must be inlined to override inlined width/height coming from xterm
+          element.style.height = "";
+          element.style.width = "";
+        });
       }
-      console.log("decoration : ", decoration); // DEV_LOG_TO_REMOVE
-      decoration.onRender((element) => {
-        element.classList.add("link-hint-decoration");
-        element.innerText = "Try clicking italic text";
-        // must be inlined to override inlined width/height coming from xterm
-        element.style.height = "";
-        element.style.width = "";
-      });
     </script>
     <!-- To test if vite can load local resource -->
     <img src="/Lenna.webp" alt="Lenna" />
