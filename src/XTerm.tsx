@@ -5,10 +5,11 @@ import * as React from "react";
 // We are using these as types.
 // eslint-disable-next-line no-unused-vars
 import {
-  type ITerminalAddon,
-  type ITerminalOptions,
-  type ITerminalInitOnlyOptions,
   type IBufferRange,
+  type ILinkProvider,
+  type ITerminalAddon,
+  type ITerminalInitOnlyOptions,
+  type ITerminalOptions,
   Terminal,
 } from "@xterm/xterm";
 
@@ -117,8 +118,8 @@ interface XTermProps {
    * processed, giving consumers of xterm.js ultimate control as to what keys
    * should be processed by the terminal and what keys should not.
    *
-   * This prop is the custom KeyboardEvent handler to attach.
-   * This is a function that takes a KeyboardEvent, allowing consumers to stop
+   * This prop defines the custom KeyboardEvent handler to attach, which is a
+   * function that takes a KeyboardEvent, allowing consumers to stop
    * propagation and/or prevent the default action. The function returns
    * whether the event should be processed by xterm.js.
    *
@@ -128,33 +129,32 @@ interface XTermProps {
    *   { "key": "Backspace", "shiftKey": false, "mapCode": 8 },
    *   { "key": "Backspace", "shiftKey": true, "mapCode": 127 }
    * ];
-   * 
-   * {
-   *   // Other props...
-   *   customKeyEventHandler: (ev => {
-   *     if (ev.type === 'keydown') {
-   *       for (let i in keymap) {
-   *         if (keymap[i].key == ev.key && keymap[i].shiftKey == ev.shiftKey) {
-   *           socket.send(String.fromCharCode(keymap[i].mapCode));
-   *           return false;
-   *         }
+   *
+   * const keyEventHandler = (ev => {
+   *   if (ev.type === 'keydown') {
+   *     for (let i in keymap) {
+   *       if (keymap[i].key == ev.key && keymap[i].shiftKey == ev.shiftKey) {
+   *         socket.send(String.fromCharCode(keymap[i].mapCode));
+   *         return false;
    *       }
    *     }
-   *   })
-   * }
+   *   }
+   * });
+   *
+   * <XTerm customKeyEventHandler={keyEventHandler} />
    * ```
    */
   customKeyEventHandler?(event: KeyboardEvent): boolean;
 
-  /** #NEED_REFINE
+  /**
    * Attaches a custom wheel event handler which is run before wheel events are
    * processed, giving consumers of xterm.js control over whether to proceed
    * or cancel terminal wheel events.
-   *#NEED_REFINE
-   * @param event The custom WheelEvent handler to attach.
-   * This is a function that takes a WheelEvent, allowing consumers to stop
-   * propagation and/or prevent the default action. The function returns
-   * whether the event should be processed by xterm.js.
+   *
+   * This prop defines the custom WheelEvent handler to attach, which is a
+   * function that takes a WheelEvent, allowing consumers to stop propagation
+   * and/or prevent the default action. The function returns whether the event
+   * should be processed by xterm.js.
    */
   customWheelEventHandler?(event: WheelEvent): boolean;
 
@@ -162,7 +162,7 @@ interface XTermProps {
    * Registers a link provider, allowing a custom parser to be used to match
    * and handle links. Multiple link providers can be used, they will be asked
    * in the order in which they are registered.
-   * @param linkProvider The link provider to use to detect links.
+   * This props is the link provider to use to detect links in the terminal.
    */
   linkProvider?: ILinkProvider;
 
@@ -188,38 +188,48 @@ interface XTermProps {
    * characters.
    *
    * NOTE: character joiners are only used by the canvas renderer.
-   *#NEED_REFINE
-   * @param handler The function that determines character joins. It is called
+   *
+   * This props is the function that determines character joins. It is called
    * with a string of text that is eligible for joining and returns an array
    * where each entry is an array containing the start (inclusive) and end
    * (exclusive) indexes of ranges that should be rendered as a single unit.
    * @returns The ID of the new joiner, this can be used to deregister
+   *
+   * NOTE xterm-react: To use a dynamic character joiner, register it via the
+   * `.terminal` property with the `.terminal.registeredCharacterJoiner()` and
+   * `.terminal.deregisterCharacterJoiner()` methods.
    */
   characterJoiner?: (text: string) => [number, number][];
 
-  /**#NEED_REFINE
+  /**
    * (EXPERIMENTAL) Deregisters the character joiner if one was registered.
    * NOTE: character joiners are only used by the canvas renderer.
-   * @param#NEED_REFINE joinerId The character joiner's ID (returned after register)#NEED_REFINE
    */
-  deregisterCharacterJoiner?: (joinerId: number) => void;
+  // Just not implemented. For dynamic characterJoiner, user should register it
+  // via `.terminal` property with the `.registeredCharacterJoiner()` method.
+  // deregisterCharacterJoiner?: (joinerId: number) => void;
 
-  /**#NEED_REFINE
+  /**
    * Adds a marker to the normal buffer and returns it.
-   * @param#NEED_REFINE cursorYOffset The y position offset of the marker from the cursor.
+   * @param cursorYOffset The y position offset of the marker from the cursor.
    * @returns The new marker or undefined.
    */
-  registerMarker?: (cursorYOffset?: number) => IMarker;
+  // Not implemented. It requires to manipulate the dom element directly, which
+  // is not recommended in React.
+  // registerMarker?: (cursorYOffset?: number) => IMarker;
 
-  /**#NEED_REFINE
-   * Adds a decoration to the terminal using
+  /**
+   * (EXPERIMENTAL) Adds a decoration to the terminal using
    * @param decorationOptions, which takes a marker and an optional anchor,
    * width, height, and x offset from the anchor. Returns the decoration or
    * undefined if the alt buffer is active or the marker has already been
    * disposed of.
-   * @throws#NEED_REFINE when options include a negative x offset.
+   * @throws when options include a negative x offset.
    */
-  registerDecoration?: (decorationOptions: IDecorationOptions) => IDecoration | undefined;
+  // Not implemented. It requires to manipulate the dom element directly, which
+  // is not recommended in React.
+  // registerDecoration?: (decorationOptions: IDecorationOptions) =>
+  // IDecoration | undefined;
 }
 
 interface XTermInstance {
@@ -301,7 +311,15 @@ export class XTerm extends React.Component<XTermProps> {
       );
     }
 
-    //#NEED_REFINE...
+    // Add Link Provider
+    if (this.props.linkProvider) {
+      this.terminal.registerLinkProvider(this.props.linkProvider);
+    }
+
+    // Add Character Joiner
+    if (this.props.characterJoiner) {
+      this.terminal.registerCharacterJoiner(this.props.characterJoiner);
+    }
   }
 
   componentDidMount() {
@@ -326,12 +344,14 @@ export class XTerm extends React.Component<XTermProps> {
   public blur(): void {
     return this.terminal.blur();
   }
+
   /**
    * Focus the terminal.
    */
   public focus(): void {
     return this.terminal.focus();
   }
+
   /**
    * Input data to application side. The data is treated the same way input
    * typed into the terminal would (ie. the {@link onData} event will fire).
@@ -356,7 +376,8 @@ export class XTerm extends React.Component<XTermProps> {
   public resize(columns: number, rows: number): void {
     return this.terminal.resize(columns, rows);
   }
- /**
+
+  /**
    * Opens the terminal within an element. This should also be called if the
    * xterm.js element ever changes browser window.
    * @param parent The element to create the terminal within. This element
