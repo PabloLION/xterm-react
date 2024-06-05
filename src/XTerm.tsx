@@ -162,24 +162,28 @@ export class XTerm extends React.Component<XTermProps> {
     });
 
     // Bind Methods. The class methods are not bound by default.
-    this.onData = this.onData.bind(this);
-    this.onCursorMove = this.onCursorMove.bind(this);
-    this.onKey = this.onKey.bind(this);
+    this.onBell = this.onBell.bind(this);
     this.onBinary = this.onBinary.bind(this);
+    this.onCursorMove = this.onCursorMove.bind(this);
+    this.onData = this.onData.bind(this);
+    this.onKey = this.onKey.bind(this);
     this.onLineFeed = this.onLineFeed.bind(this);
+    this.onRender = this.onRender.bind(this);
+    this.onWriteParsed = this.onWriteParsed.bind(this);
+    this.onResize = this.onResize.bind(this);
     this.onScroll = this.onScroll.bind(this);
     this.onSelectionChange = this.onSelectionChange.bind(this);
-    this.onRender = this.onRender.bind(this);
-    this.onResize = this.onResize.bind(this);
     this.onTitleChange = this.onTitleChange.bind(this);
 
     // Create Listeners
+    this.terminal.onBell(this.onBell);
     this.terminal.onBinary(this.onBinary);
     this.terminal.onCursorMove(this.onCursorMove);
     this.terminal.onData(this.onData);
     this.terminal.onKey(this.onKey);
     this.terminal.onLineFeed(this.onLineFeed);
     this.terminal.onScroll(this.onScroll);
+    this.terminal.onWriteParsed(this.onWriteParsed);
     this.terminal.onSelectionChange(this.onSelectionChange);
     this.terminal.onRender(this.onRender);
     this.terminal.onResize(this.onResize);
@@ -205,55 +209,44 @@ export class XTerm extends React.Component<XTermProps> {
     this.terminal.dispose();
   }
 
-  /**
-   * Adds an event listener for when the bell is triggered.
-   * @returns an `IDisposable` to stop listening.
-   */
+  render() {
+    return <div className={this.props.className} ref={this.elementRef} />;
+  }
+
   private onBell() {
     if (this.props.onBell) this.props.onBell();
   }
-
   private onBinary(data: string): void {
     if (this.props.onBinary) this.props.onBinary(data);
   }
-
   private onCursorMove() {
     if (this.props.onCursorMove) this.props.onCursorMove();
   }
-
   private onData(data: string) {
     if (this.props.onData) this.props.onData(data);
   }
-
   private onKey(event: { key: string; domEvent: KeyboardEvent }) {
     if (this.props.onKey) this.props.onKey(event);
   }
-
   private onLineFeed() {
     if (this.props.onLineFeed) this.props.onLineFeed();
   }
-
-  private onScroll(newPosition: number) {
-    if (this.props.onScroll) this.props.onScroll(newPosition);
-  }
-
-  private onSelectionChange() {
-    if (this.props.onSelectionChange) this.props.onSelectionChange();
-  }
-
   private onRender(event: { start: number; end: number }) {
     if (this.props.onRender) this.props.onRender(event);
   }
-
+  private onWriteParsed() {
+    if (this.props.onWriteParsed) this.props.onWriteParsed();
+  }
   private onResize(event: { cols: number; rows: number }) {
     if (this.props.onResize) this.props.onResize(event);
   }
-
+  private onScroll(newPosition: number) {
+    if (this.props.onScroll) this.props.onScroll(newPosition);
+  }
+  private onSelectionChange() {
+    if (this.props.onSelectionChange) this.props.onSelectionChange();
+  }
   private onTitleChange(newTitle: string) {
     if (this.props.onTitleChange) this.props.onTitleChange(newTitle);
-  }
-
-  render() {
-    return <div className={this.props.className} ref={this.elementRef} />;
   }
 }
