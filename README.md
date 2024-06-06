@@ -81,6 +81,17 @@ Contributions are welcome! Please feel free to submit pull requests or open issu
 - [React](https://reactjs.org/)
 - [robert-harbison/xterm-for-react](https://github.com/robert-harbison/xterm-for-react)
 
+#### Honorable mentions
+
+I found many many packages after finishing this project... I felt like I wasted 2 days but it seems to me that mine has the most up-to-date xterm.js version and the most features added to `xterm-for-react`.
+
+- [xterm-react](https://www.npmjs.com/package/xterm-react)
+- [react-xterm](https://www.npmjs.com/package/react-xterm)
+- [react-xtermjs](https://www.npmjs.com/package/react-xtermjs)
+- [oas-xterm-for-react18](https://www.npmjs.com/package/oas-xterm-for-react18)
+- [@devt8/xterm-for-react](https://www.npmjs.com/package/@devt8/xterm-for-react)
+- [xterm-for-react-fixed](https://www.npmjs.com/package/xterm-for-react-fixed)
+
 ### Decisions
 
 #### Do we need a `useXterm` hook?
