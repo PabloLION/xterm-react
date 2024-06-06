@@ -1,19 +1,32 @@
 {
   "name": "xterm-react",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "A React component for xterm.js terminal integration.",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "scripts": {
     "dev": "vite",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
     "postinstall": "cp dev/git-hooks/pre-push .git/hooks/pre-push",
+    "build": "tsc && vite build",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "keywords": [
+    "xterm",
+    "terminal",
+    "console",
+    "react",
+    "xterm.js",
+    "component"
+  ],
+  "author": "PabloLION <https://github.com/PabloLION/>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/PabloLION/xterm-react.git"
+  },
   "peerDependencies": {
     "react": ">=17.0.0",
     "react-dom": ">=17.0.0"
