@@ -18,7 +18,6 @@
     "sourceMap": true,
     "outDir": "./dist",
     "removeComments": false,
-    "declarationDir": "./dist/types",
     /* Interop Constraints */
     "verbatimModuleSyntax": true,
     /* Type Checking */
