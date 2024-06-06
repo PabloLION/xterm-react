@@ -208,7 +208,7 @@ interface XTermProps {
    */
   // Just not implemented. For dynamic characterJoiner, user should register it
   // Via `.terminal` property with the `.registeredCharacterJoiner()` method.
-  // DeregisterCharacterJoiner?: (joinerId: number) => void;
+  // * deregisterCharacterJoiner?: (joinerId: number) => void;
 
   /**
    * Adds a marker to the normal buffer and returns it.
@@ -217,7 +217,7 @@ interface XTermProps {
    */
   // Not implemented. It requires to manipulate the dom element directly, which
   // Is not recommended in React.
-  // RegisterMarker?: (cursorYOffset?: number) => IMarker;
+  // * registerMarker?: (cursorYOffset?: number) => IMarker;
 
   /**
    * (EXPERIMENTAL) Adds a decoration to the terminal using
@@ -229,7 +229,7 @@ interface XTermProps {
    */
   // Not implemented. It requires to manipulate the dom element directly, which
   // Is not recommended in React.
-  // RegisterDecoration?: (decorationOptions: IDecorationOptions) =>
+  // * registerDecoration?: (decorationOptions: IDecorationOptions) =>
   // IDecoration | undefined;
 }
 
@@ -380,7 +380,7 @@ export class XTerm extends React.Component<XTermProps> {
    * based measurements need to be performed when this function is called.
    */
   // This is not implemented in the XTerm class, only in `@xterm/xterm` class `Terminal`.
-  // Open(parent: HTMLElement): void;
+  // #open(parent: HTMLElement): void;
 
   /**
    * Gets whether the terminal has an active selection.
