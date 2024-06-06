@@ -1,12 +1,18 @@
 ## XTerm for React
 
-This project provides a React component that integrates the [xterm.js](https://xtermjs.org/) terminal emulator library. It aims to offer a more up-to-date and flexible alternative to existing [solutions](https://github.com/robert-harbison/xterm-for-react), with a focus on performance, code style, and additional functionality.
+This project provides a React component that integrates the [xterm.js](https://xtermjs.org/) terminal emulator library. It aims to offer a more up-to-date and flexible alternative to [existing solutions](https://github.com/robert-harbison/xterm-for-react)(last commit Jul 8, 2022), with a focus on performance, code style, and additional functionality.
+
+### Live Example
+
+A example page with mb github pages. #TODO
+
+## Usage
 
 ## Installation
 
-To install the component, use package manager like npm, yarn or pnpm:
+To install the component, use package manager like `npm`, `yarn` or `pnpm`:
 
-```bash
+```sh
 npm install xterm-react
 # or
 yarn add xterm-react
@@ -14,7 +20,7 @@ yarn add xterm-react
 pnpm add xterm-react
 ```
 
-## Usage
+### Code Example
 
 Import the `XTerm` component and use it within your React application:
 
@@ -26,6 +32,12 @@ export default function App() {
   return <XTerm />;
 }
 ```
+
+### Docs
+
+For the documentation of the `XTerm` component, check [XTerm-React Docs](./docs.md).
+
+- See also [official xterm.js documentation](https://xtermjs.org/docs/api/terminal/).
 
 ### Props
 
@@ -62,6 +74,76 @@ For development purposes, this project uses `vite` for a streamlined and efficie
 Contributions are welcome! Please feel free to submit pull requests or open issues to discuss potential improvements or features.
 
 - For dev, `pnpm` is recommended.
+
+### Credits
+
+- [XTerm.js:](https://xtermjs.org/)
+- [React](https://reactjs.org/)
+- [robert-harbison/xterm-for-react](https://github.com/robert-harbison/xterm-for-react)
+
+### Decisions
+
+#### Do we need a `useXterm` hook?
+
+I can wrap up this to a `useXterm` hook like the example below, but I think it's better to just keep it as a component. If you want to use it as a hook, make an issue or shoot me a message.
+Definition of `useXterm` hook can be like this:
+
+```tsx
+import { useRef, useEffect } from "react";
+import XTerm from "./XTerm";
+
+const useXTerm = () => {
+  const xtermRef = useRef();
+
+  useEffect(() => {
+    if (xtermRef.current) {
+      xtermRef.current.write = xtermRef.current.write.bind(xtermRef.current);
+      xtermRef.current.focus = xtermRef.current.focus.bind(xtermRef.current);
+      xtermRef.current.blur = xtermRef.current.blur.bind(xtermRef.current);
+    }
+  }, []);
+
+  return {
+    setRef: xtermRef,
+    write: (data) => xtermRef.current.write(data),
+    focus: () => xtermRef.current.focus(),
+    blur: () => xtermRef.current.blur(),
+  };
+};
+
+export default useXTerm;
+```
+
+Then, in use it is like this
+
+```tsx
+import React, { useEffect } from "react";
+import XTerm from "./XTerm";
+import useXTerm from "./useXTerm";
+
+const App = () => {
+  const { setRef, write, focus, blur } = useXTerm<XTerm>(null);
+
+  useEffect(() => {
+    write("Hello, XTerm!\n");
+    focus();
+  }, []);
+
+  return (
+    <div>
+      <h1>Using XTerm with Custom Hook</h1>
+      <XTerm ref={setRef} />
+      <button onClick={() => write("Button clicked!\n")}>
+        Write to Terminal
+      </button>
+      <button onClick={focus}>Focus Terminal</button>
+      <button onClick={blur}>Blur Terminal</button>
+    </div>
+  );
+};
+
+export default App;
+```
 
 ## License
 
