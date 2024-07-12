@@ -26,7 +26,7 @@ Import the `XTerm` component and use it within your React application:
 
 ```jsx
 import React from "react";
-import { XTerm } from "xterm-react";
+import { XTerm } from "@pablo-lion/xterm-react";
 
 export default function App() {
   return <XTerm />;

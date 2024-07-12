@@ -99,9 +99,9 @@ export const Terminal = () => {
 
 You can pass XTerm.js `@xterm/xterm` [ITerminalOptions](https://xtermjs.org/docs/api/terminal/interfaces/iterminaloptions/) option that you want to use to instantiate the XTerm.js 'Terminal' as props to this XTerm component.
 
-```
+```tsx
     // Import XTerm
-    import { XTerm } from 'xterm-react'
+    import { XTerm } from "@pablo-lion/xterm-react";
 
     // Render the component
     <XTerm options={{ lineHeight: 3 }} />
