@@ -52,7 +52,7 @@ const App = () => {
   );
 };
 
-const rootElement = document.getElementById("root");
+const rootElement = document.getElementById("root-xterm-react");
 
 if (rootElement) {
   const root = createRoot(rootElement); // createRoot(container!) if you use TypeScript

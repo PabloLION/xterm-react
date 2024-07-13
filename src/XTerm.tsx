@@ -237,14 +237,13 @@ export class XTerm extends React.Component<XTermProps> {
   /**
    * The ref to the element containing the terminal.
    * This replaces the `element` property in the `@xterm/xterm` class `Terminal`.
+   * Assigned in constructor.
    */
-  // Assigned in constructor
   readonly elementRef!: React.RefObject<HTMLDivElement>;
 
   /**
-   * XTerm.js Terminal object.
+   * XTerm.js Terminal object. Assigned in lifecycle componentDidMount.
    */
-  // Assigned in constructor
   public terminal!: Terminal;
 
   /**
@@ -255,7 +254,9 @@ export class XTerm extends React.Component<XTermProps> {
   constructor(props: XTermProps) {
     super(props);
     this.elementRef = React.createRef();
+  }
 
+  componentDidMount() {
     // Setup the XTerm terminal.
     this.terminal = new Terminal(this.props.options);
 
@@ -315,13 +316,15 @@ export class XTerm extends React.Component<XTermProps> {
     if (this.props.characterJoiner) {
       this.terminal.registerCharacterJoiner(this.props.characterJoiner);
     }
-  }
 
-  componentDidMount() {
-    if (this.elementRef.current) {
-      // Creates the terminal within the container element.
-      this.terminal.open(this.elementRef.current);
+    // Creates the terminal in the container element.
+    if (
+      this.elementRef.current === null ||
+      this.elementRef.current === undefined
+    ) {
+      throw new Error("XTerm-React: The container element is not defined.");
     }
+    this.terminal.open(this.elementRef.current);
   }
 
   componentWillUnmount() {
@@ -352,7 +355,7 @@ export class XTerm extends React.Component<XTermProps> {
    * typed into the terminal would (ie. the {@link onData} event will fire).
    * @param data The data to forward to the application.
    * @param wasUserInput Whether the input is genuine user input. This is true
-   * by default and triggers additionalbehavior like focus or selection
+   * by default and triggers additional behavior like focus or selection
    * clearing. Set this to false if the data sent should not be treated like
    * user input would, for example passing an escape sequence to the
    * application.
