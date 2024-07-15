@@ -31,7 +31,7 @@ const App = () => {
             background: "#000000",
             foreground: "#FFFFFF",
             cursor: "#FFFFFF",
-            selection: "#FFFFFF",
+            // selection: "#FFFFFF", this doesn't exist in ITheme
             // black: "#000000",
             // red: "#FF0000",
             // green: "#00FF00",

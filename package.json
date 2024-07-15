@@ -1,6 +1,6 @@
 {
   "name": "@pablo-lion/xterm-react",
-  "version": "1.1.0",
+  "version": "1.1.2",
   "description": "A React component for xterm.js terminal integration.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -13,7 +13,8 @@
     "lint:no-fix": "eslint",
     "format": "prettier --write .",
     "build": "rimraf dist && tsc",
-    "test": "echo \"Error: no test specified, maybe you want to use `dev`\" && exit 1"
+    "test": "echo \"Error: no test specified, maybe you want to use `dev`\" && exit 1",
+    "publish": "pnpm run lint && pnpm run format && pnpm run build && npm publish --access public"
   },
   "husky": {
     "hooks": {
