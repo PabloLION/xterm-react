@@ -20,7 +20,7 @@ importers:
         version: 8.42.3
       '@types/node':
         specifier: ^22.0.0
-        version: 22.10.1
+        version: 22.13.1
       '@types/react':
         specifier: ^19.0.1
         version: 19.0.1
@@ -68,7 +68,7 @@ importers:
         version: 8.17.0(eslint@9.12.0)(typescript@5.5.3)
       vite:
         specifier: ^6.0.9
-        version: 6.0.9(@types/node@22.10.1)
+        version: 6.0.9(@types/node@22.13.1)
 
 packages:
 
@@ -539,8 +539,8 @@ packages:
   '@types/json-schema@7.0.15':
     resolution: {integrity: sha512-5+fP8P8MFNC+AyZCDxrB2pkZFPGzqQWUzpSeuuVLvm8VMcorNYavBqoFcxK8bQz4Qsbn4oUEEem4wDLfcysGHA==}
 
-  '@types/node@22.10.1':
-    resolution: {integrity: sha512-qKgsUwfHZV2WCWLAnVP1JqnpE6Im6h3Y0+fYgMTasNQ7V++CBX5OT1as0g0f+OyubbFqhf6XVNIsmN4IIhEgGQ==}
+  '@types/node@22.13.1':
+    resolution: {integrity: sha512-jK8uzQlrvXqEU91UxiK5J7pKHyzgnI1Qnl0QDHIgVGuolJhRb9EEl28Cj9b3rGR8B2lhFCtvIm5os8lFnO/1Ew==}
 
   '@types/prop-types@15.7.12':
     resolution: {integrity: sha512-5zvhXYtRNRluoE/jAp4GVsSduVUzNWKkOZrCDBWYtE7biZywwdC2AcEzg+cSMLFRfVgeAFqpfNabiPjxFddV1Q==}
@@ -1767,7 +1767,7 @@ snapshots:
 
   '@types/json-schema@7.0.15': {}
 
-  '@types/node@22.10.1':
+  '@types/node@22.13.1':
     dependencies:
       undici-types: 6.20.0
 
@@ -2575,13 +2575,13 @@ snapshots:
     dependencies:
       punycode: 2.3.1
 
-  vite@6.0.9(@types/node@22.10.1):
+  vite@6.0.9(@types/node@22.13.1):
     dependencies:
       esbuild: 0.24.2
       postcss: 8.5.1
       rollup: 4.31.0
     optionalDependencies:
-      '@types/node': 22.10.1
+      '@types/node': 22.13.1
       fsevents: 2.3.3
 
   which@2.0.2:
