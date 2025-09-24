@@ -3,3 +3,4 @@ dist/
 .git-ignored
 .DS_Store
 e2e-build/
+test-fixtures/
