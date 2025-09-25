@@ -239,7 +239,7 @@ export class XTerm extends React.Component<XTermProps> {
    * This replaces the `element` property in the `@xterm/xterm` class `Terminal`.
    * Assigned in constructor.
    */
-  readonly elementRef!: React.RefObject<HTMLDivElement>;
+  readonly elementRef!: React.RefObject<HTMLDivElement | null>;
 
   /**
    * XTerm.js Terminal object. Assigned in lifecycle componentDidMount.
