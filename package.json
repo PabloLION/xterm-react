@@ -15,7 +15,7 @@
     "biome:check": "biome check .",
     "biome:fix": "biome check --fix .",
     "biome:format": "biome format --write .",
-    "build": "rimraf dist && tsc",
+    "build": "npx rimraf dist && tsc",
     "test": "echo \"Error: no test specified, maybe you want to use `dev`\" && exit 1",
     "test:versions": "node version-compatibility-tests/run-all-tests.js",
     "test:react": "node version-compatibility-tests/core/react-versions-test.js",

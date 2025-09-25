@@ -16,6 +16,6 @@ export default tsLint.config(
     },
   },
   {
-    ignores: ["dist/*", "e2e-build/*"],
+    ignores: ["dist/*", "e2e-build/*", "version-compatibility-tests/*"],
   },
 );
