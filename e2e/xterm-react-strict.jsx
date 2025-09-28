@@ -6,7 +6,7 @@ const App = () => {
   const xTermRef = useRef(null);
   useEffect(() => {
     xTermRef.current?.terminal.writeln(
-      "Hello from \x1B[1;3;31mxterm-react\x1B[0m in React.StrictMode",
+      "Hello from \x1B[1;3;31mxterm-react\x1B[0m in React.StrictMode"
     );
     xTermRef.current?.terminal.write("$ ");
   }, []);
@@ -61,7 +61,7 @@ if (rootElement) {
   root.render(
     <React.StrictMode>
       <App />
-    </React.StrictMode>,
+    </React.StrictMode>
   );
 } else {
   console.error("Root element not found");

@@ -29,11 +29,11 @@ class BiomeVersionTester {
 
     // Backup original files
     this.originalPackageJson = JSON.parse(
-      fs.readFileSync("package.json", "utf8"),
+      fs.readFileSync("package.json", "utf8")
     );
     if (fs.existsSync("biome.json")) {
       this.originalBiomeConfig = JSON.parse(
-        fs.readFileSync("biome.json", "utf8"),
+        fs.readFileSync("biome.json", "utf8")
       );
     }
 
@@ -75,7 +75,7 @@ class BiomeVersionTester {
       // Write test package.json
       fs.writeFileSync(
         "package.json",
-        JSON.stringify(testPackageJson, null, 2),
+        JSON.stringify(testPackageJson, null, 2)
       );
 
       // Install dependencies
@@ -190,14 +190,14 @@ class BiomeVersionTester {
     if (this.originalPackageJson) {
       fs.writeFileSync(
         "package.json",
-        JSON.stringify(this.originalPackageJson, null, 2),
+        JSON.stringify(this.originalPackageJson, null, 2)
       );
     }
 
     if (this.originalBiomeConfig) {
       fs.writeFileSync(
         "biome.json",
-        JSON.stringify(this.originalBiomeConfig, null, 2),
+        JSON.stringify(this.originalBiomeConfig, null, 2)
       );
     }
 

@@ -60,7 +60,7 @@ class ESLintVersionTester {
 
     // Backup original package.json
     this.originalPackageJson = JSON.parse(
-      fs.readFileSync("package.json", "utf8"),
+      fs.readFileSync("package.json", "utf8")
     );
 
     // Test ESLint versions
@@ -116,7 +116,7 @@ class ESLintVersionTester {
       // Write test package.json
       fs.writeFileSync(
         "package.json",
-        JSON.stringify(testPackageJson, null, 2),
+        JSON.stringify(testPackageJson, null, 2)
       );
 
       // Install dependencies
@@ -179,7 +179,7 @@ class ESLintVersionTester {
       // Write test package.json
       fs.writeFileSync(
         "package.json",
-        JSON.stringify(testPackageJson, null, 2),
+        JSON.stringify(testPackageJson, null, 2)
       );
 
       // Install dependencies
@@ -234,7 +234,7 @@ class ESLintVersionTester {
     if (this.originalPackageJson) {
       fs.writeFileSync(
         "package.json",
-        JSON.stringify(this.originalPackageJson, null, 2),
+        JSON.stringify(this.originalPackageJson, null, 2)
       );
       try {
         execSync("npm install --silent", { stdio: "pipe" });
@@ -276,7 +276,7 @@ class ESLintVersionTester {
     // Group results by category
     const eslintResults = this.results.filter((r) => r.category === "ESLint");
     const prettierResults = this.results.filter(
-      (r) => r.category === "Prettier",
+      (r) => r.category === "Prettier"
     );
 
     if (eslintResults.length > 0) {

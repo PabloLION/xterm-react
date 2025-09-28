@@ -41,7 +41,7 @@ class ReactVersionTester {
 
     // Backup original package.json
     this.originalPackageJson = JSON.parse(
-      fs.readFileSync("package.json", "utf8"),
+      fs.readFileSync("package.json", "utf8")
     );
 
     for (const versionConfig of REACT_VERSIONS_TO_TEST) {
@@ -86,7 +86,7 @@ class ReactVersionTester {
       // Write test package.json
       fs.writeFileSync(
         "package.json",
-        JSON.stringify(testPackageJson, null, 2),
+        JSON.stringify(testPackageJson, null, 2)
       );
 
       // Install dependencies
@@ -142,7 +142,7 @@ class ReactVersionTester {
     if (this.originalPackageJson) {
       fs.writeFileSync(
         "package.json",
-        JSON.stringify(this.originalPackageJson, null, 2),
+        JSON.stringify(this.originalPackageJson, null, 2)
       );
       try {
         execSync("npm install --silent", { stdio: "pipe" });
