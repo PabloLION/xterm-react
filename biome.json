@@ -16,7 +16,7 @@
   "javascript": {
     "formatter": {
       "quoteStyle": "double",
-      "trailingCommas": "es5"
+      "trailingCommas": "all"
     }
   },
   "files": {
@@ -29,7 +29,8 @@
       "**/*.jsx",
       "!**/dist/**/*",
       "!**/node_modules/**/*",
-      "!**/e2e-build/**/*"
+      "!**/e2e-build/**/*",
+      "!**/version-compatibility-tests/**/*"
     ]
   }
 }

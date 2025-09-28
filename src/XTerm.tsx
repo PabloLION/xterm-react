@@ -14,8 +14,7 @@ import {
 } from "@xterm/xterm";
 
 // Listener of `@xterm/xterm` `IEvent`
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type IEventListener<T, U = void> = (arg1: T, arg2: U) => any;
+export type IEventListener<T, U = void> = (arg1: T, arg2: U) => void;
 
 interface XTermProps {
   /**
@@ -340,14 +339,14 @@ export class XTerm extends React.Component<XTermProps> {
    * Unfocus the terminal.
    */
   public blur(): void {
-    return this.terminal.blur();
+    this.terminal.blur();
   }
 
   /**
    * Focus the terminal.
    */
   public focus(): void {
-    return this.terminal.focus();
+    this.terminal.focus();
   }
 
   /**
@@ -361,7 +360,7 @@ export class XTerm extends React.Component<XTermProps> {
    * application.
    */
   public input(data: string, wasUserInput?: boolean): void {
-    return this.terminal.input(data, wasUserInput);
+    this.terminal.input(data, wasUserInput);
   }
 
   /**
@@ -372,7 +371,7 @@ export class XTerm extends React.Component<XTermProps> {
    * @param y The number of rows to resize to.
    */
   public resize(columns: number, rows: number): void {
-    return this.terminal.resize(columns, rows);
+    this.terminal.resize(columns, rows);
   }
 
   /**
@@ -411,7 +410,7 @@ export class XTerm extends React.Component<XTermProps> {
    * Clears the current terminal selection.
    */
   public clearSelection(): void {
-    return this.terminal.clearSelection();
+    this.terminal.clearSelection();
   }
 
   /**
@@ -421,14 +420,14 @@ export class XTerm extends React.Component<XTermProps> {
    * @param length The length of the selection.
    */
   public select(column: number, row: number, length: number): void {
-    return this.terminal.select(column, row, length);
+    this.terminal.select(column, row, length);
   }
 
   /**
    * Selects all text within the terminal.
    */
   public selectAll(): void {
-    return this.terminal.selectAll();
+    this.terminal.selectAll();
   }
 
   /**
@@ -437,7 +436,7 @@ export class XTerm extends React.Component<XTermProps> {
    * @param end The 0-based line index to select to (inclusive).
    */
   public selectLines(start: number, end: number): void {
-    return this.terminal.selectLines(start, end);
+    this.terminal.selectLines(start, end);
   }
 
   /*
@@ -453,7 +452,7 @@ export class XTerm extends React.Component<XTermProps> {
    * @param amount The number of lines to scroll down (negative scroll up).
    */
   public scrollLines(amount: number): void {
-    return this.terminal.scrollLines(amount);
+    this.terminal.scrollLines(amount);
   }
 
   /**
@@ -461,21 +460,21 @@ export class XTerm extends React.Component<XTermProps> {
    * @param pageCount The number of pages to scroll (negative scrolls up).
    */
   public scrollPages(pageCount: number): void {
-    return this.terminal.scrollPages(pageCount);
+    this.terminal.scrollPages(pageCount);
   }
 
   /**
    * Scrolls the display of the terminal to the top.
    */
   public scrollToTop(): void {
-    return this.terminal.scrollToTop();
+    this.terminal.scrollToTop();
   }
 
   /**
    * Scrolls the display of the terminal to the bottom.
    */
   public scrollToBottom(): void {
-    return this.terminal.scrollToBottom();
+    this.terminal.scrollToBottom();
   }
 
   /**
@@ -483,14 +482,14 @@ export class XTerm extends React.Component<XTermProps> {
    * @param line The 0-based line index to scroll to.
    */
   public scrollToLine(line: number): void {
-    return this.terminal.scrollToLine(line);
+    this.terminal.scrollToLine(line);
   }
 
   /**
    * Clear the entire buffer, making the prompt line the new first line.
    */
   public clear(): void {
-    return this.terminal.clear();
+    this.terminal.clear();
   }
 
   /**
@@ -502,7 +501,7 @@ export class XTerm extends React.Component<XTermProps> {
    * by the parser.
    */
   public write(data: string | Uint8Array, callback?: () => void): void {
-    return this.terminal.write(data, callback);
+    this.terminal.write(data, callback);
   }
 
   /**
@@ -514,7 +513,7 @@ export class XTerm extends React.Component<XTermProps> {
    * by the parser.
    */
   public writeln(data: string | Uint8Array, callback?: () => void): void {
-    return this.terminal.writeln(data, callback);
+    this.terminal.writeln(data, callback);
   }
 
   /**
@@ -523,7 +522,7 @@ export class XTerm extends React.Component<XTermProps> {
    * @param data The text to write to the terminal.
    */
   public paste(data: string): void {
-    return this.terminal.paste(data);
+    this.terminal.paste(data);
   }
 
   /**
@@ -533,7 +532,7 @@ export class XTerm extends React.Component<XTermProps> {
    * @param end The row to end at (between start and this.rows - 1).
    */
   public refresh(start: number, end: number): void {
-    return this.terminal.refresh(start, end);
+    this.terminal.refresh(start, end);
   }
 
   /**
@@ -543,14 +542,14 @@ export class XTerm extends React.Component<XTermProps> {
    * issue where the texture gets messed up when resuming the OS from sleep.
    */
   public clearTextureAtlas(): void {
-    return this.terminal.clearTextureAtlas();
+    this.terminal.clearTextureAtlas();
   }
 
   /**
    * Perform a full reset (RIS, aka '\x1bc').
    */
   public reset(): void {
-    return this.terminal.reset();
+    this.terminal.reset();
   }
 
   /**

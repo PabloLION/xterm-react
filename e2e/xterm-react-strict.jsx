@@ -1,7 +1,6 @@
 import React, { useEffect, useRef } from "react";
-
-import { XTerm } from "../src/XTerm";
 import { createRoot } from "react-dom/client";
+import { XTerm } from "../src/XTerm";
 
 const App = () => {
   const xTermRef = useRef(null);
