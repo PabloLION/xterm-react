@@ -1,4 +1,4 @@
-## XTerm for React
+## XTerm React
 
 This project provides a React component that integrates the [xterm.js](https://xtermjs.org/) terminal emulator library. It aims to offer a more up-to-date and flexible alternative to [existing solutions](https://github.com/robert-harbison/xterm-for-react)(last commit Jul 8, 2022), with a focus on performance, code style, and additional functionality.
 
