@@ -3,3 +3,10 @@ dist/
 .git-ignored
 .DS_Store
 e2e-build/
+test-fixtures/
+version-compatibility-tests/*.json
+version-compatibility-tests/*.md
+version-compatibility-tests/core/*.json
+version-compatibility-tests/core/*.md
+version-compatibility-tests/devtools/*.json
+version-compatibility-tests/devtools/*.md

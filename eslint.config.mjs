@@ -16,6 +16,18 @@ export default tsLint.config(
     },
   },
   {
-    ignores: ["dist/*", "e2e-build/*"],
+    files: ["src/**/*.tsx", "src/**/*.ts"],
+    rules: {
+      "@typescript-eslint/no-explicit-any": [
+        "error",
+        {
+          ignoreRestArgs: true,
+          fixToUnknown: false,
+        },
+      ],
+    },
   },
+  {
+    ignores: ["dist/*", "e2e-build/*", "version-compatibility-tests/*"],
+  }
 );

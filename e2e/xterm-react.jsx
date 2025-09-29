@@ -1,13 +1,12 @@
-import React, { useEffect, useRef } from "react";
-
-import { XTerm } from "../src/XTerm";
+import { useEffect, useRef } from "react";
 import { createRoot } from "react-dom/client";
+import { XTerm } from "../src/XTerm";
 
 const App = () => {
   const xTermRef = useRef(null);
   useEffect(() => {
     xTermRef.current?.terminal.writeln(
-      "Hello from \x1B[1;3;31mxterm-react\x1B[0m",
+      "Hello from \x1B[1;3;31mxterm-react\x1B[0m"
     );
     xTermRef.current?.terminal.write("$ ");
   }, []);
