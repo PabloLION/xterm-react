@@ -15,15 +15,53 @@ function getLatest(name) {
   return execSync(`npm view ${name} version`, { stdio: 'pipe' }).toString().trim()
 }
 
+function getLatestForMajor(name, major) {
+  try {
+    const raw = execSync(`npm view ${name} versions --json`, { stdio: 'pipe' }).toString()
+    const versions = JSON.parse(raw)
+    const filtered = versions.filter(v => String(v).startsWith(`${major}.`))
+    return filtered[filtered.length - 1] || getLatest(name)
+  } catch {
+    return getLatest(name)
+  }
+}
+
+function parseArgs(argv) {
+  const out = {}
+  for (let i = 2; i < argv.length; i++) {
+    const a = argv[i]
+    const v = argv[i + 1]
+    switch (a) {
+      case '--react': out.react = v; i++; break
+      case '--react-dom': out.reactDom = v; i++; break
+      case '--typescript': out.typescript = v; i++; break
+      case '--vite': out.vite = v; i++; break
+      case '--plugin-react': out.pluginReact = v; i++; break
+      case '--types-react': out.typesReact = v; i++; break
+      case '--types-react-dom': out.typesReactDom = v; i++; break
+      case '--help':
+        console.log(`Usage: node consumer-pin-and-build.mjs [--react <ver>] [--react-dom <ver>] [--typescript <ver>] [--vite <ver>] [--plugin-react <ver>] [--types-react <ver>] [--types-react-dom <ver>]`)
+        process.exit(0)
+      default:
+        break
+    }
+  }
+  return out
+}
+
 function main() {
+  const args = parseArgs(process.argv)
+  const react = args.react || getLatest('react')
+  const reactDom = args.reactDom || getLatest('react-dom')
+  const reactMajor = String(react).split('.')[0]
   const versions = {
-    react: getLatest('react'),
-    'react-dom': getLatest('react-dom'),
-    typescript: getLatest('typescript'),
-    '@types/react': getLatest('@types/react'),
-    '@types/react-dom': getLatest('@types/react-dom'),
-    vite: getLatest('vite'),
-    '@vitejs/plugin-react': getLatest('@vitejs/plugin-react')
+    react,
+    'react-dom': reactDom,
+    typescript: args.typescript || getLatest('typescript'),
+    '@types/react': args.typesReact || getLatestForMajor('@types/react', reactMajor),
+    '@types/react-dom': args.typesReactDom || getLatestForMajor('@types/react-dom', reactMajor),
+    vite: args.vite || getLatest('vite'),
+    '@vitejs/plugin-react': args.pluginReact || getLatest('@vitejs/plugin-react')
   }
 
   // Build and pack library tarball
@@ -73,4 +111,3 @@ function main() {
 }
 
 main()
-
