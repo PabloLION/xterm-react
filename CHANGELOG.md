@@ -2,23 +2,24 @@
 
 All notable changes to this project will be documented in this file.
 
-## \[1.2.0] - 2025-09-30
+## [1.2.0] - 2025-09-30
 
 ### Added
 
-- React 19 compatibility as the default peer dependency target, plus updated TypeScript 5 builds.
-- Claude GitHub workflows for automated reviews and `@claude` mentions.
-- `AGENTS.md` contributor guidelines and this changelog for easier onboarding.
-- pnpm-based lint/format workflow with enforced auto-fix support.
+- React 19 is now the default peer dependency target; TypeScript 5 builds remain supported.
+- Claude-based GitHub review workflows and AGENTS.md contributor guide.
+- Version compatibility harness scripts under `version-compatibility-tests/`.
 
 ### Changed
 
-- Locked the `@claude` mention workflow to trusted commenters.
-- Routed `pnpm publish` through `scripts/prepare-publish.sh` to keep releases reproducible.
+- CI lint/format is guard-only (no auto-fix): runs `pnpm lint:no-fix -- --max-warnings=0`, Prettier check, and Biome check.
+- Standardized on `pnpm`; removed `package-lock.json` in favor of `pnpm-lock.yaml`.
+- Release helper now uses `pnpm version` / `pnpm publish` and stages `CHANGELOG.md` alongside `VERSION.md`.
+- README install instructions updated to `@pablo-lion/xterm-react`.
 
 ### Fixed
 
-- Lint-and-format CI now fails when auto-fixes modify tracked files before verification, preventing unformatted PRs.
+- Ensured pnpm setup precedes Node cache in CI; resolved missing `pnpm` executable issues.
 
 ## \[1.1.2] - 2024-07-15
 
