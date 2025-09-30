@@ -1,5 +1,0 @@
-Checking formatting...
-
-[warn] jsxBracketSameLine is deprecated.
-[warn] src/XTerm.tsx
-[warn] Code style issues found in the above file. Forgot to run Prettier?

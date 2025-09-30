@@ -10,4 +10,6 @@ version-compatibility-tests/core/*.json
 version-compatibility-tests/core/*.md
 version-compatibility-tests/devtools/*.json
 version-compatibility-tests/devtools/*.md
+version-compatibility-tests/logs/
+.compat-worktree/
 package-lock.json

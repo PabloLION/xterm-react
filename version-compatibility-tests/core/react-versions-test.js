@@ -133,7 +133,8 @@ class ReactVersionTester {
       );
 
       // Install dependencies
-      if (this.verbose) console.log(`   Installing ${versionConfig.name} dependencies...`);
+      if (this.verbose)
+        console.log(`   Installing ${versionConfig.name} dependencies...`);
       const installCmd = this.verbose
         ? "pnpm install"
         : "pnpm install --silent";

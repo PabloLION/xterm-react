@@ -163,7 +163,8 @@ class ESLintVersionTester {
       );
 
       // Install dependencies
-      if (this.verbose) console.log(`   Installing ${config.name} dependencies...`);
+      if (this.verbose)
+        console.log(`   Installing ${config.name} dependencies...`);
       const installCmd = this.verbose
         ? "pnpm install"
         : "pnpm install --silent";
