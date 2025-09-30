@@ -4,6 +4,7 @@
   "description": "A React component for xterm.js terminal integration.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "type": "module",
   "files": [
     "dist"
   ],
@@ -69,5 +70,12 @@
   "repository": {
     "type": "git",
     "url": "git+https://github.com/PabloLION/xterm-react.git"
-  }
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "sideEffects": false
 }
