@@ -62,7 +62,12 @@ Planned topic branches and example commits
   - docs(release): align VERSION.md with CHANGELOG.md entries
 - test/xterm-rtl-smoke
   - test(xterm): add RTL mount and imperative API smoke tests
+<<<<<<< HEAD
 Decision: CI guard-only vs local auto-fix
 
+=======
+
+Decision: CI guard-only vs local auto-fix
+>>>>>>> f5209b8 (docs(roadmap): document CI guard-only and local auto-fix policy)
 - CI (GitHub Actions) is a guard: check-only with `pnpm lint:no-fix --max-warnings=0`, `pnpm exec prettier --check .`, and `pnpm biome:check`. CI must not mutate files.
 - Local dev hooks (pre-push) run auto-fix: `pnpm lint` and `pnpm format`, then fail the push if diffs remain. This keeps PRs clean and enforces running our tools locally.
