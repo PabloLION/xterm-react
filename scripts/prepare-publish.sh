@@ -42,10 +42,10 @@ require_command() {
 update_version_files() {
   local target="$1"
   if [[ "$target" =~ ^(major|minor|patch)$ ]]; then
-    npm version "$target" --no-git-tag-version >/dev/null
+    pnpm version "$target" --no-git-tag-version >/dev/null
     NEW_VERSION=$(node -p "require('./package.json').version")
   else
-    npm version "$target" --no-git-tag-version >/dev/null
+    pnpm version "$target" --no-git-tag-version >/dev/null
     NEW_VERSION="$target"
   fi
 }
@@ -90,13 +90,13 @@ run_checks() {
 
 commit_and_tag() {
   local version="$1"
-  git add package.json package-lock.json VERSION.md pnpm-lock.yaml 2>/dev/null || true
+  git add package.json VERSION.md CHANGELOG.md pnpm-lock.yaml 2>/dev/null || true
   git commit -m "chore: release v${version}"
   git tag -a "v${version}" -m "Release v${version}"
 }
 
 publish_package() {
-  npm publish --access public
+  pnpm publish --access public
 }
 
 main() {
@@ -148,7 +148,6 @@ main() {
   fi
 
   ensure_clean_worktree
-  require_command npm
   require_command pnpm
   require_command node
   require_command git
