@@ -1,13 +1,14 @@
 #!/usr/bin/env node
 
 /**
- * ESLint Ecosystem Version Compatibility Test
+ * ESLint Ecosystem Version Compatibility Test (ESM)
  * Tests different versions of ESLint and related tools with latest React & TypeScript
  */
 
-const { execSync } = require("child_process");
-const fs = require("fs");
-const path = require("path");
+import { execSync } from "node:child_process";
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 const ESLINT_VERSIONS_TO_TEST = [
   {
@@ -121,12 +122,12 @@ class ESLintVersionTester {
 
       // Install dependencies
       console.log(`   Installing ${config.name} dependencies...`);
-      execSync("npm install --silent", { stdio: "pipe" });
+      execSync("pnpm install --silent", { stdio: "pipe" });
 
       // Test ESLint functionality
       console.log(`   Testing ESLint execution...`);
       try {
-        execSync("npm run lint:no-fix", { stdio: "pipe" });
+        execSync("pnpm run lint:no-fix", { stdio: "pipe" });
         var lintSuccess = true;
       } catch (lintError) {
         // ESLint finding issues is OK, we just want to ensure it runs
@@ -137,7 +138,7 @@ class ESLintVersionTester {
 
       // Test build with new ESLint setup
       console.log(`   Testing build compatibility...`);
-      execSync("npm run build", { stdio: "pipe" });
+      execSync("pnpm run build", { stdio: "pipe" });
 
       return {
         category: "ESLint",
@@ -184,12 +185,12 @@ class ESLintVersionTester {
 
       // Install dependencies
       console.log(`   Installing ${config.name} dependencies...`);
-      execSync("npm install --silent", { stdio: "pipe" });
+      execSync("pnpm install --silent", { stdio: "pipe" });
 
       // Test Prettier functionality
       console.log(`   Testing Prettier execution...`);
       try {
-        execSync("npx prettier --check src/", { stdio: "pipe" });
+        execSync("pnpm exec prettier --check src/", { stdio: "pipe" });
         var prettierSuccess = true;
       } catch (prettierError) {
         // Prettier finding formatting issues is OK, we just want to ensure it runs
@@ -201,7 +202,7 @@ class ESLintVersionTester {
       // Test format command
       console.log(`   Testing format command...`);
       try {
-        execSync("npm run format", { stdio: "pipe" });
+        execSync("pnpm run format", { stdio: "pipe" });
         var formatSuccess = true;
       } catch (formatError) {
         var formatSuccess = false;
@@ -237,7 +238,7 @@ class ESLintVersionTester {
         JSON.stringify(this.originalPackageJson, null, 2)
       );
       try {
-        execSync("npm install --silent", { stdio: "pipe" });
+        execSync("pnpm install --silent", { stdio: "pipe" });
         console.log("✅ Original dependencies restored");
       } catch (error) {
         console.error("⚠️  Warning: Failed to restore original dependencies");
@@ -325,10 +326,11 @@ class ESLintVersionTester {
   }
 }
 
+export default ESLintVersionTester;
+
 // Run if called directly
-if (require.main === module) {
+const __filename = fileURLToPath(import.meta.url);
+if (process.argv[1] && path.resolve(process.argv[1]) === __filename) {
   const tester = new ESLintVersionTester();
   tester.testAllVersions().catch(console.error);
 }
-
-module.exports = ESLintVersionTester;

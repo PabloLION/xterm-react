@@ -1,13 +1,14 @@
 #!/usr/bin/env node
 
 /**
- * React Version Compatibility Test
+ * React Version Compatibility Test (ESM)
  * Tests major React versions with current TypeScript setup
  */
 
-const { execSync, spawn } = require("child_process");
-const fs = require("fs");
-const path = require("path");
+import { execSync } from "node:child_process";
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 const REACT_VERSIONS_TO_TEST = [
   {
@@ -91,11 +92,11 @@ class ReactVersionTester {
 
       // Install dependencies
       console.log(`   Installing ${versionConfig.name} dependencies...`);
-      execSync("npm install --silent", { stdio: "pipe" });
+      execSync("pnpm install --silent", { stdio: "pipe" });
 
       // Test TypeScript compilation
       console.log(`   Testing TypeScript compilation...`);
-      execSync("npm run build", { stdio: "pipe" });
+      execSync("pnpm run build", { stdio: "pipe" });
 
       // Test if e2e example still works
       console.log(`   Testing e2e compatibility...`);
@@ -124,7 +125,7 @@ class ReactVersionTester {
   async testE2EBuild() {
     try {
       // Try to build the e2e project with Vite
-      execSync("npx vite build", {
+      execSync("pnpm exec vite build", {
         stdio: "pipe",
         cwd: process.cwd(),
         timeout: 60000,
@@ -145,7 +146,7 @@ class ReactVersionTester {
         JSON.stringify(this.originalPackageJson, null, 2)
       );
       try {
-        execSync("npm install --silent", { stdio: "pipe" });
+        execSync("pnpm install --silent", { stdio: "pipe" });
         console.log("✅ Original dependencies restored");
       } catch (error) {
         console.error("⚠️  Warning: Failed to restore original dependencies");
@@ -201,10 +202,11 @@ class ReactVersionTester {
   }
 }
 
+export default ReactVersionTester;
+
 // Run if called directly
-if (require.main === module) {
+const __filename = fileURLToPath(import.meta.url);
+if (process.argv[1] && path.resolve(process.argv[1]) === __filename) {
   const tester = new ReactVersionTester();
   tester.testAllVersions().catch(console.error);
 }
-
-module.exports = ReactVersionTester;

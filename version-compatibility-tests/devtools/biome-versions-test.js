@@ -1,13 +1,14 @@
 #!/usr/bin/env node
 
 /**
- * Biome Version Compatibility Test
+ * Biome Version Compatibility Test (ESM)
  * Tests different versions of Biome with latest React & TypeScript
  */
 
-const { execSync } = require("child_process");
-const fs = require("fs");
-const path = require("path");
+import { execSync } from "node:child_process";
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 const BIOME_VERSIONS_TO_TEST = [
   { name: "Biome 1.8", version: "^1.8.3" },
@@ -80,7 +81,7 @@ class BiomeVersionTester {
 
       // Install dependencies
       console.log(`   Installing ${config.name} dependencies...`);
-      execSync("npm install --silent", { stdio: "pipe" });
+      execSync("pnpm install --silent", { stdio: "pipe" });
 
       // Create compatible biome.json for this version
       await this.createCompatibleBiomeConfig(config.version);
@@ -88,7 +89,7 @@ class BiomeVersionTester {
       // Test Biome check functionality
       console.log(`   Testing Biome check...`);
       try {
-        execSync("npm run biome:check -- --max-diagnostics=5", {
+        execSync("pnpm run biome:check -- --max-diagnostics=5", {
           stdio: "pipe",
           timeout: 30000,
         });
@@ -106,7 +107,7 @@ class BiomeVersionTester {
       // Test Biome format functionality
       console.log(`   Testing Biome format...`);
       try {
-        execSync("npm run biome:format -- --dry-run", {
+        execSync("pnpm run biome:format -- --dry-run", {
           stdio: "pipe",
           timeout: 30000,
         });
@@ -120,7 +121,7 @@ class BiomeVersionTester {
       // Test migration if needed
       console.log(`   Testing configuration migration...`);
       try {
-        execSync("npx biome migrate --dry-run", {
+        execSync("pnpm exec biome migrate --dry-run", {
           stdio: "pipe",
           timeout: 15000,
         });
@@ -202,7 +203,7 @@ class BiomeVersionTester {
     }
 
     try {
-      execSync("npm install --silent", { stdio: "pipe" });
+      execSync("pnpm install --silent", { stdio: "pipe" });
       console.log("✅ Original files restored");
     } catch (error) {
       console.error("⚠️  Warning: Failed to restore original dependencies");
@@ -266,10 +267,11 @@ class BiomeVersionTester {
   }
 }
 
+export default BiomeVersionTester;
+
 // Run if called directly
-if (require.main === module) {
+const __filename = fileURLToPath(import.meta.url);
+if (process.argv[1] && path.resolve(process.argv[1]) === __filename) {
   const tester = new BiomeVersionTester();
   tester.testAllVersions().catch(console.error);
 }
-
-module.exports = BiomeVersionTester;
