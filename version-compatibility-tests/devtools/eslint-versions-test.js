@@ -51,7 +51,8 @@ const PRETTIER_VERSIONS_TO_TEST = [
 ];
 
 class ESLintVersionTester {
-  constructor() {
+  constructor(opts = {}) {
+    this.verbose = Boolean(opts.verbose);
     this.results = [];
     this.originalPackageJson = null;
   }
@@ -122,12 +123,12 @@ class ESLintVersionTester {
 
       // Install dependencies
       console.log(`   Installing ${config.name} dependencies...`);
-      execSync("pnpm install --silent", { stdio: "pipe" });
+      execSync("pnpm install --silent", { stdio: this.verbose ? "inherit" : "pipe" });
 
       // Test ESLint functionality
       console.log(`   Testing ESLint execution...`);
       try {
-        execSync("pnpm run lint:no-fix", { stdio: "pipe" });
+        execSync("pnpm run lint:no-fix", { stdio: this.verbose ? "inherit" : "pipe" });
         var lintSuccess = true;
       } catch (lintError) {
         // ESLint finding issues is OK, we just want to ensure it runs
@@ -138,7 +139,7 @@ class ESLintVersionTester {
 
       // Test build with new ESLint setup
       console.log(`   Testing build compatibility...`);
-      execSync("pnpm run build", { stdio: "pipe" });
+      execSync("pnpm run build", { stdio: this.verbose ? "inherit" : "pipe" });
 
       return {
         category: "ESLint",
@@ -185,12 +186,12 @@ class ESLintVersionTester {
 
       // Install dependencies
       console.log(`   Installing ${config.name} dependencies...`);
-      execSync("pnpm install --silent", { stdio: "pipe" });
+      execSync("pnpm install --silent", { stdio: this.verbose ? "inherit" : "pipe" });
 
       // Test Prettier functionality
       console.log(`   Testing Prettier execution...`);
       try {
-        execSync("pnpm exec prettier --check src/", { stdio: "pipe" });
+        execSync("pnpm exec prettier --check src/", { stdio: this.verbose ? "inherit" : "pipe" });
         var prettierSuccess = true;
       } catch (prettierError) {
         // Prettier finding formatting issues is OK, we just want to ensure it runs
@@ -202,7 +203,7 @@ class ESLintVersionTester {
       // Test format command
       console.log(`   Testing format command...`);
       try {
-        execSync("pnpm run format", { stdio: "pipe" });
+        execSync("pnpm run format", { stdio: this.verbose ? "inherit" : "pipe" });
         var formatSuccess = true;
       } catch (formatError) {
         var formatSuccess = false;
@@ -238,7 +239,7 @@ class ESLintVersionTester {
         JSON.stringify(this.originalPackageJson, null, 2)
       );
       try {
-        execSync("pnpm install --silent", { stdio: "pipe" });
+        execSync("pnpm install --silent", { stdio: this.verbose ? "inherit" : "pipe" });
         console.log("✅ Original dependencies restored");
       } catch (error) {
         console.error("⚠️  Warning: Failed to restore original dependencies");

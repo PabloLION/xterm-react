@@ -19,7 +19,8 @@ const BIOME_VERSIONS_TO_TEST = [
 ];
 
 class BiomeVersionTester {
-  constructor() {
+  constructor(opts = {}) {
+    this.verbose = Boolean(opts.verbose);
     this.results = [];
     this.originalPackageJson = null;
     this.originalBiomeConfig = null;
@@ -81,7 +82,7 @@ class BiomeVersionTester {
 
       // Install dependencies
       console.log(`   Installing ${config.name} dependencies...`);
-      execSync("pnpm install --silent", { stdio: "pipe" });
+      execSync("pnpm install --silent", { stdio: this.verbose ? "inherit" : "pipe" });
 
       // Create compatible biome.json for this version
       await this.createCompatibleBiomeConfig(config.version);
@@ -90,7 +91,7 @@ class BiomeVersionTester {
       console.log(`   Testing Biome check...`);
       try {
         execSync("pnpm run biome:check -- --max-diagnostics=5", {
-          stdio: "pipe",
+          stdio: this.verbose ? "inherit" : "pipe",
           timeout: 30000,
         });
         var checkSuccess = true;
@@ -108,7 +109,7 @@ class BiomeVersionTester {
       console.log(`   Testing Biome format...`);
       try {
         execSync("pnpm run biome:format -- --dry-run", {
-          stdio: "pipe",
+          stdio: this.verbose ? "inherit" : "pipe",
           timeout: 30000,
         });
         var formatSuccess = true;
@@ -122,7 +123,7 @@ class BiomeVersionTester {
       console.log(`   Testing configuration migration...`);
       try {
         execSync("pnpm exec biome migrate --dry-run", {
-          stdio: "pipe",
+          stdio: this.verbose ? "inherit" : "pipe",
           timeout: 15000,
         });
         var migrateSuccess = true;
@@ -203,7 +204,7 @@ class BiomeVersionTester {
     }
 
     try {
-      execSync("pnpm install --silent", { stdio: "pipe" });
+      execSync("pnpm install --silent", { stdio: this.verbose ? "inherit" : "pipe" });
       console.log("✅ Original files restored");
     } catch (error) {
       console.error("⚠️  Warning: Failed to restore original dependencies");

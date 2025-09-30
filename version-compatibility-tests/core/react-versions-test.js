@@ -32,7 +32,8 @@ const REACT_VERSIONS_TO_TEST = [
 ];
 
 class ReactVersionTester {
-  constructor() {
+  constructor(opts = {}) {
+    this.verbose = Boolean(opts.verbose);
     this.results = [];
     this.originalPackageJson = null;
   }
@@ -92,11 +93,11 @@ class ReactVersionTester {
 
       // Install dependencies
       console.log(`   Installing ${versionConfig.name} dependencies...`);
-      execSync("pnpm install --silent", { stdio: "pipe" });
+      execSync("pnpm install --silent", { stdio: this.verbose ? "inherit" : "pipe" });
 
       // Test TypeScript compilation
       console.log(`   Testing TypeScript compilation...`);
-      execSync("pnpm run build", { stdio: "pipe" });
+      execSync("pnpm run build", { stdio: this.verbose ? "inherit" : "pipe" });
 
       // Test if e2e example still works
       console.log(`   Testing e2e compatibility...`);
@@ -126,7 +127,7 @@ class ReactVersionTester {
     try {
       // Try to build the e2e project with Vite
       execSync("pnpm exec vite build", {
-        stdio: "pipe",
+        stdio: this.verbose ? "inherit" : "pipe",
         cwd: process.cwd(),
         timeout: 60000,
       });
@@ -146,7 +147,7 @@ class ReactVersionTester {
         JSON.stringify(this.originalPackageJson, null, 2)
       );
       try {
-        execSync("pnpm install --silent", { stdio: "pipe" });
+        execSync("pnpm install --silent", { stdio: this.verbose ? "inherit" : "pipe" });
         console.log("✅ Original dependencies restored");
       } catch (error) {
         console.error("⚠️  Warning: Failed to restore original dependencies");

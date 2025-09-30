@@ -14,6 +14,10 @@ import ReactVersionTester from "./core/react-versions-test.js";
 import ESLintVersionTester from "./devtools/eslint-versions-test.js";
 import BiomeVersionTester from "./devtools/biome-versions-test.js";
 
+// CLI flags
+const argv = process.argv.slice(2);
+const VERBOSE = argv.includes("--verbose") || argv.includes("-v");
+
 class MasterTestRunner {
   constructor() {
     this.allResults = {
@@ -37,6 +41,9 @@ class MasterTestRunner {
   }
 
   async runAllTests() {
+    if (VERBOSE) {
+      console.log("[verbose] Mode ON");
+    }
     console.log("🚀 Starting Comprehensive Version Compatibility Tests\n");
     console.log("=".repeat(60));
 
@@ -44,7 +51,7 @@ class MasterTestRunner {
       // Run React version tests
       console.log("\n🔍 Phase 1: React Version Compatibility");
       console.log("-".repeat(40));
-      const reactTester = new ReactVersionTester();
+      const reactTester = new ReactVersionTester({ verbose: VERBOSE });
       const reactResults = await reactTester.testAllVersions();
       this.allResults.results.react = reactResults;
       this.allResults.summary.totalCategories++;
@@ -52,7 +59,7 @@ class MasterTestRunner {
       // Run ESLint ecosystem tests
       console.log("\n🔍 Phase 2: ESLint Ecosystem Compatibility");
       console.log("-".repeat(40));
-      const eslintTester = new ESLintVersionTester();
+      const eslintTester = new ESLintVersionTester({ verbose: VERBOSE });
       const eslintResults = await eslintTester.testAllVersions();
       this.allResults.results.eslint = eslintResults;
       this.allResults.summary.totalCategories++;
@@ -60,7 +67,7 @@ class MasterTestRunner {
       // Run Biome version tests
       console.log("\n🔍 Phase 3: Biome Version Compatibility");
       console.log("-".repeat(40));
-      const biomeTester = new BiomeVersionTester();
+      const biomeTester = new BiomeVersionTester({ verbose: VERBOSE });
       const biomeResults = await biomeTester.testAllVersions();
       this.allResults.results.biome = biomeResults;
       this.allResults.summary.totalCategories++;
@@ -77,7 +84,7 @@ class MasterTestRunner {
       console.log(`✅ Passed: ${this.allResults.summary.totalPassed}`);
       console.log(`❌ Failed: ${this.allResults.summary.totalFailed}`);
     } catch (error) {
-      console.error("\n❌ Test runner failed:", error.message);
+      console.error("\n❌ Test runner failed:", VERBOSE ? error : error.message);
       throw error;
     }
   }
