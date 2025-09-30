@@ -95,8 +95,16 @@ async function main() {
 
   // 1) Build & pack library tarball
   fs.mkdirSync(distDir, { recursive: true });
-  exec('pnpm run build', { cwd: repoRoot }, args.verbose, path.join(logDir, 'lib-build.log'));
-  exec(`pnpm pack --pack-destination ${JSON.stringify(distDir)}`, { cwd: repoRoot }, args.verbose, path.join(logDir, 'lib-pack.log'));
+  const libBuild = exec('pnpm run build', { cwd: repoRoot }, args.verbose, path.join(logDir, 'lib-build.log'));
+  if (!libBuild.ok) {
+    console.error('Library build failed. See log:', path.join(logDir, 'lib-build.log'));
+    process.exit(1);
+  }
+  const libPack = exec(`pnpm pack --pack-destination ${JSON.stringify(distDir)}`, { cwd: repoRoot }, args.verbose, path.join(logDir, 'lib-pack.log'));
+  if (!libPack.ok) {
+    console.error('Library pack failed. See log:', path.join(logDir, 'lib-pack.log'));
+    process.exit(1);
+  }
   const tgzs = fs.readdirSync(distDir).filter((f) => f.endsWith('.tgz')).map((f) => ({ f, t: fs.statSync(path.join(distDir, f)).ctimeMs })).sort((a,b)=>b.t-a.t);
   if (tgzs.length === 0) throw new Error('No packed tarball found');
   const tarball = tgzs[0].f;
