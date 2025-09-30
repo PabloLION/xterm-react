@@ -91,7 +91,6 @@ run_checks() {
 commit_and_tag() {
   local version="$1"
   git add package.json package-lock.json VERSION.md pnpm-lock.yaml 2>/dev/null || true
-  git add package.json package-lock.json VERSION.md
   git commit -m "chore: release v${version}"
   git tag -a "v${version}" -m "Release v${version}"
 }
