@@ -77,6 +77,41 @@ function main() {
     process.exit(1)
   }
 
+  // Optionally add tool pins (eslint/prettier/biome)
+  function mapEslint(label) {
+    if (!label) return null
+    switch (label) {
+      case '8-ts6':
+        return { eslint: '^8.57.0', '@typescript-eslint/parser': '^6.21.0', '@typescript-eslint/eslint-plugin': '^6.21.0' }
+      case '9-ts8':
+        return { eslint: '^9.36.0', '@typescript-eslint/parser': '^8.44.1', '@typescript-eslint/eslint-plugin': '^8.44.1' }
+      default:
+        // allow raw version (e.g., 9.36.0)
+        return { eslint: label }
+    }
+  }
+  function mapPrettier(label) {
+    if (!label) return null
+    switch (label) {
+      case '2.8':
+        return { prettier: '^2.8.8', 'eslint-plugin-prettier': '^4.2.1' }
+      case '3.0':
+        return { prettier: '^3.0.0', 'eslint-plugin-prettier': '^5.0.0' }
+      case '3.3':
+        return { prettier: '^3.3.0', 'eslint-plugin-prettier': '^5.5.4' }
+      default:
+        return { prettier: label }
+    }
+  }
+  function mapBiome(label) {
+    if (!label) return null
+    return { '@biomejs/biome': label }
+  }
+
+  const eslintPins = mapEslint(args.eslint)
+  const prettierPins = mapPrettier(args.prettier)
+  const biomePins = mapBiome(args.biome)
+
   // Pin in consumer app
   const pkgPath = path.join(appDir, 'package.json')
   const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'))
@@ -92,7 +127,10 @@ function main() {
     '@types/react': versions['@types/react'],
     '@types/react-dom': versions['@types/react-dom'],
     vite: versions.vite,
-    '@vitejs/plugin-react': versions['@vitejs/plugin-react']
+    '@vitejs/plugin-react': versions['@vitejs/plugin-react'],
+    ...(eslintPins || {}),
+    ...(prettierPins || {}),
+    ...(biomePins || {})
   }
   fs.writeFileSync(pkgPath, JSON.stringify(pkg, null, 2))
 
@@ -100,6 +138,16 @@ function main() {
   try {
     sh('pnpm install', { cwd: appDir })
     sh('pnpm exec vite build', { cwd: appDir })
+    // Optional checks
+    if (eslintPins) {
+      try { sh('pnpm exec eslint .', { cwd: appDir }) } catch (e) { /* leave failure to user */ }
+    }
+    if (prettierPins) {
+      try { sh('pnpm exec prettier --check .', { cwd: appDir }) } catch (e) { /* non-blocking */ }
+    }
+    if (biomePins) {
+      try { sh('pnpm exec biome check .', { cwd: appDir }) } catch (e) { /* non-blocking */ }
+    }
   } finally {
     // Leave the pinned versions in place for reproducibility
   }
