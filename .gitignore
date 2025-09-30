@@ -12,4 +12,6 @@ version-compatibility-tests/devtools/*.json
 version-compatibility-tests/devtools/*.md
 version-compatibility-tests/logs/
 .compat-worktree/
+version-compatibility-tests/consumer-app/node_modules/
+version-compatibility-tests/consumer-app/dist/
 package-lock.json

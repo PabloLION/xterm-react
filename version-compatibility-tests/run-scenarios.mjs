@@ -3,9 +3,12 @@ import { execSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 
-const repoRoot = path.resolve(path.join(path.dirname(new URL(import.meta.url).pathname), '..'));
-const fragmentsRoot = path.join(repoRoot, 'scenarios', 'fragments');
-const logsRoot = path.join(repoRoot, 'logs', new Date().toISOString().replace(/[:.]/g, '-'));
+const suiteDir = path.dirname(new URL(import.meta.url).pathname);
+const repoRoot = path.resolve(path.join(suiteDir, '..'));
+const consumerAppDir = path.join(suiteDir, 'consumer-app');
+const distDir = path.join(suiteDir, 'dist');
+const fragmentsRoot = path.join(suiteDir, 'scenarios', 'fragments');
+const logsRoot = path.join(suiteDir, 'logs', new Date().toISOString().replace(/[:.]/g, '-'));
 
 function parseArgs(argv) {
   const args = { verbose: false, react: null, ts: null, eslint: null, prettier: null, biome: null, out: logsRoot };
@@ -77,7 +80,6 @@ async function main() {
   fs.mkdirSync(args.out, { recursive: true });
   const dims = { react: args.react, ts: args.ts, eslint: args.eslint, prettier: args.prettier, biome: args.biome };
   const scenario = slug(dims);
-  const worktree = path.resolve('.compat-worktree', scenario);
 
   // Build overrides
   const fragments = [];
@@ -91,41 +93,54 @@ async function main() {
   const logDir = path.join(args.out, scenario);
   fs.mkdirSync(logDir, { recursive: true });
 
-  // Prepare worktree
-  exec(`git worktree add -f ${JSON.stringify(worktree)} HEAD`, { cwd: process.cwd() }, args.verbose, path.join(logDir, 'worktree-add.log'));
+  // 1) Build & pack library tarball
+  fs.mkdirSync(distDir, { recursive: true });
+  exec('pnpm run build', { cwd: repoRoot }, args.verbose, path.join(logDir, 'lib-build.log'));
+  exec(`pnpm pack --pack-destination ${JSON.stringify(distDir)}`, { cwd: repoRoot }, args.verbose, path.join(logDir, 'lib-pack.log'));
+  const tgzs = fs.readdirSync(distDir).filter((f) => f.endsWith('.tgz')).map((f) => ({ f, t: fs.statSync(path.join(distDir, f)).ctimeMs })).sort((a,b)=>b.t-a.t);
+  if (tgzs.length === 0) throw new Error('No packed tarball found');
+  const tarball = tgzs[0].f;
 
+  // 2) Prepare consumer app package.json with file dep and overrides
+  const consumerPkgPath = path.join(consumerAppDir, 'package.json');
+  const consumerPkg = JSON.parse(fs.readFileSync(consumerPkgPath, 'utf8'));
+  const originalConsumerPkg = JSON.stringify(consumerPkg, null, 2);
+  consumerPkg.dependencies = consumerPkg.dependencies || {};
+  consumerPkg.dependencies['@pablo-lion/xterm-react'] = `file:../dist/${tarball}`;
+  consumerPkg.pnpm = consumerPkg.pnpm || {};
+  consumerPkg.pnpm.overrides = Object.assign({}, consumerPkg.pnpm.overrides || {}, overrides);
+  fs.writeFileSync(consumerPkgPath, JSON.stringify(consumerPkg, null, 2));
+
+  // 3) Install & build consumer app
   try {
-    const pkgPath = path.join(worktree, 'package.json');
-    const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
-    pkg.pnpm = pkg.pnpm || {};
-    pkg.pnpm.overrides = Object.assign({}, pkg.pnpm.overrides || {}, overrides);
-    fs.writeFileSync(pkgPath, JSON.stringify(pkg, null, 2));
+    const installRes = exec('pnpm install --prefer-offline', { cwd: consumerAppDir }, args.verbose, path.join(logDir, 'consumer-install.log'));
+    const buildRes = exec('pnpm exec vite build', { cwd: consumerAppDir }, args.verbose, path.join(logDir, 'consumer-build.log'));
 
-    // Install
-    const installRes = exec('pnpm install --prefer-offline', { cwd: worktree }, args.verbose, path.join(logDir, 'install.log'));
-
-    // Commands: build if react set; lint, prettier, biome based on dimensions
+    // optional checks if dimensions provided
     const results = {};
-    if (args.react) results.build = exec('pnpm run build', { cwd: worktree }, args.verbose, path.join(logDir, 'build.log'));
-    if (args.eslint) results.lint = exec('pnpm run lint:no-fix', { cwd: worktree }, args.verbose, path.join(logDir, 'lint.log'));
-    if (args.prettier) results.prettier = exec('pnpm exec prettier --check .', { cwd: worktree }, args.verbose, path.join(logDir, 'prettier.log'));
-    if (args.biome) results.biome = exec('pnpm run biome:check', { cwd: worktree }, args.verbose, path.join(logDir, 'biome.log'));
+    if (args.eslint) results.lint = exec('pnpm exec eslint .', { cwd: consumerAppDir }, args.verbose, path.join(logDir, 'consumer-eslint.log'));
+    if (args.prettier) results.prettier = exec('pnpm exec prettier --check .', { cwd: consumerAppDir }, args.verbose, path.join(logDir, 'consumer-prettier.log'));
+    if (args.biome) results.biome = exec('pnpm exec biome check .', { cwd: consumerAppDir }, args.verbose, path.join(logDir, 'consumer-biome.log'));
 
-    // Summary
     const summary = {
       scenario,
+      tarball,
       overrides,
       install: installRes.ok,
+      build: buildRes.ok,
       results: Object.fromEntries(Object.entries(results).map(([k, v]) => [k, v.ok])),
       logDir,
     };
     fs.writeFileSync(path.join(logDir, 'summary.json'), JSON.stringify(summary, null, 2));
     console.log('Scenario:', scenario);
+    console.log('Tarball:', tarball);
     console.log('Logs:', logDir);
     console.log('Install:', installRes.ok ? 'OK' : 'FAIL');
-    for (const [k, v] of Object.entries(results)) console.log(`${k}: ${v.ok ? 'OK' : 'FAIL'}`);
+    console.log('Build:', buildRes.ok ? 'OK' : 'FAIL');
+    for (const [k, v] of Object.entries(summary.results)) console.log(`${k}: ${v ? 'OK' : 'FAIL'}`);
   } finally {
-    exec(`git worktree remove -f ${JSON.stringify(worktree)}`, { cwd: process.cwd() }, args.verbose, path.join(logDir, 'worktree-remove.log'));
+    // restore consumer package.json
+    fs.writeFileSync(consumerPkgPath, originalConsumerPkg);
   }
 }
 
@@ -133,4 +148,3 @@ main().catch((e) => {
   console.error('Runner error:', e);
   process.exit(1);
 });
-
