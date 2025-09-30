@@ -11,14 +11,14 @@ This project provides a React component that integrates the [xterm.js](https://x
 
 ## Installation
 
-To install the component, use package manager like `npm`, `yarn` or `pnpm`:
+To install the component, use `npm`, `yarn`, or `pnpm`:
 
 ```sh
-npm install xterm-react
+npm install @pablo-lion/xterm-react
 # or
-yarn add xterm-react
+yarn add @pablo-lion/xterm-react
 # or
-pnpm add xterm-react
+pnpm add @pablo-lion/xterm-react
 ```
 
 ### Code Example
