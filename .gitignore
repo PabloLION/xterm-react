@@ -10,8 +10,6 @@ version-compatibility-tests/core/*.json
 version-compatibility-tests/core/*.md
 version-compatibility-tests/devtools/*.json
 version-compatibility-tests/devtools/*.md
-version-compatibility-tests/logs/
-.compat-worktree/
 version-compatibility-tests/consumer-app/node_modules/
 version-compatibility-tests/consumer-app/dist/
 version-compatibility-tests/dist/
