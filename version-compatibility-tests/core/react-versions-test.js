@@ -93,7 +93,8 @@ class ReactVersionTester {
 
       // Install dependencies
       console.log(`   Installing ${versionConfig.name} dependencies...`);
-      execSync("pnpm install --silent", { stdio: this.verbose ? "inherit" : "pipe" });
+      const installCmd = this.verbose ? "pnpm install" : "pnpm install --silent";
+      execSync(installCmd, { stdio: this.verbose ? "inherit" : "pipe" });
 
       // Test TypeScript compilation
       console.log(`   Testing TypeScript compilation...`);
@@ -147,7 +148,8 @@ class ReactVersionTester {
         JSON.stringify(this.originalPackageJson, null, 2)
       );
       try {
-        execSync("pnpm install --silent", { stdio: this.verbose ? "inherit" : "pipe" });
+        const restoreCmd = this.verbose ? "pnpm install" : "pnpm install --silent";
+        execSync(restoreCmd, { stdio: this.verbose ? "inherit" : "pipe" });
         console.log("✅ Original dependencies restored");
       } catch (error) {
         console.error("⚠️  Warning: Failed to restore original dependencies");

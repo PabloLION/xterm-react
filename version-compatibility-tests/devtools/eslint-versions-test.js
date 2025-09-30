@@ -123,7 +123,8 @@ class ESLintVersionTester {
 
       // Install dependencies
       console.log(`   Installing ${config.name} dependencies...`);
-      execSync("pnpm install --silent", { stdio: this.verbose ? "inherit" : "pipe" });
+      const installCmd = this.verbose ? "pnpm install" : "pnpm install --silent";
+      execSync(installCmd, { stdio: this.verbose ? "inherit" : "pipe" });
 
       // Test ESLint functionality
       console.log(`   Testing ESLint execution...`);
@@ -186,7 +187,8 @@ class ESLintVersionTester {
 
       // Install dependencies
       console.log(`   Installing ${config.name} dependencies...`);
-      execSync("pnpm install --silent", { stdio: this.verbose ? "inherit" : "pipe" });
+      const installCmd = this.verbose ? "pnpm install" : "pnpm install --silent";
+      execSync(installCmd, { stdio: this.verbose ? "inherit" : "pipe" });
 
       // Test Prettier functionality
       console.log(`   Testing Prettier execution...`);
@@ -239,7 +241,8 @@ class ESLintVersionTester {
         JSON.stringify(this.originalPackageJson, null, 2)
       );
       try {
-        execSync("pnpm install --silent", { stdio: this.verbose ? "inherit" : "pipe" });
+        const restoreCmd = this.verbose ? "pnpm install" : "pnpm install --silent";
+        execSync(restoreCmd, { stdio: this.verbose ? "inherit" : "pipe" });
         console.log("✅ Original dependencies restored");
       } catch (error) {
         console.error("⚠️  Warning: Failed to restore original dependencies");

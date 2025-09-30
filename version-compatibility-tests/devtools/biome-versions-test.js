@@ -82,7 +82,8 @@ class BiomeVersionTester {
 
       // Install dependencies
       console.log(`   Installing ${config.name} dependencies...`);
-      execSync("pnpm install --silent", { stdio: this.verbose ? "inherit" : "pipe" });
+      const installCmd = this.verbose ? "pnpm install" : "pnpm install --silent";
+      execSync(installCmd, { stdio: this.verbose ? "inherit" : "pipe" });
 
       // Create compatible biome.json for this version
       await this.createCompatibleBiomeConfig(config.version);
@@ -204,7 +205,8 @@ class BiomeVersionTester {
     }
 
     try {
-      execSync("pnpm install --silent", { stdio: this.verbose ? "inherit" : "pipe" });
+      const restoreCmd = this.verbose ? "pnpm install" : "pnpm install --silent";
+      execSync(restoreCmd, { stdio: this.verbose ? "inherit" : "pipe" });
       console.log("✅ Original files restored");
     } catch (error) {
       console.error("⚠️  Warning: Failed to restore original dependencies");

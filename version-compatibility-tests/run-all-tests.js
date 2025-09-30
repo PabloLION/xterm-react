@@ -7,6 +7,7 @@
 
 import fs from "node:fs";
 import path from "node:path";
+import { execSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
 // Import test modules
@@ -43,6 +44,15 @@ class MasterTestRunner {
   async runAllTests() {
     if (VERBOSE) {
       console.log("[verbose] Mode ON");
+      try {
+        console.log(`[verbose] Node: ${process.version}`);
+        const pnpmVersion = execSync("pnpm --version", { stdio: "pipe" })
+          .toString()
+          .trim();
+        console.log(`[verbose] pnpm: ${pnpmVersion}`);
+      } catch (e) {
+        console.log("[verbose] pnpm not found on PATH or failed to run.");
+      }
     }
     console.log("🚀 Starting Comprehensive Version Compatibility Tests\n");
     console.log("=".repeat(60));
