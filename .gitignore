@@ -13,4 +13,7 @@ version-compatibility-tests/devtools/*.md
 version-compatibility-tests/consumer-app/node_modules/
 version-compatibility-tests/consumer-app/dist/
 version-compatibility-tests/dist/
+version-compatibility-tests/logs/
+version-compatibility-tests/consumer-app/pnpm-lock.yaml
+.compat-worktree/
 package-lock.json
