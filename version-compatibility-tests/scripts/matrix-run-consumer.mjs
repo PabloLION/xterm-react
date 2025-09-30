@@ -35,8 +35,8 @@ function runScenario(react, ts, eslint, prettier, biome) {
   const dir = path.join(logsRoot, scenario)
   fs.mkdirSync(dir, { recursive: true })
 
-  const pinCmd = `node ../scripts/consumer-pin-and-build.mjs --react ${react} --react-dom ${react} --typescript ${ts} --eslint ${eslint} --prettier ${prettier} --biome ${biome}`
-  const pinRes = sh(pinCmd, path.join(root, 'version-compatibility-tests'), path.join(dir, 'pin-and-build.log'))
+  const pinCmd = `node version-compatibility-tests/scripts/consumer-pin-and-build.mjs --react ${react} --react-dom ${react} --typescript ${ts} --eslint ${eslint} --prettier ${prettier} --biome ${biome}`
+  const pinRes = sh(pinCmd, root, path.join(dir, 'pin-and-build.log'))
 
   // After build, run quick checks again to capture statuses independently
   const buildRes = sh('pnpm exec vite build', appDir, path.join(dir, 'build.log'))
@@ -78,4 +78,3 @@ function main() {
 }
 
 main()
-
