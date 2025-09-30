@@ -109,6 +109,20 @@ async function main() {
   consumerPkg.dependencies['@pablo-lion/xterm-react'] = `file:../dist/${tarball}`;
   consumerPkg.pnpm = consumerPkg.pnpm || {};
   consumerPkg.pnpm.overrides = Object.assign({}, consumerPkg.pnpm.overrides || {}, overrides);
+  // Ensure tool placeholders when their dimensions are requested so overrides install them
+  consumerPkg.devDependencies = consumerPkg.devDependencies || {};
+  if (args.eslint) {
+    consumerPkg.devDependencies.eslint ||= '*';
+    consumerPkg.devDependencies['@typescript-eslint/parser'] ||= '*';
+    consumerPkg.devDependencies['@typescript-eslint/eslint-plugin'] ||= '*';
+  }
+  if (args.prettier) {
+    consumerPkg.devDependencies.prettier ||= '*';
+    consumerPkg.devDependencies['eslint-plugin-prettier'] ||= '*';
+  }
+  if (args.biome) {
+    consumerPkg.devDependencies['@biomejs/biome'] ||= '*';
+  }
   fs.writeFileSync(consumerPkgPath, JSON.stringify(consumerPkg, null, 2));
 
   // 3) Install & build consumer app
