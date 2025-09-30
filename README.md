@@ -70,6 +70,11 @@ I'll add a full docs later.
 
 For development purposes, this project uses `vite` for a streamlined and efficient workflow.
 
+## Release
+
+The release workflow is automated by the [`scripts/prepare-publish.sh`](scripts/prepare-publish.sh) helper. Run the script with
+either a semantic version bump (`--bump major|minor|patch`) or an explicit `--version` value to prepare and publish a release.
+
 ## Contributing
 
 Contributions are welcome! Please feel free to submit pull requests or open issues to discuss potential improvements or features.
