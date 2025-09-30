@@ -31,14 +31,17 @@
 Note: If a topic is too large for one commit, split it into as many small, atomic commits as needed. Keep each commit to a single logical change.
 
 Conventions
+
 - Branch: `<type>/<scope>-<short-desc>` (kebab-case)
 - Commit: `<type>(scope): short imperative description` (≤72 chars)
 - Types: feat, fix, refactor, perf, style, test, docs, build, ci, chore
 
 Recommended roadmap branch
+
 - docs/roadmap-1.2-hardening (rename from `improvement-plan` after review)
 
 Planned topic branches and example commits
+
 - fix/react-ref-type-elementref
   - fix(types): make elementRef ref compatible with React 19
 - docs/public-api-xterm-props
@@ -62,12 +65,6 @@ Planned topic branches and example commits
   - docs(release): align VERSION.md with CHANGELOG.md entries
 - test/xterm-rtl-smoke
   - test(xterm): add RTL mount and imperative API smoke tests
-<<<<<<< HEAD
-Decision: CI guard-only vs local auto-fix
-
-=======
-
-Decision: CI guard-only vs local auto-fix
->>>>>>> f5209b8 (docs(roadmap): document CI guard-only and local auto-fix policy)
+    Decision: CI guard-only vs local auto-fix
 - CI (GitHub Actions) is a guard: check-only with `pnpm lint:no-fix --max-warnings=0`, `pnpm exec prettier --check .`, and `pnpm biome:check`. CI must not mutate files.
 - Local dev hooks (pre-push) run auto-fix: `pnpm lint` and `pnpm format`, then fail the push if diffs remain. This keeps PRs clean and enforces running our tools locally.
