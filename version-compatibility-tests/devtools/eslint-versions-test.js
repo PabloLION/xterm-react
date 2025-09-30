@@ -53,8 +53,47 @@ const PRETTIER_VERSIONS_TO_TEST = [
 class ESLintVersionTester {
   constructor(opts = {}) {
     this.verbose = Boolean(opts.verbose);
+    this.logDir = opts.logDir || null;
     this.results = [];
     this.originalPackageJson = null;
+  }
+
+  slugify(text) {
+    return text.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+  }
+
+  execWithLog(cmd, options, logFile) {
+    const logPath = this.logDir ? path.join(this.logDir, "eslint", logFile) : null;
+    try {
+      const out = execSync(cmd, { ...options, stdio: "pipe" });
+      if (logPath) {
+        fs.mkdirSync(path.dirname(logPath), { recursive: true });
+        fs.writeFileSync(logPath, out);
+      }
+      if (this.verbose) {
+        const txt = out.toString();
+        const lines = txt.split(/\r?\n/);
+        const tail = lines.slice(-40).join("\n");
+        console.log(`[verbose] ${cmd} -> ${logFile}`);
+        if (tail.trim()) console.log(tail);
+      }
+      return true;
+    } catch (err) {
+      const stdout = err.stdout ? err.stdout.toString() : "";
+      const stderr = err.stderr ? err.stderr.toString() : "";
+      const combined = stdout + (stderr ? "\n" + stderr : "");
+      if (logPath) {
+        fs.mkdirSync(path.dirname(logPath), { recursive: true });
+        fs.writeFileSync(logPath, combined);
+      }
+      if (this.verbose) {
+        console.error(`[verbose] FAILED: ${cmd} -> ${logFile}`);
+        const lines = combined.split(/\r?\n/);
+        const tail = lines.slice(-60).join("\n");
+        if (tail.trim()) console.error(tail);
+      }
+      throw err;
+    }
   }
 
   async testAllVersions() {
@@ -62,7 +101,7 @@ class ESLintVersionTester {
 
     // Backup original package.json
     this.originalPackageJson = JSON.parse(
-      fs.readFileSync("package.json", "utf8")
+      fs.readFileSync("package.json", "utf8"),
     );
 
     // Test ESLint versions
@@ -118,18 +157,18 @@ class ESLintVersionTester {
       // Write test package.json
       fs.writeFileSync(
         "package.json",
-        JSON.stringify(testPackageJson, null, 2)
+        JSON.stringify(testPackageJson, null, 2),
       );
 
       // Install dependencies
       console.log(`   Installing ${config.name} dependencies...`);
       const installCmd = this.verbose ? "pnpm install" : "pnpm install --silent";
-      execSync(installCmd, { stdio: this.verbose ? "inherit" : "pipe" });
+      this.execWithLog(installCmd, {}, `${this.slugify(config.name)}-install.log`);
 
       // Test ESLint functionality
       console.log(`   Testing ESLint execution...`);
       try {
-        execSync("pnpm run lint:no-fix", { stdio: this.verbose ? "inherit" : "pipe" });
+        this.execWithLog("pnpm run lint:no-fix", {}, `${this.slugify(config.name)}-lint.log`);
         var lintSuccess = true;
       } catch (lintError) {
         // ESLint finding issues is OK, we just want to ensure it runs
@@ -140,7 +179,7 @@ class ESLintVersionTester {
 
       // Test build with new ESLint setup
       console.log(`   Testing build compatibility...`);
-      execSync("pnpm run build", { stdio: this.verbose ? "inherit" : "pipe" });
+      this.execWithLog("pnpm run build", {}, `${this.slugify(config.name)}-build.log`);
 
       return {
         category: "ESLint",
@@ -150,7 +189,9 @@ class ESLintVersionTester {
         lintExecutes: lintSuccess,
         buildSuccess: true,
         timestamp: new Date().toISOString(),
-        details: `ESLint ${lintSuccess ? "executes" : "has execution issues"}, build successful`,
+        details: `ESLint ${
+          lintSuccess ? "executes" : "has execution issues"
+        }, build successful`,
       };
     } catch (error) {
       return {
@@ -182,18 +223,18 @@ class ESLintVersionTester {
       // Write test package.json
       fs.writeFileSync(
         "package.json",
-        JSON.stringify(testPackageJson, null, 2)
+        JSON.stringify(testPackageJson, null, 2),
       );
 
       // Install dependencies
       console.log(`   Installing ${config.name} dependencies...`);
-      const installCmd = this.verbose ? "pnpm install" : "pnpm install --silent";
-      execSync(installCmd, { stdio: this.verbose ? "inherit" : "pipe" });
+      const installCmd2 = this.verbose ? "pnpm install" : "pnpm install --silent";
+      this.execWithLog(installCmd2, {}, `${this.slugify(config.name)}-install.log`);
 
       // Test Prettier functionality
       console.log(`   Testing Prettier execution...`);
       try {
-        execSync("pnpm exec prettier --check src/", { stdio: this.verbose ? "inherit" : "pipe" });
+        this.execWithLog("pnpm exec prettier --check src/", {}, `${this.slugify(config.name)}-prettier-check.log`);
         var prettierSuccess = true;
       } catch (prettierError) {
         // Prettier finding formatting issues is OK, we just want to ensure it runs
@@ -205,7 +246,7 @@ class ESLintVersionTester {
       // Test format command
       console.log(`   Testing format command...`);
       try {
-        execSync("pnpm run format", { stdio: this.verbose ? "inherit" : "pipe" });
+        this.execWithLog("pnpm run format", {}, `${this.slugify(config.name)}-format.log`);
         var formatSuccess = true;
       } catch (formatError) {
         var formatSuccess = false;
@@ -220,7 +261,9 @@ class ESLintVersionTester {
         prettierExecutes: prettierSuccess,
         formatSuccess: formatSuccess,
         timestamp: new Date().toISOString(),
-        details: `Prettier ${prettierSuccess ? "executes" : "has execution issues"}, format ${formatSuccess ? "works" : "issues"}`,
+        details: `Prettier ${
+          prettierSuccess ? "executes" : "has execution issues"
+        }, format ${formatSuccess ? "works" : "issues"}`,
       };
     } catch (error) {
       return {
@@ -238,11 +281,11 @@ class ESLintVersionTester {
     if (this.originalPackageJson) {
       fs.writeFileSync(
         "package.json",
-        JSON.stringify(this.originalPackageJson, null, 2)
+        JSON.stringify(this.originalPackageJson, null, 2),
       );
       try {
         const restoreCmd = this.verbose ? "pnpm install" : "pnpm install --silent";
-        execSync(restoreCmd, { stdio: this.verbose ? "inherit" : "pipe" });
+        this.execWithLog(restoreCmd, {}, `restore-install.log`);
         console.log("✅ Original dependencies restored");
       } catch (error) {
         console.error("⚠️  Warning: Failed to restore original dependencies");
@@ -283,17 +326,27 @@ class ESLintVersionTester {
     // Group results by category
     const eslintResults = this.results.filter((r) => r.category === "ESLint");
     const prettierResults = this.results.filter(
-      (r) => r.category === "Prettier"
+      (r) => r.category === "Prettier",
     );
 
     if (eslintResults.length > 0) {
       markdown += `## ESLint Versions\n\n`;
       eslintResults.forEach((result) => {
         markdown += `### ${result.name}\n\n`;
-        markdown += `- **Status**: ${result.success ? "✅ Compatible" : "❌ Issues found"}\n`;
-        markdown += `- **Versions**: ${JSON.stringify(result.versions, null, 2)}\n`;
-        markdown += `- **Lint Execution**: ${result.lintExecutes ? "✅ Works" : "❌ Issues"}\n`;
-        markdown += `- **Build**: ${result.buildSuccess ? "✅ Success" : "❌ Failed"}\n`;
+        markdown += `- **Status**: ${
+          result.success ? "✅ Compatible" : "❌ Issues found"
+        }\n`;
+        markdown += `- **Versions**: ${JSON.stringify(
+          result.versions,
+          null,
+          2,
+        )}\n`;
+        markdown += `- **Lint Execution**: ${
+          result.lintExecutes ? "✅ Works" : "❌ Issues"
+        }\n`;
+        markdown += `- **Build**: ${
+          result.buildSuccess ? "✅ Success" : "❌ Failed"
+        }\n`;
         if (result.error) {
           markdown += `- **Error**: ${result.error}\n`;
         }
@@ -308,11 +361,17 @@ class ESLintVersionTester {
       markdown += `## Prettier Versions\n\n`;
       prettierResults.forEach((result) => {
         markdown += `### ${result.name}\n\n`;
-        markdown += `- **Status**: ${result.success ? "✅ Compatible" : "❌ Issues found"}\n`;
+        markdown += `- **Status**: ${
+          result.success ? "✅ Compatible" : "❌ Issues found"
+        }\n`;
         markdown += `- **Prettier Version**: ${result.version}\n`;
         markdown += `- **Plugin Version**: ${result.pluginVersion}\n`;
-        markdown += `- **Prettier Execution**: ${result.prettierExecutes ? "✅ Works" : "❌ Issues"}\n`;
-        markdown += `- **Format Command**: ${result.formatSuccess ? "✅ Works" : "❌ Issues"}\n`;
+        markdown += `- **Prettier Execution**: ${
+          result.prettierExecutes ? "✅ Works" : "❌ Issues"
+        }\n`;
+        markdown += `- **Format Command**: ${
+          result.formatSuccess ? "✅ Works" : "❌ Issues"
+        }\n`;
         if (result.error) {
           markdown += `- **Error**: ${result.error}\n`;
         }

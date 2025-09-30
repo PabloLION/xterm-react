@@ -34,8 +34,47 @@ const REACT_VERSIONS_TO_TEST = [
 class ReactVersionTester {
   constructor(opts = {}) {
     this.verbose = Boolean(opts.verbose);
+    this.logDir = opts.logDir || null;
     this.results = [];
     this.originalPackageJson = null;
+  }
+
+  slugFor(versionName) {
+    return versionName.toLowerCase().replace(/\s+/g, "-");
+  }
+
+  execWithLog(cmd, options, logFile) {
+    const logPath = this.logDir ? path.join(this.logDir, "react", logFile) : null;
+    try {
+      const out = execSync(cmd, { ...options, stdio: "pipe" });
+      if (logPath) {
+        fs.mkdirSync(path.dirname(logPath), { recursive: true });
+        fs.writeFileSync(logPath, out);
+      }
+      if (this.verbose) {
+        const txt = out.toString();
+        const lines = txt.split(/\r?\n/);
+        const tail = lines.slice(-40).join("\n");
+        console.log(`[verbose] ${cmd} -> ${logFile}`);
+        if (tail.trim()) console.log(tail);
+      }
+      return true;
+    } catch (err) {
+      const stdout = err.stdout ? err.stdout.toString() : "";
+      const stderr = err.stderr ? err.stderr.toString() : "";
+      const combined = stdout + (stderr ? "\n" + stderr : "");
+      if (logPath) {
+        fs.mkdirSync(path.dirname(logPath), { recursive: true });
+        fs.writeFileSync(logPath, combined);
+      }
+      if (this.verbose) {
+        console.error(`[verbose] FAILED: ${cmd} -> ${logFile}`);
+        const lines = combined.split(/\r?\n/);
+        const tail = lines.slice(-60).join("\n");
+        if (tail.trim()) console.error(tail);
+      }
+      throw err;
+    }
   }
 
   async testAllVersions() {
@@ -43,7 +82,7 @@ class ReactVersionTester {
 
     // Backup original package.json
     this.originalPackageJson = JSON.parse(
-      fs.readFileSync("package.json", "utf8")
+      fs.readFileSync("package.json", "utf8"),
     );
 
     for (const versionConfig of REACT_VERSIONS_TO_TEST) {
@@ -88,17 +127,17 @@ class ReactVersionTester {
       // Write test package.json
       fs.writeFileSync(
         "package.json",
-        JSON.stringify(testPackageJson, null, 2)
+        JSON.stringify(testPackageJson, null, 2),
       );
 
       // Install dependencies
       console.log(`   Installing ${versionConfig.name} dependencies...`);
       const installCmd = this.verbose ? "pnpm install" : "pnpm install --silent";
-      execSync(installCmd, { stdio: this.verbose ? "inherit" : "pipe" });
+      this.execWithLog(installCmd, {}, `${this.slugFor(versionConfig.name)}-install.log`);
 
       // Test TypeScript compilation
       console.log(`   Testing TypeScript compilation...`);
-      execSync("pnpm run build", { stdio: this.verbose ? "inherit" : "pipe" });
+      this.execWithLog("pnpm run build", {}, `${this.slugFor(versionConfig.name)}-build.log`);
 
       // Test if e2e example still works
       console.log(`   Testing e2e compatibility...`);
@@ -111,7 +150,9 @@ class ReactVersionTester {
         buildSuccess: true,
         e2eSuccess: buildResult.success,
         timestamp: new Date().toISOString(),
-        details: `Build successful, e2e ${buildResult.success ? "compatible" : "has issues"}`,
+        details: `Build successful, e2e ${
+          buildResult.success ? "compatible" : "has issues"
+        }`,
       };
     } catch (error) {
       return {
@@ -127,11 +168,11 @@ class ReactVersionTester {
   async testE2EBuild() {
     try {
       // Try to build the e2e project with Vite
-      execSync("pnpm exec vite build", {
-        stdio: this.verbose ? "inherit" : "pipe",
-        cwd: process.cwd(),
-        timeout: 60000,
-      });
+      this.execWithLog(
+        "pnpm exec vite build",
+        { cwd: process.cwd(), timeout: 60000 },
+        `${this.slugFor(versionConfig.name)}-e2e-build.log`,
+      );
       return { success: true };
     } catch (error) {
       return {
@@ -145,11 +186,11 @@ class ReactVersionTester {
     if (this.originalPackageJson) {
       fs.writeFileSync(
         "package.json",
-        JSON.stringify(this.originalPackageJson, null, 2)
+        JSON.stringify(this.originalPackageJson, null, 2),
       );
       try {
         const restoreCmd = this.verbose ? "pnpm install" : "pnpm install --silent";
-        execSync(restoreCmd, { stdio: this.verbose ? "inherit" : "pipe" });
+        this.execWithLog(restoreCmd, {}, `restore-install.log`);
         console.log("✅ Original dependencies restored");
       } catch (error) {
         console.error("⚠️  Warning: Failed to restore original dependencies");
@@ -186,9 +227,15 @@ class ReactVersionTester {
     this.results.forEach((result) => {
       markdown += `### ${result.name}\n\n`;
       markdown += `- **Version**: ${result.version}\n`;
-      markdown += `- **Status**: ${result.success ? "✅ Compatible" : "❌ Issues found"}\n`;
-      markdown += `- **Build**: ${result.buildSuccess ? "✅ Success" : "❌ Failed"}\n`;
-      markdown += `- **E2E**: ${result.e2eSuccess ? "✅ Compatible" : "❌ Issues"}\n`;
+      markdown += `- **Status**: ${
+        result.success ? "✅ Compatible" : "❌ Issues found"
+      }\n`;
+      markdown += `- **Build**: ${
+        result.buildSuccess ? "✅ Success" : "❌ Failed"
+      }\n`;
+      markdown += `- **E2E**: ${
+        result.e2eSuccess ? "✅ Compatible" : "❌ Issues"
+      }\n`;
       if (result.error) {
         markdown += `- **Error**: ${result.error}\n`;
       }

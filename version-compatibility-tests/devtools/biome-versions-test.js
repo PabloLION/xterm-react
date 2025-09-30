@@ -21,9 +21,48 @@ const BIOME_VERSIONS_TO_TEST = [
 class BiomeVersionTester {
   constructor(opts = {}) {
     this.verbose = Boolean(opts.verbose);
+    this.logDir = opts.logDir || null;
     this.results = [];
     this.originalPackageJson = null;
     this.originalBiomeConfig = null;
+  }
+
+  slugify(text) {
+    return text.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+  }
+
+  execWithLog(cmd, options, logFile) {
+    const logPath = this.logDir ? path.join(this.logDir, "biome", logFile) : null;
+    try {
+      const out = execSync(cmd, { ...options, stdio: "pipe" });
+      if (logPath) {
+        fs.mkdirSync(path.dirname(logPath), { recursive: true });
+        fs.writeFileSync(logPath, out);
+      }
+      if (this.verbose) {
+        const txt = out.toString();
+        const lines = txt.split(/\r?\n/);
+        const tail = lines.slice(-40).join("\n");
+        console.log(`[verbose] ${cmd} -> ${logFile}`);
+        if (tail.trim()) console.log(tail);
+      }
+      return true;
+    } catch (err) {
+      const stdout = err.stdout ? err.stdout.toString() : "";
+      const stderr = err.stderr ? err.stderr.toString() : "";
+      const combined = stdout + (stderr ? "\n" + stderr : "");
+      if (logPath) {
+        fs.mkdirSync(path.dirname(logPath), { recursive: true });
+        fs.writeFileSync(logPath, combined);
+      }
+      if (this.verbose) {
+        console.error(`[verbose] FAILED: ${cmd} -> ${logFile}`);
+        const lines = combined.split(/\r?\n/);
+        const tail = lines.slice(-60).join("\n");
+        if (tail.trim()) console.error(tail);
+      }
+      throw err;
+    }
   }
 
   async testAllVersions() {
@@ -31,11 +70,11 @@ class BiomeVersionTester {
 
     // Backup original files
     this.originalPackageJson = JSON.parse(
-      fs.readFileSync("package.json", "utf8")
+      fs.readFileSync("package.json", "utf8"),
     );
     if (fs.existsSync("biome.json")) {
       this.originalBiomeConfig = JSON.parse(
-        fs.readFileSync("biome.json", "utf8")
+        fs.readFileSync("biome.json", "utf8"),
       );
     }
 
@@ -77,13 +116,13 @@ class BiomeVersionTester {
       // Write test package.json
       fs.writeFileSync(
         "package.json",
-        JSON.stringify(testPackageJson, null, 2)
+        JSON.stringify(testPackageJson, null, 2),
       );
 
       // Install dependencies
       console.log(`   Installing ${config.name} dependencies...`);
       const installCmd = this.verbose ? "pnpm install" : "pnpm install --silent";
-      execSync(installCmd, { stdio: this.verbose ? "inherit" : "pipe" });
+      this.execWithLog(installCmd, {}, `${this.slugify(config.name)}-install.log`);
 
       // Create compatible biome.json for this version
       await this.createCompatibleBiomeConfig(config.version);
@@ -91,10 +130,11 @@ class BiomeVersionTester {
       // Test Biome check functionality
       console.log(`   Testing Biome check...`);
       try {
-        execSync("pnpm run biome:check -- --max-diagnostics=5", {
-          stdio: this.verbose ? "inherit" : "pipe",
-          timeout: 30000,
-        });
+        this.execWithLog(
+          "pnpm run biome:check -- --max-diagnostics=5",
+          { timeout: 30000 },
+          `${this.slugify(config.name)}-biome-check.log`,
+        );
         var checkSuccess = true;
         var checkError = null;
       } catch (checkErr) {
@@ -109,10 +149,12 @@ class BiomeVersionTester {
       // Test Biome format functionality
       console.log(`   Testing Biome format...`);
       try {
-        execSync("pnpm run biome:format -- --dry-run", {
-          stdio: this.verbose ? "inherit" : "pipe",
-          timeout: 30000,
-        });
+        // Prefer direct exec to avoid "--" pass-through issues in scripts
+        this.execWithLog(
+          "pnpm exec biome format --write . --dry-run",
+          { timeout: 30000 },
+          `${this.slugify(config.name)}-biome-format.log`,
+        );
         var formatSuccess = true;
       } catch (formatErr) {
         var formatSuccess =
@@ -123,10 +165,11 @@ class BiomeVersionTester {
       // Test migration if needed
       console.log(`   Testing configuration migration...`);
       try {
-        execSync("pnpm exec biome migrate --dry-run", {
-          stdio: this.verbose ? "inherit" : "pipe",
-          timeout: 15000,
-        });
+        this.execWithLog(
+          "pnpm exec biome migrate --dry-run",
+          { timeout: 15000 },
+          `${this.slugify(config.name)}-biome-migrate.log`,
+        );
         var migrateSuccess = true;
       } catch (migrateErr) {
         var migrateSuccess =
@@ -142,7 +185,9 @@ class BiomeVersionTester {
         formatExecutes: formatSuccess,
         migrationSupported: migrateSuccess,
         timestamp: new Date().toISOString(),
-        details: `Check: ${checkSuccess ? "OK" : "Issues"}, Format: ${formatSuccess ? "OK" : "Issues"}`,
+        details: `Check: ${checkSuccess ? "OK" : "Issues"}, Format: ${
+          formatSuccess ? "OK" : "Issues"
+        }`,
         checkError: checkError,
       };
     } catch (error) {
@@ -193,20 +238,20 @@ class BiomeVersionTester {
     if (this.originalPackageJson) {
       fs.writeFileSync(
         "package.json",
-        JSON.stringify(this.originalPackageJson, null, 2)
+        JSON.stringify(this.originalPackageJson, null, 2),
       );
     }
 
     if (this.originalBiomeConfig) {
       fs.writeFileSync(
         "biome.json",
-        JSON.stringify(this.originalBiomeConfig, null, 2)
+        JSON.stringify(this.originalBiomeConfig, null, 2),
       );
     }
 
     try {
       const restoreCmd = this.verbose ? "pnpm install" : "pnpm install --silent";
-      execSync(restoreCmd, { stdio: this.verbose ? "inherit" : "pipe" });
+      this.execWithLog(restoreCmd, {}, `restore-install.log`);
       console.log("✅ Original files restored");
     } catch (error) {
       console.error("⚠️  Warning: Failed to restore original dependencies");
@@ -247,10 +292,18 @@ class BiomeVersionTester {
     this.results.forEach((result) => {
       markdown += `### ${result.name}\n\n`;
       markdown += `- **Version**: ${result.version}\n`;
-      markdown += `- **Status**: ${result.success ? "✅ Compatible" : "❌ Issues found"}\n`;
-      markdown += `- **Check Command**: ${result.checkExecutes ? "✅ Works" : "❌ Issues"}\n`;
-      markdown += `- **Format Command**: ${result.formatExecutes ? "✅ Works" : "❌ Issues"}\n`;
-      markdown += `- **Migration Support**: ${result.migrationSupported ? "✅ Supported" : "❌ Issues"}\n`;
+      markdown += `- **Status**: ${
+        result.success ? "✅ Compatible" : "❌ Issues found"
+      }\n`;
+      markdown += `- **Check Command**: ${
+        result.checkExecutes ? "✅ Works" : "❌ Issues"
+      }\n`;
+      markdown += `- **Format Command**: ${
+        result.formatExecutes ? "✅ Works" : "❌ Issues"
+      }\n`;
+      markdown += `- **Migration Support**: ${
+        result.migrationSupported ? "✅ Supported" : "❌ Issues"
+      }\n`;
       if (result.error) {
         markdown += `- **Error**: ${result.error}\n`;
       }
