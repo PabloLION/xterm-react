@@ -40,7 +40,7 @@ jobs:
         run: git diff --exit-code
 
       - name: Lint (verify no remaining issues)
-        run: pnpm lint:no-fix -- --max-warnings=0
+        run: pnpm lint:no-fix --max-warnings=0
 
       - name: Format (verify idempotency)
         run: pnpm exec prettier --check .

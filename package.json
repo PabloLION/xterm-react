@@ -9,8 +9,8 @@
   ],
   "scripts": {
     "dev": "vite",
-    "lint": "eslint --fix",
-    "lint:no-fix": "eslint",
+    "lint": "eslint --fix .",
+    "lint:no-fix": "eslint .",
     "format": "prettier --write .",
     "biome:check": "biome check .",
     "biome:fix": "biome check --fix .",
