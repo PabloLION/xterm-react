@@ -57,7 +57,7 @@ class VersionTester {
 
     // Backup original package.json
     this.originalPackageJson = JSON.parse(
-      fs.readFileSync("package.json", "utf8"),
+      fs.readFileSync("package.json", "utf8")
     );
 
     try {
@@ -130,7 +130,7 @@ class VersionTester {
       // Write test package.json
       fs.writeFileSync(
         "package.json",
-        JSON.stringify(testPackageJson, null, 2),
+        JSON.stringify(testPackageJson, null, 2)
       );
 
       // Install dependencies (with timeout and error handling)
@@ -144,7 +144,7 @@ class VersionTester {
           status: "failed",
           error: `Installation failed: ${installError.message.slice(
             0,
-            100,
+            100
           )}...`,
           timestamp: new Date().toISOString(),
         };
@@ -199,7 +199,7 @@ class VersionTester {
               status: "failed",
               error: `Tool execution failed: ${lintError.message.slice(
                 0,
-                100,
+                100
               )}...`,
               timestamp: new Date().toISOString(),
             };
@@ -224,7 +224,7 @@ class VersionTester {
     if (this.originalPackageJson) {
       fs.writeFileSync(
         "package.json",
-        JSON.stringify(this.originalPackageJson, null, 2),
+        JSON.stringify(this.originalPackageJson, null, 2)
       );
       try {
         execSync("npm install --silent --no-audit --no-fund", {
@@ -254,7 +254,7 @@ class VersionTester {
     // Write detailed JSON report
     fs.writeFileSync(
       "version-compatibility-tests/COMPATIBILITY_REPORT.json",
-      JSON.stringify(report, null, 2),
+      JSON.stringify(report, null, 2)
     );
 
     // Generate markdown summary
@@ -327,7 +327,7 @@ class VersionTester {
 
     fs.writeFileSync(
       "version-compatibility-tests/COMPATIBILITY_REPORT.md",
-      markdown,
+      markdown
     );
   }
 }

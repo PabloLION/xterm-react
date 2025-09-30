@@ -44,7 +44,9 @@ class ReactVersionTester {
   }
 
   execWithLog(cmd, options, logFile) {
-    const logPath = this.logDir ? path.join(this.logDir, "react", logFile) : null;
+    const logPath = this.logDir
+      ? path.join(this.logDir, "react", logFile)
+      : null;
     try {
       const out = execSync(cmd, { ...options, stdio: "pipe" });
       if (logPath) {
@@ -82,7 +84,7 @@ class ReactVersionTester {
 
     // Backup original package.json
     this.originalPackageJson = JSON.parse(
-      fs.readFileSync("package.json", "utf8"),
+      fs.readFileSync("package.json", "utf8")
     );
 
     for (const versionConfig of REACT_VERSIONS_TO_TEST) {
@@ -127,20 +129,30 @@ class ReactVersionTester {
       // Write test package.json
       fs.writeFileSync(
         "package.json",
-        JSON.stringify(testPackageJson, null, 2),
+        JSON.stringify(testPackageJson, null, 2)
       );
 
       // Install dependencies
-      console.log(`   Installing ${versionConfig.name} dependencies...`);
-      const installCmd = this.verbose ? "pnpm install" : "pnpm install --silent";
-      this.execWithLog(installCmd, {}, `${this.slugFor(versionConfig.name)}-install.log`);
+      if (this.verbose) console.log(`   Installing ${versionConfig.name} dependencies...`);
+      const installCmd = this.verbose
+        ? "pnpm install"
+        : "pnpm install --silent";
+      this.execWithLog(
+        installCmd,
+        {},
+        `${this.slugFor(versionConfig.name)}-install.log`
+      );
 
       // Test TypeScript compilation
-      console.log(`   Testing TypeScript compilation...`);
-      this.execWithLog("pnpm run build", {}, `${this.slugFor(versionConfig.name)}-build.log`);
+      if (this.verbose) console.log(`   Testing TypeScript compilation...`);
+      this.execWithLog(
+        "pnpm run build",
+        {},
+        `${this.slugFor(versionConfig.name)}-build.log`
+      );
 
       // Test if e2e example still works
-      console.log(`   Testing e2e compatibility...`);
+      if (this.verbose) console.log(`   Testing e2e compatibility...`);
       const buildResult = await this.testE2EBuild();
 
       return {
@@ -171,7 +183,7 @@ class ReactVersionTester {
       this.execWithLog(
         "pnpm exec vite build",
         { cwd: process.cwd(), timeout: 60000 },
-        `${this.slugFor(versionConfig.name)}-e2e-build.log`,
+        `${this.slugFor(versionConfig.name)}-e2e-build.log`
       );
       return { success: true };
     } catch (error) {
@@ -186,10 +198,12 @@ class ReactVersionTester {
     if (this.originalPackageJson) {
       fs.writeFileSync(
         "package.json",
-        JSON.stringify(this.originalPackageJson, null, 2),
+        JSON.stringify(this.originalPackageJson, null, 2)
       );
       try {
-        const restoreCmd = this.verbose ? "pnpm install" : "pnpm install --silent";
+        const restoreCmd = this.verbose
+          ? "pnpm install"
+          : "pnpm install --silent";
         this.execWithLog(restoreCmd, {}, `restore-install.log`);
         console.log("✅ Original dependencies restored");
       } catch (error) {

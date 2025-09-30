@@ -18,6 +18,7 @@ import BiomeVersionTester from "./devtools/biome-versions-test.js";
 // CLI flags
 const argv = process.argv.slice(2);
 const VERBOSE = argv.includes("--verbose") || argv.includes("-v");
+const SUMMARY_ONLY = argv.includes("--summary") || argv.includes("-s");
 
 // Resolve this file's directory for logs
 const __filename = fileURLToPath(import.meta.url);
@@ -68,7 +69,10 @@ class MasterTestRunner {
       // Run React version tests
       console.log("\n🔍 Phase 1: React Version Compatibility");
       console.log("-".repeat(40));
-      const reactTester = new ReactVersionTester({ verbose: VERBOSE, logDir: LOG_DIR });
+      const reactTester = new ReactVersionTester({
+        verbose: VERBOSE && !SUMMARY_ONLY,
+        logDir: LOG_DIR,
+      });
       const reactResults = await reactTester.testAllVersions();
       this.allResults.results.react = reactResults;
       this.allResults.summary.totalCategories++;
@@ -76,7 +80,10 @@ class MasterTestRunner {
       // Run ESLint ecosystem tests
       console.log("\n🔍 Phase 2: ESLint Ecosystem Compatibility");
       console.log("-".repeat(40));
-      const eslintTester = new ESLintVersionTester({ verbose: VERBOSE, logDir: LOG_DIR });
+      const eslintTester = new ESLintVersionTester({
+        verbose: VERBOSE && !SUMMARY_ONLY,
+        logDir: LOG_DIR,
+      });
       const eslintResults = await eslintTester.testAllVersions();
       this.allResults.results.eslint = eslintResults;
       this.allResults.summary.totalCategories++;
@@ -84,7 +91,10 @@ class MasterTestRunner {
       // Run Biome version tests
       console.log("\n🔍 Phase 3: Biome Version Compatibility");
       console.log("-".repeat(40));
-      const biomeTester = new BiomeVersionTester({ verbose: VERBOSE, logDir: LOG_DIR });
+      const biomeTester = new BiomeVersionTester({
+        verbose: VERBOSE && !SUMMARY_ONLY,
+        logDir: LOG_DIR,
+      });
       const biomeResults = await biomeTester.testAllVersions();
       this.allResults.results.biome = biomeResults;
       this.allResults.summary.totalCategories++;
@@ -103,7 +113,7 @@ class MasterTestRunner {
     } catch (error) {
       console.error(
         "\n❌ Test runner failed:",
-        VERBOSE ? error : error.message,
+        VERBOSE ? error : error.message
       );
       throw error;
     }
@@ -118,10 +128,10 @@ class MasterTestRunner {
     if (this.allResults.results.react) {
       totalTests += this.allResults.results.react.length;
       totalPassed += this.allResults.results.react.filter(
-        (r) => r.success,
+        (r) => r.success
       ).length;
       totalFailed += this.allResults.results.react.filter(
-        (r) => !r.success,
+        (r) => !r.success
       ).length;
     }
 
@@ -129,10 +139,10 @@ class MasterTestRunner {
     if (this.allResults.results.eslint) {
       totalTests += this.allResults.results.eslint.length;
       totalPassed += this.allResults.results.eslint.filter(
-        (r) => r.success,
+        (r) => r.success
       ).length;
       totalFailed += this.allResults.results.eslint.filter(
-        (r) => !r.success,
+        (r) => !r.success
       ).length;
     }
 
@@ -140,10 +150,10 @@ class MasterTestRunner {
     if (this.allResults.results.biome) {
       totalTests += this.allResults.results.biome.length;
       totalPassed += this.allResults.results.biome.filter(
-        (r) => r.success,
+        (r) => r.success
       ).length;
       totalFailed += this.allResults.results.biome.filter(
-        (r) => !r.success,
+        (r) => !r.success
       ).length;
     }
 
@@ -158,7 +168,7 @@ class MasterTestRunner {
     const __dirname = path.dirname(__filename);
     const jsonReportPath = path.join(
       __dirname,
-      "MASTER_COMPATIBILITY_REPORT.json",
+      "MASTER_COMPATIBILITY_REPORT.json"
     );
     fs.writeFileSync(jsonReportPath, JSON.stringify(this.allResults, null, 2));
 
@@ -189,7 +199,7 @@ class MasterTestRunner {
 
     const reactStats = this.getStatsForCategory(this.allResults.results.react);
     const eslintStats = this.getStatsForCategory(
-      this.allResults.results.eslint,
+      this.allResults.results.eslint
     );
     const biomeStats = this.getStatsForCategory(this.allResults.results.biome);
 
@@ -201,7 +211,7 @@ class MasterTestRunner {
     }** | **${this.allResults.summary.totalFailed}** | **${Math.round(
       (this.allResults.summary.totalPassed /
         this.allResults.summary.totalTests) *
-        100,
+        100
     )}%** |\n\n`;
 
     // React Results
@@ -237,10 +247,10 @@ class MasterTestRunner {
       markdown += `Testing with latest React 19 and TypeScript 5 as base configuration.\n\n`;
 
       const eslintResults = this.allResults.results.eslint.filter(
-        (r) => r.category === "ESLint",
+        (r) => r.category === "ESLint"
       );
       const prettierResults = this.allResults.results.eslint.filter(
-        (r) => r.category === "Prettier",
+        (r) => r.category === "Prettier"
       );
 
       if (eslintResults.length > 0) {
@@ -317,7 +327,7 @@ class MasterTestRunner {
 
       // Add specific recommendations based on results
       const latestReactResult = this.allResults.results.react?.find((r) =>
-        r.name.includes("React 19"),
+        r.name.includes("React 19")
       );
       if (latestReactResult && latestReactResult.success) {
         markdown += `- **React**: ${latestReactResult.version} ✅\n`;
@@ -328,7 +338,7 @@ class MasterTestRunner {
       markdown += `- **Prettier**: ^3.3.0 with eslint-plugin-prettier ^5.5.4 ✅\n`;
 
       const latestBiomeResult = this.allResults.results.biome?.find((r) =>
-        r.name.includes("Current"),
+        r.name.includes("Current")
       );
       if (latestBiomeResult && latestBiomeResult.success) {
         markdown += `- **Biome**: ${latestBiomeResult.version} ✅\n`;
@@ -372,8 +382,8 @@ class MasterTestRunner {
 export default MasterTestRunner;
 
 // Run all tests if called directly
-const __filename = fileURLToPath(import.meta.url);
-if (process.argv[1] && path.resolve(process.argv[1]) === __filename) {
+const thisFile = fileURLToPath(import.meta.url);
+if (process.argv[1] && path.resolve(process.argv[1]) === thisFile) {
   const runner = new MasterTestRunner();
   runner.runAllTests().catch((error) => {
     console.error("❌ Test suite failed:", error);

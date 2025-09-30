@@ -1,0 +1,23 @@
+
+> @pablo-lion/xterm-react@1.2.0 lint:no-fix /Users/pablo/LocalDocs/repo/PabloLION/xterm-react
+> eslint .
+
+ ELIFECYCLE  Command failed with exit code 2.
+
+
+Oops! Something went wrong! :(
+
+ESLint: 9.36.0
+
+TypeError: Error while loading rule '@typescript-eslint/no-empty-function': Cannot read properties of undefined (reading 'allow')
+Occurred while linting /Users/pablo/LocalDocs/repo/PabloLION/xterm-react/eslint.config.mjs
+    at Object.create (/Users/pablo/LocalDocs/repo/PabloLION/xterm-react/node_modules/.pnpm/eslint@9.36.0/node_modules/eslint/lib/rules/no-empty-function.js:140:12)
+    at create (/Users/pablo/LocalDocs/repo/PabloLION/xterm-react/node_modules/.pnpm/@typescript-eslint+eslint-plugin@7.18.0_@typescript-eslint+parser@7.18.0_eslint@9.36.0_typescript@5.4.5/node_modules/@typescript-eslint/eslint-plugin/dist/rules/no-empty-function.js:55:32)
+    at Object.create (/Users/pablo/LocalDocs/repo/PabloLION/xterm-react/node_modules/.pnpm/@typescript-eslint+utils@7.18.0_eslint@9.36.0_typescript@5.4.5/node_modules/@typescript-eslint/utils/dist/eslint-utils/RuleCreator.js:37:20)
+    at createRuleListeners (/Users/pablo/LocalDocs/repo/PabloLION/xterm-react/node_modules/.pnpm/eslint@9.36.0/node_modules/eslint/lib/linter/linter.js:1019:15)
+    at /Users/pablo/LocalDocs/repo/PabloLION/xterm-react/node_modules/.pnpm/eslint@9.36.0/node_modules/eslint/lib/linter/linter.js:1151:7
+    at Array.forEach (<anonymous>)
+    at runRules (/Users/pablo/LocalDocs/repo/PabloLION/xterm-react/node_modules/.pnpm/eslint@9.36.0/node_modules/eslint/lib/linter/linter.js:1085:31)
+    at #flatVerifyWithoutProcessors (/Users/pablo/LocalDocs/repo/PabloLION/xterm-react/node_modules/.pnpm/eslint@9.36.0/node_modules/eslint/lib/linter/linter.js:2101:4)
+    at Linter._verifyWithFlatConfigArrayAndWithoutProcessors (/Users/pablo/LocalDocs/repo/PabloLION/xterm-react/node_modules/.pnpm/eslint@9.36.0/node_modules/eslint/lib/linter/linter.js:2189:43)
+    at Linter._verifyWithFlatConfigArray (/Users/pablo/LocalDocs/repo/PabloLION/xterm-react/node_modules/.pnpm/eslint@9.36.0/node_modules/eslint/lib/linter/linter.js:2292:15)

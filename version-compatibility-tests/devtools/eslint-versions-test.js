@@ -17,7 +17,6 @@ const ESLINT_VERSIONS_TO_TEST = [
       eslint: "^8.57.0",
       "@typescript-eslint/parser": "^6.21.0",
       "@typescript-eslint/eslint-plugin": "^6.21.0",
-      "typescript-eslint": "^6.21.0",
     },
   },
   {
@@ -26,7 +25,6 @@ const ESLINT_VERSIONS_TO_TEST = [
       eslint: "^9.0.0",
       "@typescript-eslint/parser": "^7.18.0",
       "@typescript-eslint/eslint-plugin": "^7.18.0",
-      "typescript-eslint": "^7.18.0",
     },
   },
   {
@@ -35,7 +33,6 @@ const ESLINT_VERSIONS_TO_TEST = [
       eslint: "^9.36.0",
       "@typescript-eslint/parser": "^8.44.1",
       "@typescript-eslint/eslint-plugin": "^8.44.1",
-      "typescript-eslint": "^8.44.1",
     },
   },
 ];
@@ -59,11 +56,16 @@ class ESLintVersionTester {
   }
 
   slugify(text) {
-    return text.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+    return text
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/(^-|-$)/g, "");
   }
 
   execWithLog(cmd, options, logFile) {
-    const logPath = this.logDir ? path.join(this.logDir, "eslint", logFile) : null;
+    const logPath = this.logDir
+      ? path.join(this.logDir, "eslint", logFile)
+      : null;
     try {
       const out = execSync(cmd, { ...options, stdio: "pipe" });
       if (logPath) {
@@ -101,7 +103,7 @@ class ESLintVersionTester {
 
     // Backup original package.json
     this.originalPackageJson = JSON.parse(
-      fs.readFileSync("package.json", "utf8"),
+      fs.readFileSync("package.json", "utf8")
     );
 
     // Test ESLint versions
@@ -157,18 +159,28 @@ class ESLintVersionTester {
       // Write test package.json
       fs.writeFileSync(
         "package.json",
-        JSON.stringify(testPackageJson, null, 2),
+        JSON.stringify(testPackageJson, null, 2)
       );
 
       // Install dependencies
-      console.log(`   Installing ${config.name} dependencies...`);
-      const installCmd = this.verbose ? "pnpm install" : "pnpm install --silent";
-      this.execWithLog(installCmd, {}, `${this.slugify(config.name)}-install.log`);
+      if (this.verbose) console.log(`   Installing ${config.name} dependencies...`);
+      const installCmd = this.verbose
+        ? "pnpm install"
+        : "pnpm install --silent";
+      this.execWithLog(
+        installCmd,
+        {},
+        `${this.slugify(config.name)}-install.log`
+      );
 
       // Test ESLint functionality
-      console.log(`   Testing ESLint execution...`);
+      if (this.verbose) console.log(`   Testing ESLint execution...`);
       try {
-        this.execWithLog("pnpm run lint:no-fix", {}, `${this.slugify(config.name)}-lint.log`);
+        this.execWithLog(
+          "pnpm run lint:no-fix",
+          {},
+          `${this.slugify(config.name)}-lint.log`
+        );
         var lintSuccess = true;
       } catch (lintError) {
         // ESLint finding issues is OK, we just want to ensure it runs
@@ -178,8 +190,12 @@ class ESLintVersionTester {
       }
 
       // Test build with new ESLint setup
-      console.log(`   Testing build compatibility...`);
-      this.execWithLog("pnpm run build", {}, `${this.slugify(config.name)}-build.log`);
+      if (this.verbose) console.log(`   Testing build compatibility...`);
+      this.execWithLog(
+        "pnpm run build",
+        {},
+        `${this.slugify(config.name)}-build.log`
+      );
 
       return {
         category: "ESLint",
@@ -223,18 +239,28 @@ class ESLintVersionTester {
       // Write test package.json
       fs.writeFileSync(
         "package.json",
-        JSON.stringify(testPackageJson, null, 2),
+        JSON.stringify(testPackageJson, null, 2)
       );
 
       // Install dependencies
       console.log(`   Installing ${config.name} dependencies...`);
-      const installCmd2 = this.verbose ? "pnpm install" : "pnpm install --silent";
-      this.execWithLog(installCmd2, {}, `${this.slugify(config.name)}-install.log`);
+      const installCmd2 = this.verbose
+        ? "pnpm install"
+        : "pnpm install --silent";
+      this.execWithLog(
+        installCmd2,
+        {},
+        `${this.slugify(config.name)}-install.log`
+      );
 
       // Test Prettier functionality
       console.log(`   Testing Prettier execution...`);
       try {
-        this.execWithLog("pnpm exec prettier --check src/", {}, `${this.slugify(config.name)}-prettier-check.log`);
+        this.execWithLog(
+          "pnpm exec prettier --check src/",
+          {},
+          `${this.slugify(config.name)}-prettier-check.log`
+        );
         var prettierSuccess = true;
       } catch (prettierError) {
         // Prettier finding formatting issues is OK, we just want to ensure it runs
@@ -246,7 +272,11 @@ class ESLintVersionTester {
       // Test format command
       console.log(`   Testing format command...`);
       try {
-        this.execWithLog("pnpm run format", {}, `${this.slugify(config.name)}-format.log`);
+        this.execWithLog(
+          "pnpm run format",
+          {},
+          `${this.slugify(config.name)}-format.log`
+        );
         var formatSuccess = true;
       } catch (formatError) {
         var formatSuccess = false;
@@ -281,10 +311,12 @@ class ESLintVersionTester {
     if (this.originalPackageJson) {
       fs.writeFileSync(
         "package.json",
-        JSON.stringify(this.originalPackageJson, null, 2),
+        JSON.stringify(this.originalPackageJson, null, 2)
       );
       try {
-        const restoreCmd = this.verbose ? "pnpm install" : "pnpm install --silent";
+        const restoreCmd = this.verbose
+          ? "pnpm install"
+          : "pnpm install --silent";
         this.execWithLog(restoreCmd, {}, `restore-install.log`);
         console.log("✅ Original dependencies restored");
       } catch (error) {
@@ -326,7 +358,7 @@ class ESLintVersionTester {
     // Group results by category
     const eslintResults = this.results.filter((r) => r.category === "ESLint");
     const prettierResults = this.results.filter(
-      (r) => r.category === "Prettier",
+      (r) => r.category === "Prettier"
     );
 
     if (eslintResults.length > 0) {
@@ -339,7 +371,7 @@ class ESLintVersionTester {
         markdown += `- **Versions**: ${JSON.stringify(
           result.versions,
           null,
-          2,
+          2
         )}\n`;
         markdown += `- **Lint Execution**: ${
           result.lintExecutes ? "✅ Works" : "❌ Issues"

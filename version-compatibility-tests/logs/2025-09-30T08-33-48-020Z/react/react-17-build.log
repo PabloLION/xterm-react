@@ -1,0 +1,4 @@
+
+> @pablo-lion/xterm-react@1.2.0 build /Users/pablo/LocalDocs/repo/PabloLION/xterm-react
+> npx rimraf dist && tsc
+

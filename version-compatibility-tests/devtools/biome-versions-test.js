@@ -28,11 +28,16 @@ class BiomeVersionTester {
   }
 
   slugify(text) {
-    return text.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+    return text
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/(^-|-$)/g, "");
   }
 
   execWithLog(cmd, options, logFile) {
-    const logPath = this.logDir ? path.join(this.logDir, "biome", logFile) : null;
+    const logPath = this.logDir
+      ? path.join(this.logDir, "biome", logFile)
+      : null;
     try {
       const out = execSync(cmd, { ...options, stdio: "pipe" });
       if (logPath) {
@@ -70,11 +75,11 @@ class BiomeVersionTester {
 
     // Backup original files
     this.originalPackageJson = JSON.parse(
-      fs.readFileSync("package.json", "utf8"),
+      fs.readFileSync("package.json", "utf8")
     );
     if (fs.existsSync("biome.json")) {
       this.originalBiomeConfig = JSON.parse(
-        fs.readFileSync("biome.json", "utf8"),
+        fs.readFileSync("biome.json", "utf8")
       );
     }
 
@@ -116,24 +121,30 @@ class BiomeVersionTester {
       // Write test package.json
       fs.writeFileSync(
         "package.json",
-        JSON.stringify(testPackageJson, null, 2),
+        JSON.stringify(testPackageJson, null, 2)
       );
 
       // Install dependencies
-      console.log(`   Installing ${config.name} dependencies...`);
-      const installCmd = this.verbose ? "pnpm install" : "pnpm install --silent";
-      this.execWithLog(installCmd, {}, `${this.slugify(config.name)}-install.log`);
+      if (this.verbose) console.log(`   Installing ${config.name} dependencies...`);
+      const installCmd = this.verbose
+        ? "pnpm install"
+        : "pnpm install --silent";
+      this.execWithLog(
+        installCmd,
+        {},
+        `${this.slugify(config.name)}-install.log`
+      );
 
       // Create compatible biome.json for this version
       await this.createCompatibleBiomeConfig(config.version);
 
       // Test Biome check functionality
-      console.log(`   Testing Biome check...`);
+      if (this.verbose) console.log(`   Testing Biome check...`);
       try {
         this.execWithLog(
           "pnpm run biome:check -- --max-diagnostics=5",
           { timeout: 30000 },
-          `${this.slugify(config.name)}-biome-check.log`,
+          `${this.slugify(config.name)}-biome-check.log`
         );
         var checkSuccess = true;
         var checkError = null;
@@ -147,13 +158,13 @@ class BiomeVersionTester {
       }
 
       // Test Biome format functionality
-      console.log(`   Testing Biome format...`);
+      if (this.verbose) console.log(`   Testing Biome format...`);
       try {
         // Prefer direct exec to avoid "--" pass-through issues in scripts
         this.execWithLog(
           "pnpm exec biome format --write . --dry-run",
           { timeout: 30000 },
-          `${this.slugify(config.name)}-biome-format.log`,
+          `${this.slugify(config.name)}-biome-format.log`
         );
         var formatSuccess = true;
       } catch (formatErr) {
@@ -163,12 +174,12 @@ class BiomeVersionTester {
       }
 
       // Test migration if needed
-      console.log(`   Testing configuration migration...`);
+      if (this.verbose) console.log(`   Testing configuration migration...`);
       try {
         this.execWithLog(
           "pnpm exec biome migrate --dry-run",
           { timeout: 15000 },
-          `${this.slugify(config.name)}-biome-migrate.log`,
+          `${this.slugify(config.name)}-biome-migrate.log`
         );
         var migrateSuccess = true;
       } catch (migrateErr) {
@@ -238,19 +249,21 @@ class BiomeVersionTester {
     if (this.originalPackageJson) {
       fs.writeFileSync(
         "package.json",
-        JSON.stringify(this.originalPackageJson, null, 2),
+        JSON.stringify(this.originalPackageJson, null, 2)
       );
     }
 
     if (this.originalBiomeConfig) {
       fs.writeFileSync(
         "biome.json",
-        JSON.stringify(this.originalBiomeConfig, null, 2),
+        JSON.stringify(this.originalBiomeConfig, null, 2)
       );
     }
 
     try {
-      const restoreCmd = this.verbose ? "pnpm install" : "pnpm install --silent";
+      const restoreCmd = this.verbose
+        ? "pnpm install"
+        : "pnpm install --silent";
       this.execWithLog(restoreCmd, {}, `restore-install.log`);
       console.log("✅ Original files restored");
     } catch (error) {
