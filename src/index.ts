@@ -1,1 +1,1 @@
-export { XTerm } from "./XTerm";
+export { XTerm, type XTermProps } from "./XTerm";
