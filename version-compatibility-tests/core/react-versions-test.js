@@ -1,13 +1,14 @@
 #!/usr/bin/env node
 
 /**
- * React Version Compatibility Test
+ * React Version Compatibility Test (ESM)
  * Tests major React versions with current TypeScript setup
  */
 
-const { execSync, spawn } = require("child_process");
-const fs = require("fs");
-const path = require("path");
+import { execSync } from "node:child_process";
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 const REACT_VERSIONS_TO_TEST = [
   {
@@ -31,9 +32,51 @@ const REACT_VERSIONS_TO_TEST = [
 ];
 
 class ReactVersionTester {
-  constructor() {
+  constructor(opts = {}) {
+    this.verbose = Boolean(opts.verbose);
+    this.logDir = opts.logDir || null;
     this.results = [];
     this.originalPackageJson = null;
+  }
+
+  slugFor(versionName) {
+    return versionName.toLowerCase().replace(/\s+/g, "-");
+  }
+
+  execWithLog(cmd, options, logFile) {
+    const logPath = this.logDir
+      ? path.join(this.logDir, "react", logFile)
+      : null;
+    try {
+      const out = execSync(cmd, { ...options, stdio: "pipe" });
+      if (logPath) {
+        fs.mkdirSync(path.dirname(logPath), { recursive: true });
+        fs.writeFileSync(logPath, out);
+      }
+      if (this.verbose) {
+        const txt = out.toString();
+        const lines = txt.split(/\r?\n/);
+        const tail = lines.slice(-40).join("\n");
+        console.log(`[verbose] ${cmd} -> ${logFile}`);
+        if (tail.trim()) console.log(tail);
+      }
+      return true;
+    } catch (err) {
+      const stdout = err.stdout ? err.stdout.toString() : "";
+      const stderr = err.stderr ? err.stderr.toString() : "";
+      const combined = stdout + (stderr ? "\n" + stderr : "");
+      if (logPath) {
+        fs.mkdirSync(path.dirname(logPath), { recursive: true });
+        fs.writeFileSync(logPath, combined);
+      }
+      if (this.verbose) {
+        console.error(`[verbose] FAILED: ${cmd} -> ${logFile}`);
+        const lines = combined.split(/\r?\n/);
+        const tail = lines.slice(-60).join("\n");
+        if (tail.trim()) console.error(tail);
+      }
+      throw err;
+    }
   }
 
   async testAllVersions() {
@@ -90,15 +133,27 @@ class ReactVersionTester {
       );
 
       // Install dependencies
-      console.log(`   Installing ${versionConfig.name} dependencies...`);
-      execSync("npm install --silent", { stdio: "pipe" });
+      if (this.verbose)
+        console.log(`   Installing ${versionConfig.name} dependencies...`);
+      const installCmd = this.verbose
+        ? "pnpm install"
+        : "pnpm install --silent";
+      this.execWithLog(
+        installCmd,
+        {},
+        `${this.slugFor(versionConfig.name)}-install.log`
+      );
 
       // Test TypeScript compilation
-      console.log(`   Testing TypeScript compilation...`);
-      execSync("npm run build", { stdio: "pipe" });
+      if (this.verbose) console.log(`   Testing TypeScript compilation...`);
+      this.execWithLog(
+        "pnpm run build",
+        {},
+        `${this.slugFor(versionConfig.name)}-build.log`
+      );
 
       // Test if e2e example still works
-      console.log(`   Testing e2e compatibility...`);
+      if (this.verbose) console.log(`   Testing e2e compatibility...`);
       const buildResult = await this.testE2EBuild();
 
       return {
@@ -108,7 +163,9 @@ class ReactVersionTester {
         buildSuccess: true,
         e2eSuccess: buildResult.success,
         timestamp: new Date().toISOString(),
-        details: `Build successful, e2e ${buildResult.success ? "compatible" : "has issues"}`,
+        details: `Build successful, e2e ${
+          buildResult.success ? "compatible" : "has issues"
+        }`,
       };
     } catch (error) {
       return {
@@ -124,11 +181,11 @@ class ReactVersionTester {
   async testE2EBuild() {
     try {
       // Try to build the e2e project with Vite
-      execSync("npx vite build", {
-        stdio: "pipe",
-        cwd: process.cwd(),
-        timeout: 60000,
-      });
+      this.execWithLog(
+        "pnpm exec vite build",
+        { cwd: process.cwd(), timeout: 60000 },
+        `${this.slugFor(versionConfig.name)}-e2e-build.log`
+      );
       return { success: true };
     } catch (error) {
       return {
@@ -145,7 +202,10 @@ class ReactVersionTester {
         JSON.stringify(this.originalPackageJson, null, 2)
       );
       try {
-        execSync("npm install --silent", { stdio: "pipe" });
+        const restoreCmd = this.verbose
+          ? "pnpm install"
+          : "pnpm install --silent";
+        this.execWithLog(restoreCmd, {}, `restore-install.log`);
         console.log("✅ Original dependencies restored");
       } catch (error) {
         console.error("⚠️  Warning: Failed to restore original dependencies");
@@ -154,6 +214,8 @@ class ReactVersionTester {
   }
 
   generateReport() {
+    const __filename = fileURLToPath(import.meta.url);
+    const __dirname = path.dirname(__filename);
     const report = {
       testDate: new Date().toISOString(),
       summary: {
@@ -180,9 +242,15 @@ class ReactVersionTester {
     this.results.forEach((result) => {
       markdown += `### ${result.name}\n\n`;
       markdown += `- **Version**: ${result.version}\n`;
-      markdown += `- **Status**: ${result.success ? "✅ Compatible" : "❌ Issues found"}\n`;
-      markdown += `- **Build**: ${result.buildSuccess ? "✅ Success" : "❌ Failed"}\n`;
-      markdown += `- **E2E**: ${result.e2eSuccess ? "✅ Compatible" : "❌ Issues"}\n`;
+      markdown += `- **Status**: ${
+        result.success ? "✅ Compatible" : "❌ Issues found"
+      }\n`;
+      markdown += `- **Build**: ${
+        result.buildSuccess ? "✅ Success" : "❌ Failed"
+      }\n`;
+      markdown += `- **E2E**: ${
+        result.e2eSuccess ? "✅ Compatible" : "❌ Issues"
+      }\n`;
       if (result.error) {
         markdown += `- **Error**: ${result.error}\n`;
       }
@@ -201,10 +269,11 @@ class ReactVersionTester {
   }
 }
 
+export default ReactVersionTester;
+
 // Run if called directly
-if (require.main === module) {
+const __filename = fileURLToPath(import.meta.url);
+if (process.argv[1] && path.resolve(process.argv[1]) === __filename) {
   const tester = new ReactVersionTester();
   tester.testAllVersions().catch(console.error);
 }
-
-module.exports = ReactVersionTester;

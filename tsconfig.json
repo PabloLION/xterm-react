@@ -23,5 +23,6 @@
     /* Type Checking */
     "strict": true
     /* Completeness */
-  }
+  },
+  "include": ["src"]
 }

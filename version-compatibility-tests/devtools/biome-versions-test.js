@@ -1,13 +1,14 @@
 #!/usr/bin/env node
 
 /**
- * Biome Version Compatibility Test
+ * Biome Version Compatibility Test (ESM)
  * Tests different versions of Biome with latest React & TypeScript
  */
 
-const { execSync } = require("child_process");
-const fs = require("fs");
-const path = require("path");
+import { execSync } from "node:child_process";
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 const BIOME_VERSIONS_TO_TEST = [
   { name: "Biome 1.8", version: "^1.8.3" },
@@ -18,10 +19,55 @@ const BIOME_VERSIONS_TO_TEST = [
 ];
 
 class BiomeVersionTester {
-  constructor() {
+  constructor(opts = {}) {
+    this.verbose = Boolean(opts.verbose);
+    this.logDir = opts.logDir || null;
     this.results = [];
     this.originalPackageJson = null;
     this.originalBiomeConfig = null;
+  }
+
+  slugify(text) {
+    return text
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/(^-|-$)/g, "");
+  }
+
+  execWithLog(cmd, options, logFile) {
+    const logPath = this.logDir
+      ? path.join(this.logDir, "biome", logFile)
+      : null;
+    try {
+      const out = execSync(cmd, { ...options, stdio: "pipe" });
+      if (logPath) {
+        fs.mkdirSync(path.dirname(logPath), { recursive: true });
+        fs.writeFileSync(logPath, out);
+      }
+      if (this.verbose) {
+        const txt = out.toString();
+        const lines = txt.split(/\r?\n/);
+        const tail = lines.slice(-40).join("\n");
+        console.log(`[verbose] ${cmd} -> ${logFile}`);
+        if (tail.trim()) console.log(tail);
+      }
+      return true;
+    } catch (err) {
+      const stdout = err.stdout ? err.stdout.toString() : "";
+      const stderr = err.stderr ? err.stderr.toString() : "";
+      const combined = stdout + (stderr ? "\n" + stderr : "");
+      if (logPath) {
+        fs.mkdirSync(path.dirname(logPath), { recursive: true });
+        fs.writeFileSync(logPath, combined);
+      }
+      if (this.verbose) {
+        console.error(`[verbose] FAILED: ${cmd} -> ${logFile}`);
+        const lines = combined.split(/\r?\n/);
+        const tail = lines.slice(-60).join("\n");
+        if (tail.trim()) console.error(tail);
+      }
+      throw err;
+    }
   }
 
   async testAllVersions() {
@@ -79,19 +125,28 @@ class BiomeVersionTester {
       );
 
       // Install dependencies
-      console.log(`   Installing ${config.name} dependencies...`);
-      execSync("npm install --silent", { stdio: "pipe" });
+      if (this.verbose)
+        console.log(`   Installing ${config.name} dependencies...`);
+      const installCmd = this.verbose
+        ? "pnpm install"
+        : "pnpm install --silent";
+      this.execWithLog(
+        installCmd,
+        {},
+        `${this.slugify(config.name)}-install.log`
+      );
 
       // Create compatible biome.json for this version
       await this.createCompatibleBiomeConfig(config.version);
 
       // Test Biome check functionality
-      console.log(`   Testing Biome check...`);
+      if (this.verbose) console.log(`   Testing Biome check...`);
       try {
-        execSync("npm run biome:check -- --max-diagnostics=5", {
-          stdio: "pipe",
-          timeout: 30000,
-        });
+        this.execWithLog(
+          "pnpm run biome:check -- --max-diagnostics=5",
+          { timeout: 30000 },
+          `${this.slugify(config.name)}-biome-check.log`
+        );
         var checkSuccess = true;
         var checkError = null;
       } catch (checkErr) {
@@ -104,12 +159,14 @@ class BiomeVersionTester {
       }
 
       // Test Biome format functionality
-      console.log(`   Testing Biome format...`);
+      if (this.verbose) console.log(`   Testing Biome format...`);
       try {
-        execSync("npm run biome:format -- --dry-run", {
-          stdio: "pipe",
-          timeout: 30000,
-        });
+        // Prefer direct exec to avoid "--" pass-through issues in scripts
+        this.execWithLog(
+          "pnpm exec biome format --write . --dry-run",
+          { timeout: 30000 },
+          `${this.slugify(config.name)}-biome-format.log`
+        );
         var formatSuccess = true;
       } catch (formatErr) {
         var formatSuccess =
@@ -118,12 +175,13 @@ class BiomeVersionTester {
       }
 
       // Test migration if needed
-      console.log(`   Testing configuration migration...`);
+      if (this.verbose) console.log(`   Testing configuration migration...`);
       try {
-        execSync("npx biome migrate --dry-run", {
-          stdio: "pipe",
-          timeout: 15000,
-        });
+        this.execWithLog(
+          "pnpm exec biome migrate --dry-run",
+          { timeout: 15000 },
+          `${this.slugify(config.name)}-biome-migrate.log`
+        );
         var migrateSuccess = true;
       } catch (migrateErr) {
         var migrateSuccess =
@@ -139,7 +197,9 @@ class BiomeVersionTester {
         formatExecutes: formatSuccess,
         migrationSupported: migrateSuccess,
         timestamp: new Date().toISOString(),
-        details: `Check: ${checkSuccess ? "OK" : "Issues"}, Format: ${formatSuccess ? "OK" : "Issues"}`,
+        details: `Check: ${checkSuccess ? "OK" : "Issues"}, Format: ${
+          formatSuccess ? "OK" : "Issues"
+        }`,
         checkError: checkError,
       };
     } catch (error) {
@@ -202,7 +262,10 @@ class BiomeVersionTester {
     }
 
     try {
-      execSync("npm install --silent", { stdio: "pipe" });
+      const restoreCmd = this.verbose
+        ? "pnpm install"
+        : "pnpm install --silent";
+      this.execWithLog(restoreCmd, {}, `restore-install.log`);
       console.log("✅ Original files restored");
     } catch (error) {
       console.error("⚠️  Warning: Failed to restore original dependencies");
@@ -210,6 +273,8 @@ class BiomeVersionTester {
   }
 
   generateReport() {
+    const __filename = fileURLToPath(import.meta.url);
+    const __dirname = path.dirname(__filename);
     const report = {
       testDate: new Date().toISOString(),
       baseVersions: {
@@ -241,10 +306,18 @@ class BiomeVersionTester {
     this.results.forEach((result) => {
       markdown += `### ${result.name}\n\n`;
       markdown += `- **Version**: ${result.version}\n`;
-      markdown += `- **Status**: ${result.success ? "✅ Compatible" : "❌ Issues found"}\n`;
-      markdown += `- **Check Command**: ${result.checkExecutes ? "✅ Works" : "❌ Issues"}\n`;
-      markdown += `- **Format Command**: ${result.formatExecutes ? "✅ Works" : "❌ Issues"}\n`;
-      markdown += `- **Migration Support**: ${result.migrationSupported ? "✅ Supported" : "❌ Issues"}\n`;
+      markdown += `- **Status**: ${
+        result.success ? "✅ Compatible" : "❌ Issues found"
+      }\n`;
+      markdown += `- **Check Command**: ${
+        result.checkExecutes ? "✅ Works" : "❌ Issues"
+      }\n`;
+      markdown += `- **Format Command**: ${
+        result.formatExecutes ? "✅ Works" : "❌ Issues"
+      }\n`;
+      markdown += `- **Migration Support**: ${
+        result.migrationSupported ? "✅ Supported" : "❌ Issues"
+      }\n`;
       if (result.error) {
         markdown += `- **Error**: ${result.error}\n`;
       }
@@ -266,10 +339,11 @@ class BiomeVersionTester {
   }
 }
 
+export default BiomeVersionTester;
+
 // Run if called directly
-if (require.main === module) {
+const __filename = fileURLToPath(import.meta.url);
+if (process.argv[1] && path.resolve(process.argv[1]) === __filename) {
   const tester = new BiomeVersionTester();
   tester.testAllVersions().catch(console.error);
 }
-
-module.exports = BiomeVersionTester;

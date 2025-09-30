@@ -1,17 +1,31 @@
 #!/usr/bin/env node
 
 /**
- * Master Test Runner for Version Compatibility Tests
+ * Master Test Runner for Version Compatibility Tests (ESM)
  * Runs all version compatibility tests and generates comprehensive report
  */
 
-const fs = require("fs");
-const path = require("path");
+import { execSync } from "node:child_process";
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 // Import test modules
-const ReactVersionTester = require("./core/react-versions-test");
-const ESLintVersionTester = require("./devtools/eslint-versions-test");
-const BiomeVersionTester = require("./devtools/biome-versions-test");
+import ReactVersionTester from "./core/react-versions-test.js";
+import ESLintVersionTester from "./devtools/eslint-versions-test.js";
+import BiomeVersionTester from "./devtools/biome-versions-test.js";
+
+// CLI flags
+const argv = process.argv.slice(2);
+const VERBOSE = argv.includes("--verbose") || argv.includes("-v");
+const SUMMARY_ONLY = argv.includes("--summary") || argv.includes("-s");
+
+// Resolve this file's directory for logs
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+const LOG_DIR = path.join(__dirname, "logs", timestamp);
+fs.mkdirSync(LOG_DIR, { recursive: true });
 
 class MasterTestRunner {
   constructor() {
@@ -36,6 +50,18 @@ class MasterTestRunner {
   }
 
   async runAllTests() {
+    if (VERBOSE) {
+      console.log("[verbose] Mode ON");
+      try {
+        console.log(`[verbose] Node: ${process.version}`);
+        const pnpmVersion = execSync("pnpm --version", { stdio: "pipe" })
+          .toString()
+          .trim();
+        console.log(`[verbose] pnpm: ${pnpmVersion}`);
+      } catch (e) {
+        console.log("[verbose] pnpm not found on PATH or failed to run.");
+      }
+    }
     console.log("🚀 Starting Comprehensive Version Compatibility Tests\n");
     console.log("=".repeat(60));
 
@@ -43,7 +69,10 @@ class MasterTestRunner {
       // Run React version tests
       console.log("\n🔍 Phase 1: React Version Compatibility");
       console.log("-".repeat(40));
-      const reactTester = new ReactVersionTester();
+      const reactTester = new ReactVersionTester({
+        verbose: VERBOSE && !SUMMARY_ONLY,
+        logDir: LOG_DIR,
+      });
       const reactResults = await reactTester.testAllVersions();
       this.allResults.results.react = reactResults;
       this.allResults.summary.totalCategories++;
@@ -51,7 +80,10 @@ class MasterTestRunner {
       // Run ESLint ecosystem tests
       console.log("\n🔍 Phase 2: ESLint Ecosystem Compatibility");
       console.log("-".repeat(40));
-      const eslintTester = new ESLintVersionTester();
+      const eslintTester = new ESLintVersionTester({
+        verbose: VERBOSE && !SUMMARY_ONLY,
+        logDir: LOG_DIR,
+      });
       const eslintResults = await eslintTester.testAllVersions();
       this.allResults.results.eslint = eslintResults;
       this.allResults.summary.totalCategories++;
@@ -59,7 +91,10 @@ class MasterTestRunner {
       // Run Biome version tests
       console.log("\n🔍 Phase 3: Biome Version Compatibility");
       console.log("-".repeat(40));
-      const biomeTester = new BiomeVersionTester();
+      const biomeTester = new BiomeVersionTester({
+        verbose: VERBOSE && !SUMMARY_ONLY,
+        logDir: LOG_DIR,
+      });
       const biomeResults = await biomeTester.testAllVersions();
       this.allResults.results.biome = biomeResults;
       this.allResults.summary.totalCategories++;
@@ -76,7 +111,10 @@ class MasterTestRunner {
       console.log(`✅ Passed: ${this.allResults.summary.totalPassed}`);
       console.log(`❌ Failed: ${this.allResults.summary.totalFailed}`);
     } catch (error) {
-      console.error("\n❌ Test runner failed:", error.message);
+      console.error(
+        "\n❌ Test runner failed:",
+        VERBOSE ? error : error.message
+      );
       throw error;
     }
   }
@@ -126,6 +164,8 @@ class MasterTestRunner {
 
   generateMasterReport() {
     // Write comprehensive JSON report
+    const __filename = fileURLToPath(import.meta.url);
+    const __dirname = path.dirname(__filename);
     const jsonReportPath = path.join(
       __dirname,
       "MASTER_COMPATIBILITY_REPORT.json"
@@ -166,7 +206,13 @@ class MasterTestRunner {
     markdown += `| React Versions | ${reactStats.total} | ${reactStats.passed} | ${reactStats.failed} | ${reactStats.successRate}% |\n`;
     markdown += `| ESLint Ecosystem | ${eslintStats.total} | ${eslintStats.passed} | ${eslintStats.failed} | ${eslintStats.successRate}% |\n`;
     markdown += `| Biome Versions | ${biomeStats.total} | ${biomeStats.passed} | ${biomeStats.failed} | ${biomeStats.successRate}% |\n`;
-    markdown += `| **TOTAL** | **${this.allResults.summary.totalTests}** | **${this.allResults.summary.totalPassed}** | **${this.allResults.summary.totalFailed}** | **${Math.round((this.allResults.summary.totalPassed / this.allResults.summary.totalTests) * 100)}%** |\n\n`;
+    markdown += `| **TOTAL** | **${this.allResults.summary.totalTests}** | **${
+      this.allResults.summary.totalPassed
+    }** | **${this.allResults.summary.totalFailed}** | **${Math.round(
+      (this.allResults.summary.totalPassed /
+        this.allResults.summary.totalTests) *
+        100
+    )}%** |\n\n`;
 
     // React Results
     if (
@@ -180,8 +226,12 @@ class MasterTestRunner {
         const status = result.success ? "✅" : "❌";
         markdown += `### ${status} ${result.name}\n\n`;
         markdown += `- **Version**: ${result.version}\n`;
-        markdown += `- **Build**: ${result.buildSuccess ? "✅ Success" : "❌ Failed"}\n`;
-        markdown += `- **E2E**: ${result.e2eSuccess ? "✅ Compatible" : "❌ Issues"}\n`;
+        markdown += `- **Build**: ${
+          result.buildSuccess ? "✅ Success" : "❌ Failed"
+        }\n`;
+        markdown += `- **E2E**: ${
+          result.e2eSuccess ? "✅ Compatible" : "❌ Issues"
+        }\n`;
         if (result.error) markdown += `- **Error**: ${result.error}\n`;
         if (result.details) markdown += `- **Details**: ${result.details}\n`;
         markdown += `\n`;
@@ -208,8 +258,12 @@ class MasterTestRunner {
         eslintResults.forEach((result) => {
           const status = result.success ? "✅" : "❌";
           markdown += `#### ${status} ${result.name}\n\n`;
-          markdown += `- **Lint Execution**: ${result.lintExecutes ? "✅ Works" : "❌ Issues"}\n`;
-          markdown += `- **Build**: ${result.buildSuccess ? "✅ Success" : "❌ Failed"}\n`;
+          markdown += `- **Lint Execution**: ${
+            result.lintExecutes ? "✅ Works" : "❌ Issues"
+          }\n`;
+          markdown += `- **Build**: ${
+            result.buildSuccess ? "✅ Success" : "❌ Failed"
+          }\n`;
           if (result.error) markdown += `- **Error**: ${result.error}\n`;
           if (result.details) markdown += `- **Details**: ${result.details}\n`;
           markdown += `\n`;
@@ -221,8 +275,12 @@ class MasterTestRunner {
         prettierResults.forEach((result) => {
           const status = result.success ? "✅" : "❌";
           markdown += `#### ${status} ${result.name}\n\n`;
-          markdown += `- **Prettier Execution**: ${result.prettierExecutes ? "✅ Works" : "❌ Issues"}\n`;
-          markdown += `- **Format Command**: ${result.formatSuccess ? "✅ Works" : "❌ Issues"}\n`;
+          markdown += `- **Prettier Execution**: ${
+            result.prettierExecutes ? "✅ Works" : "❌ Issues"
+          }\n`;
+          markdown += `- **Format Command**: ${
+            result.formatSuccess ? "✅ Works" : "❌ Issues"
+          }\n`;
           if (result.error) markdown += `- **Error**: ${result.error}\n`;
           if (result.details) markdown += `- **Details**: ${result.details}\n`;
           markdown += `\n`;
@@ -242,9 +300,15 @@ class MasterTestRunner {
         const status = result.success ? "✅" : "❌";
         markdown += `### ${status} ${result.name}\n\n`;
         markdown += `- **Version**: ${result.version}\n`;
-        markdown += `- **Check Command**: ${result.checkExecutes ? "✅ Works" : "❌ Issues"}\n`;
-        markdown += `- **Format Command**: ${result.formatExecutes ? "✅ Works" : "❌ Issues"}\n`;
-        markdown += `- **Migration Support**: ${result.migrationSupported ? "✅ Supported" : "❌ Issues"}\n`;
+        markdown += `- **Check Command**: ${
+          result.checkExecutes ? "✅ Works" : "❌ Issues"
+        }\n`;
+        markdown += `- **Format Command**: ${
+          result.formatExecutes ? "✅ Works" : "❌ Issues"
+        }\n`;
+        markdown += `- **Migration Support**: ${
+          result.migrationSupported ? "✅ Supported" : "❌ Issues"
+        }\n`;
         if (result.error) markdown += `- **Error**: ${result.error}\n`;
         if (result.checkError)
           markdown += `- **Check Error**: ${result.checkError}\n`;
@@ -295,6 +359,8 @@ class MasterTestRunner {
     markdown += `---\n`;
     markdown += `*This report was automatically generated by the version compatibility test suite.*`;
 
+    const __filename = fileURLToPath(import.meta.url);
+    const __dirname = path.dirname(__filename);
     const markdownPath = path.join(__dirname, "MASTER_COMPATIBILITY_REPORT.md");
     fs.writeFileSync(markdownPath, markdown);
   }
@@ -313,13 +379,14 @@ class MasterTestRunner {
   }
 }
 
+export default MasterTestRunner;
+
 // Run all tests if called directly
-if (require.main === module) {
+const thisFile = fileURLToPath(import.meta.url);
+if (process.argv[1] && path.resolve(process.argv[1]) === thisFile) {
   const runner = new MasterTestRunner();
   runner.runAllTests().catch((error) => {
     console.error("❌ Test suite failed:", error);
     process.exit(1);
   });
 }
-
-module.exports = MasterTestRunner;

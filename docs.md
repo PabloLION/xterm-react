@@ -128,10 +128,10 @@ You can see an example of using addons please see [this](https://github.com/robe
 ```jsx
 // Import the addon
 // import { SearchAddon } from "xterm-addon-search" // old out-of-support add-on
-import { SearchAddon } from "@xterm/addon-search"
+import { SearchAddon } from "@xterm/addon-search";
 
 // Instantiate the addon
-const searchAddon = new SearchAddon()
+const searchAddon = new SearchAddon();
 
 // Load the addons as a prop
 export default function Terminal(): JSX.Element {

@@ -142,7 +142,10 @@ class VersionTester {
       } catch (installError) {
         return {
           status: "failed",
-          error: `Installation failed: ${installError.message.slice(0, 100)}...`,
+          error: `Installation failed: ${installError.message.slice(
+            0,
+            100
+          )}...`,
           timestamp: new Date().toISOString(),
         };
       }
@@ -194,7 +197,10 @@ class VersionTester {
           ) {
             return {
               status: "failed",
-              error: `Tool execution failed: ${lintError.message.slice(0, 100)}...`,
+              error: `Tool execution failed: ${lintError.message.slice(
+                0,
+                100
+              )}...`,
               timestamp: new Date().toISOString(),
             };
           }
