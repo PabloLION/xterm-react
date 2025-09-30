@@ -21,7 +21,7 @@
     "test:react": "node version-compatibility-tests/core/react-versions-test.js",
     "test:eslint": "node version-compatibility-tests/devtools/eslint-versions-test.js",
     "test:biome": "node version-compatibility-tests/devtools/biome-versions-test.js",
-    "publish": "pnpm run lint && pnpm run format && pnpm run build && npm publish --access public"
+    "publish": "./scripts/prepare-publish.sh"
   },
   "husky": {
     "hooks": {
