@@ -22,7 +22,8 @@
     "test:eslint": "node version-compatibility-tests/devtools/eslint-versions-test.js",
     "test:biome": "node version-compatibility-tests/devtools/biome-versions-test.js",
     "publish": "./scripts/prepare-publish.sh",
-    "compat:consumer:build-latest": "node version-compatibility-tests/scripts/consumer-pin-and-build.mjs"
+    "compat:consumer:build-latest": "node version-compatibility-tests/scripts/consumer-pin-and-build.mjs",
+    "compat:matrix": "node version-compatibility-tests/scripts/matrix-run-consumer.mjs"
   },
   "husky": {
     "hooks": {
