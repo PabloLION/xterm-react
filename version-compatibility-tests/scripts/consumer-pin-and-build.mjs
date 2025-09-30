@@ -27,7 +27,7 @@ function getLatestForMajor(name, major) {
 }
 
 function parseArgs(argv) {
-  const out = {}
+  const out = { keepPins: false }
   for (let i = 2; i < argv.length; i++) {
     const a = argv[i]
     const v = argv[i + 1]
@@ -39,8 +39,9 @@ function parseArgs(argv) {
       case '--plugin-react': out.pluginReact = v; i++; break
       case '--types-react': out.typesReact = v; i++; break
       case '--types-react-dom': out.typesReactDom = v; i++; break
+      case '--keep-pins': out.keepPins = true; break
       case '--help':
-        console.log(`Usage: node consumer-pin-and-build.mjs [--react <ver>] [--react-dom <ver>] [--typescript <ver>] [--vite <ver>] [--plugin-react <ver>] [--types-react <ver>] [--types-react-dom <ver>]`)
+        console.log(`Usage: node consumer-pin-and-build.mjs [--react <ver>] [--react-dom <ver>] [--typescript <ver>] [--vite <ver>] [--plugin-react <ver>] [--types-react <ver>] [--types-react-dom <ver>] [--keep-pins]`)
         process.exit(0)
       default:
         break
@@ -114,7 +115,8 @@ function main() {
 
   // Pin in consumer app
   const pkgPath = path.join(appDir, 'package.json')
-  const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'))
+  const originalPkg = fs.readFileSync(pkgPath, 'utf8')
+  const pkg = JSON.parse(originalPkg)
   pkg.dependencies = {
     ...(pkg.dependencies || {}),
     react: versions.react,
@@ -149,7 +151,10 @@ function main() {
       try { sh('pnpm exec biome check .', { cwd: appDir }) } catch (e) { /* non-blocking */ }
     }
   } finally {
-    // Leave the pinned versions in place for reproducibility
+    if (!args.keepPins) {
+      // Restore original consumer package.json to avoid git noise
+      fs.writeFileSync(pkgPath, originalPkg)
+    }
   }
 
   console.log('\nPinned versions:')
