@@ -16,7 +16,7 @@ import {
 // Listener of `@xterm/xterm` `IEvent`
 export type IEventListener<T, U = void> = (arg1: T, arg2: U) => void;
 
-interface XTermProps {
+export interface XTermProps {
   /**
    * Class name to add to the terminal container.
    */
