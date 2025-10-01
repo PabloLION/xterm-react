@@ -80,6 +80,8 @@ This library officially supports and is continuously tested against the followin
 - Prettier: 2.8, 3.0, 3.3
 - Biome: 2.0.0, 2.1.1, 2.2.4
 
+Latest matrix summary: `version-compatibility-tests/MATRIX_SUMMARY.md`
+
 Run the matrix locally:
 
 ```sh

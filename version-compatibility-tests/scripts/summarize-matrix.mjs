@@ -89,7 +89,12 @@ function summarize(summaryPath) {
 
   const outPath = path.join(dir, 'MATRIX_SUMMARY.md')
   fs.writeFileSync(outPath, md)
+  // Also write a stable alias so README can link to the latest summary
+  const stable = path.join(suiteDir, 'MATRIX_SUMMARY.md')
+  const header = `<!-- Auto-generated: latest summary alias. Source: ${outPath} -->\n\n`
+  fs.writeFileSync(stable, header + md)
   console.log('Markdown summary written to', outPath)
+  console.log('Stable alias updated at', stable)
   console.log('\n---\n')
   console.log(md)
 }
@@ -101,4 +106,3 @@ function main() {
 }
 
 main()
-
