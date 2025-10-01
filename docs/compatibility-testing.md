@@ -20,6 +20,12 @@ This repo ships an in‑repo “consumer app” plus scripts to test the publish
   - Latest Markdown summary (stable alias): `version-compatibility-tests/MATRIX_SUMMARY.md`
   - Per‑scenario logs and `MATRIX_SUMMARY.json`: `version-compatibility-tests/logs/<timestamp>/`
 
+### Filters and quick mode
+- Run a reduced set (latest of each dimension):
+  - `QUICK=1 pnpm run compat:matrix` or `pnpm run compat:matrix -- --quick`
+- Filter specific versions (comma-separated, must exist in the arrays):
+  - `pnpm run compat:matrix -- --reacts 19.1.1 --types 5.9.3 --eslint 9-ts8 --prettier 3.3 --biome 2.2.4`
+
 ## Version Resolution Details
 - Scope: the matrix targets React 18 and 19; React 17 is out of scope and not tested.
 - React and ReactDOM are pinned to the same version per scenario.
