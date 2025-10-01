@@ -11,7 +11,8 @@ fs.mkdirSync(logsRoot, { recursive: true })
 const xfailPath = path.join(root, 'version-compatibility-tests', 'xfail.json')
 const XFAIL = fs.existsSync(xfailPath) ? JSON.parse(fs.readFileSync(xfailPath, 'utf8')) : []
 
-const REACTS = ['17.0.2', '18.3.1', '19.1.1']
+// Support scope: React 18 and 19 only
+const REACTS = ['18.3.1', '19.1.1']
 const TYPES = ['5.2.2', '5.4.5', '5.9.3']
 const ESLINTS = ['8-ts6', '9-ts8']
 const PRETTIERS = ['2.8', '3.0', '3.3']

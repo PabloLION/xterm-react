@@ -20,7 +20,8 @@
     
     "publish": "./scripts/prepare-publish.sh",
     "compat:consumer:build-latest": "node version-compatibility-tests/scripts/consumer-pin-and-build.mjs",
-    "compat:matrix": "node version-compatibility-tests/scripts/matrix-run-consumer.mjs"
+    "compat:matrix": "node version-compatibility-tests/scripts/matrix-run-consumer.mjs",
+    "compat:matrix:summary": "node version-compatibility-tests/scripts/summarize-matrix.mjs"
   },
   "husky": {
     "hooks": {
