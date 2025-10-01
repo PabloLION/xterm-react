@@ -20,10 +20,26 @@ let PRETTIERS = ['2.8', '3.0', '3.3']
 let BIOMES = ['2.0.0', '2.1.1', '2.2.4']
 
 // Optional quick mode and CLI filters
-function parseListArg(flag) {
-  const idx = process.argv.indexOf(`--${flag}`)
-  if (idx !== -1 && process.argv[idx + 1]) return process.argv[idx + 1].split(',').map(s => s.trim()).filter(Boolean)
+function parseArgValue(names) {
+  const argv = process.argv.slice(2)
+  for (let i = 0; i < argv.length; i++) {
+    const a = argv[i]
+    if (names.includes(a)) {
+      const v = argv[i + 1]
+      if (v) return v
+    }
+  }
   return null
+}
+function parseListArgMulti(names) {
+  const raw = parseArgValue(names)
+  if (!raw) return null
+  return raw.split(',').map(s => s.trim()).filter(Boolean)
+}
+function warnDeprecated(oldName, newName) {
+  if (process.argv.includes(`--${oldName}`)) {
+    console.warn(`[matrix] --${oldName} is deprecated; use --${newName} (or short alias) instead`)
+  }
 }
 function filterAllowed(name, current, requested) {
   const set = new Set(current)
@@ -44,11 +60,22 @@ if (quick) {
   BIOMES = [BIOMES[BIOMES.length - 1]]
 }
 
-const rArg = parseListArg('reacts'); if (rArg) REACTS = filterAllowed('react', REACTS, rArg)
-const tArg = parseListArg('types'); if (tArg) TYPES = filterAllowed('typescript', TYPES, tArg)
-const eArg = parseListArg('eslint'); if (eArg) ESLINTS = filterAllowed('eslint', ESLINTS, eArg)
-const pArg = parseListArg('prettier'); if (pArg) PRETTIERS = filterAllowed('prettier', PRETTIERS, pArg)
-const bArg = parseListArg('biome'); if (bArg) BIOMES = filterAllowed('biome', BIOMES, bArg)
+// New flags (preferred): --react, --typescript, --eslint, --prettier, --biome
+// Short aliases: -r, -t, -e, -p, -b
+const rArg = parseListArgMulti(['--react', '-r'])
+const tArg = parseListArgMulti(['--typescript', '-t'])
+const eArg = parseListArgMulti(['--eslint', '-e'])
+const pArg = parseListArgMulti(['--prettier', '-p'])
+const bArg = parseListArgMulti(['--biome', '-b'])
+if (rArg) REACTS = filterAllowed('react', REACTS, rArg)
+if (tArg) TYPES = filterAllowed('typescript', TYPES, tArg)
+if (eArg) ESLINTS = filterAllowed('eslint', ESLINTS, eArg)
+if (pArg) PRETTIERS = filterAllowed('prettier', PRETTIERS, pArg)
+if (bArg) BIOMES = filterAllowed('biome', BIOMES, bArg)
+
+// Soft deprecation warnings for legacy flags (still parsed via parseArgValue if present)
+warnDeprecated('reacts', 'react')
+warnDeprecated('types', 'typescript')
 
 function slug(parts) {
   return parts.map((p) => p.replace(/[^a-z0-9.\-]+/gi, '-')).join('+').toLowerCase()

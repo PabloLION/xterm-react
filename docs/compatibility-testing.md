@@ -24,7 +24,8 @@ This repo ships an in‑repo “consumer app” plus scripts to test the publish
 - Run a reduced set (latest of each dimension):
   - `QUICK=1 pnpm run compat:matrix` or `pnpm run compat:matrix -- --quick`
 - Filter specific versions (comma-separated, must exist in the arrays):
-  - `pnpm run compat:matrix -- --reacts 19.1.1 --types 5.9.3 --eslint 9-ts8 --prettier 3.3 --biome 2.2.4`
+  - Long flags: `pnpm run compat:matrix -- --react 19.1.1 --typescript 5.9.3 --eslint 9-ts8 --prettier 3.3 --biome 2.2.4`
+  - Short flags: `pnpm run compat:matrix -- -r 19.1.1 -t 5.9.3 -e 9-ts8 -p 3.3 -b 2.2.4`
 
 ### Parallel mode (opt‑in)
 - Run scenarios concurrently using isolated worker app dirs (packs once):
