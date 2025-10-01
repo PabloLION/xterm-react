@@ -17,6 +17,7 @@ This repo ships an in‑repo “consumer app” plus scripts to test the publish
 - Full curated matrix:
   - `pnpm run compat:matrix`
   - Latest summary pointer: `version-compatibility-tests/MATRIX_LATEST.json`
+  - Latest Markdown summary (stable alias): `version-compatibility-tests/MATRIX_SUMMARY.md`
   - Per‑scenario logs and `MATRIX_SUMMARY.json`: `version-compatibility-tests/logs/<timestamp>/`
 
 ## Version Resolution Details
