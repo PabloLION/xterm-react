@@ -1,0 +1,24 @@
+{
+  "name": "compat-consumer-app",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "react": "*",
+    "react-dom": "*",
+    "@pablo-lion/xterm-react": "file:../dist/PACKED_TARBALL_WILL_BE_INJECTED.tgz"
+  },
+  "devDependencies": {
+    "@types/react": "*",
+    "@types/react-dom": "*",
+    "@vitejs/plugin-react": "^4.3.2",
+    "typescript": "^5.4.5",
+    "vite": "^5.4.0"
+  }
+}
+
