@@ -8,12 +8,14 @@ const appDir = path.join(root, 'version-compatibility-tests', 'consumer-app')
 const distDir = path.join(root, 'version-compatibility-tests', 'dist')
 const logsRoot = path.join(root, 'version-compatibility-tests', 'logs', new Date().toISOString().replace(/[:.]/g, '-'))
 fs.mkdirSync(logsRoot, { recursive: true })
+const xfailPath = path.join(root, 'version-compatibility-tests', 'xfail.json')
+const XFAIL = fs.existsSync(xfailPath) ? JSON.parse(fs.readFileSync(xfailPath, 'utf8')) : []
 
-const REACTS = ['18.3.1', '19.1.1']
-const TYPES = ['5.4.5', '5.9.3']
+const REACTS = ['17.0.2', '18.3.1', '19.1.1']
+const TYPES = ['5.2.2', '5.4.5', '5.9.3']
 const ESLINTS = ['8-ts6', '9-ts8']
-const PRETTIERS = ['2.8', '3.3']
-const BIOMES = ['2.2.4']
+const PRETTIERS = ['2.8', '3.0', '3.3']
+const BIOMES = ['2.0.0', '2.1.1', '2.2.4']
 
 function slug(parts) {
   return parts.map((p) => p.replace(/[^a-z0-9.\-]+/gi, '-')).join('+').toLowerCase()
@@ -45,6 +47,14 @@ function runScenario(react, ts, eslint, prettier, biome, tarballName) {
   const formatRes = sh('pnpm exec prettier --check .', appDir, path.join(dir, 'prettier.log'))
   const biomeRes = sh('pnpm exec biome check .', appDir, path.join(dir, 'biome.log'))
 
+  const expectedFail = XFAIL.some(x =>
+    (x.react?.toString() ?? react) === react &&
+    (x.typescript?.toString() ?? ts) === ts &&
+    (x.eslint?.toString() ?? eslint) === eslint &&
+    (x.prettier?.toString() ?? prettier) === prettier &&
+    (x.biome?.toString() ?? biome) === biome
+  )
+
   const summary = {
     scenario,
     versions: { react, ts, eslint, prettier, biome },
@@ -55,6 +65,10 @@ function runScenario(react, ts, eslint, prettier, biome, tarballName) {
       prettier: formatRes.ok,
       biome: biomeRes.ok
     },
+    expected_fail: expectedFail,
+    outcome: expectedFail
+      ? (buildRes.ok && pinRes.ok ? 'XPASS' : 'XFAIL')
+      : (buildRes.ok && pinRes.ok ? 'PASS' : 'FAIL'),
     logs: dir
   }
   fs.writeFileSync(path.join(dir, 'summary.json'), JSON.stringify(summary, null, 2))

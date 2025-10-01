@@ -32,12 +32,21 @@ This repo ships an in‑repo “consumer app” plus scripts to test the publish
   - `REACTS`, `TYPES`, `ESLINTS` (`8-ts6`, `9-ts8`, or explicit versions), `PRETTIERS`, `BIOMES`.
 - Add new dimensions by expanding the pin script to accept more flags and updating the runner to pass them through.
 
-## Status Semantics (Pass / Fail / XPass)
-- Default expectation: scenarios should pass (build succeeds). Lint/format checks provide additional signal and may fail independently.
-- XPass (observed‑only): for features not yet implemented, we will track scenarios as “observed” without treating their result as a blocker. In a follow‑up branch we’ll add a small config (e.g., an `xpass` list) to record these scenarios explicitly. Until then, consult the matrix summary and logs to review non‑blocking outcomes.
+## Status Semantics (PASS / FAIL / XFAIL / XPASS)
+- Default expectation: scenarios should PASS (build succeeds). Lint/format checks are additional signal.
+- Expected failures are declared in `version-compatibility-tests/xfail.json` as an array of exact combos, e.g.:
+  ```json
+  [
+    { "react": "19.1.1", "typescript": "5.9.3", "eslint": "9-ts8", "prettier": "3.3", "biome": "2.2.4" }
+  ]
+  ```
+- Outcomes:
+  - PASS: not in xfail and build succeeds.
+  - FAIL: not in xfail and build fails.
+  - XFAIL: in xfail and build fails (known, non‑blocking).
+  - XPASS: in xfail but build succeeds (unexpected pass; remove from xfail).
 
 ## Housekeeping
 - Generated artifacts are ignored:
   - `version-compatibility-tests/logs/`, `version-compatibility-tests/dist/`, consumer app lockfile and build output.
 - The legacy category runner and its reports were removed; the matrix output described here is the source of truth.
-
