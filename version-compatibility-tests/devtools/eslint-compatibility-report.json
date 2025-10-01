@@ -1,0 +1,83 @@
+{
+  "testDate": "2025-09-30T08:41:55.487Z",
+  "baseVersions": {
+    "react": "^19.0.0",
+    "typescript": "^5.4.5"
+  },
+  "summary": {
+    "total": 6,
+    "passed": 3,
+    "failed": 3
+  },
+  "results": [
+    {
+      "category": "ESLint",
+      "name": "ESLint 8 + TypeScript-ESLint 6",
+      "versions": {
+        "eslint": "^8.57.0",
+        "@typescript-eslint/parser": "^6.21.0",
+        "@typescript-eslint/eslint-plugin": "^6.21.0"
+      },
+      "success": false,
+      "error": "Command failed: pnpm run build",
+      "timestamp": "2025-09-30T08:41:36.015Z"
+    },
+    {
+      "category": "ESLint",
+      "name": "ESLint 9 + TypeScript-ESLint 7",
+      "versions": {
+        "eslint": "^9.0.0",
+        "@typescript-eslint/parser": "^7.18.0",
+        "@typescript-eslint/eslint-plugin": "^7.18.0"
+      },
+      "success": false,
+      "error": "Command failed: pnpm run build",
+      "timestamp": "2025-09-30T08:41:41.855Z"
+    },
+    {
+      "category": "ESLint",
+      "name": "ESLint 9 + TypeScript-ESLint 8 (Current)",
+      "versions": {
+        "eslint": "^9.36.0",
+        "@typescript-eslint/parser": "^8.44.1",
+        "@typescript-eslint/eslint-plugin": "^8.44.1"
+      },
+      "success": false,
+      "error": "Command failed: pnpm run build",
+      "timestamp": "2025-09-30T08:41:47.052Z"
+    },
+    {
+      "category": "Prettier",
+      "name": "Prettier 2.8",
+      "version": "^2.8.8",
+      "pluginVersion": "^4.2.1",
+      "success": true,
+      "prettierExecutes": true,
+      "formatSuccess": true,
+      "timestamp": "2025-09-30T08:41:50.543Z",
+      "details": "Prettier executes, format works"
+    },
+    {
+      "category": "Prettier",
+      "name": "Prettier 3.0",
+      "version": "^3.0.0",
+      "pluginVersion": "^5.0.0",
+      "success": true,
+      "prettierExecutes": true,
+      "formatSuccess": true,
+      "timestamp": "2025-09-30T08:41:52.847Z",
+      "details": "Prettier executes, format works"
+    },
+    {
+      "category": "Prettier",
+      "name": "Prettier 3.3 (Current)",
+      "version": "^3.3.0",
+      "pluginVersion": "^5.5.4",
+      "success": true,
+      "prettierExecutes": true,
+      "formatSuccess": true,
+      "timestamp": "2025-09-30T08:41:54.954Z",
+      "details": "Prettier executes, format works"
+    }
+  ]
+}

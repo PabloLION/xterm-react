@@ -17,10 +17,7 @@
     "biome:format": "biome format --write .",
     "build": "npx rimraf dist && tsc",
     "test": "echo \"Error: no test specified, maybe you want to use `dev`\" && exit 1",
-    "test:versions": "node version-compatibility-tests/run-all-tests.js",
-    "test:react": "node version-compatibility-tests/core/react-versions-test.js",
-    "test:eslint": "node version-compatibility-tests/devtools/eslint-versions-test.js",
-    "test:biome": "node version-compatibility-tests/devtools/biome-versions-test.js",
+    
     "publish": "./scripts/prepare-publish.sh",
     "compat:consumer:build-latest": "node version-compatibility-tests/scripts/consumer-pin-and-build.mjs",
     "compat:matrix": "node version-compatibility-tests/scripts/matrix-run-consumer.mjs"

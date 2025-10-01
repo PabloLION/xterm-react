@@ -1,0 +1,35 @@
+{
+  "testDate": "2025-09-30T08:41:29.536Z",
+  "summary": {
+    "total": 3,
+    "passed": 2,
+    "failed": 1
+  },
+  "results": [
+    {
+      "name": "React 17",
+      "version": "^17.0.0",
+      "success": true,
+      "buildSuccess": true,
+      "e2eSuccess": false,
+      "timestamp": "2025-09-30T08:41:22.274Z",
+      "details": "Build successful, e2e has issues"
+    },
+    {
+      "name": "React 18",
+      "version": "^18.0.0",
+      "success": true,
+      "buildSuccess": true,
+      "e2eSuccess": false,
+      "timestamp": "2025-09-30T08:41:25.748Z",
+      "details": "Build successful, e2e has issues"
+    },
+    {
+      "name": "React 19",
+      "version": "^19.0.0",
+      "success": false,
+      "error": "Command failed: pnpm run build",
+      "timestamp": "2025-09-30T08:41:28.994Z"
+    }
+  ]
+}
