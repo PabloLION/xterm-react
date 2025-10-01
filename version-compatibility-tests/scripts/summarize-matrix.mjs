@@ -95,6 +95,32 @@ function summarize(summaryPath) {
   fs.writeFileSync(stable, header + md)
   console.log('Markdown summary written to', outPath)
   console.log('Stable alias updated at', stable)
+
+  // Update README with a compact badge-style line between markers
+  try {
+    const readmePath = path.join(root, 'README.md')
+    if (fs.existsSync(readmePath)) {
+      const begin = '<!-- compat-matrix-badge:begin -->'
+      const end = '<!-- compat-matrix-badge:end -->'
+      const relStable = path.posix.join('version-compatibility-tests', 'MATRIX_SUMMARY.md')
+      const badge = `Compatibility status: PASS ${counts.PASS} · FAIL ${counts.FAIL} · XFAIL ${counts.XFAIL} · XPASS ${counts.XPASS} — latest: ${relStable}`
+      const replacement = `${begin}\n${badge}\n${end}`
+      let readme = fs.readFileSync(readmePath, 'utf8')
+      if (readme.includes(begin) && readme.includes(end)) {
+        readme = readme.replace(new RegExp(`${begin}[\n\r\s\S]*?${end}`), replacement)
+      } else {
+        const lines = readme.split(/\r?\n/)
+        const idx = lines.findIndex((l) => /^##\s+Compatibility\s*$/.test(l.trim()))
+        const insertAt = idx >= 0 ? idx + 1 : 0
+        lines.splice(insertAt, 0, replacement, '')
+        readme = lines.join('\n')
+      }
+      fs.writeFileSync(readmePath, readme)
+      console.log('README badge updated')
+    }
+  } catch (e) {
+    console.warn('Failed to update README badge:', e.message)
+  }
   console.log('\n---\n')
   console.log(md)
 }
