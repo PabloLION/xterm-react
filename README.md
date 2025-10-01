@@ -70,6 +70,29 @@ I'll add a full docs later.
 
 For development purposes, this project uses `vite` for a streamlined and efficient workflow.
 
+## Compatibility
+
+This library officially supports and is continuously tested against the following toolchain matrix via an in-repo consumer app (see docs/compatibility-testing.md):
+
+- React: 18.3.x, 19.1.x (React 17 is out of scope)
+- TypeScript: 5.2.2, 5.4.5, 5.9.3
+- ESLint: 8 (typescript-eslint 6), 9 (typescript-eslint 8)
+- Prettier: 2.8, 3.0, 3.3
+- Biome: 2.0.0, 2.1.1, 2.2.4
+
+Run the matrix locally:
+
+```sh
+pnpm compat:matrix         # run curated matrix and write logs
+pnpm compat:matrix:summary # generate Markdown summary for the latest run
+```
+
+For a quick smoke on the latest combo:
+
+```sh
+pnpm compat:consumer:build-latest
+```
+
 ## Release
 
 The release workflow is automated by the [`scripts/prepare-publish.sh`](scripts/prepare-publish.sh) helper. Run the script with
