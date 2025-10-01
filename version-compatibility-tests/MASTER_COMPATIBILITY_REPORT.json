@@ -1,0 +1,170 @@
+{
+  "metadata": {
+    "testDate": "2025-09-30T08:41:18.634Z",
+    "nodeVersion": "v24.8.0",
+    "platform": "darwin arm64"
+  },
+  "summary": {
+    "totalCategories": 3,
+    "totalTests": 14,
+    "totalPassed": 10,
+    "totalFailed": 4
+  },
+  "results": {
+    "react": [
+      {
+        "name": "React 17",
+        "version": "^17.0.0",
+        "success": true,
+        "buildSuccess": true,
+        "e2eSuccess": false,
+        "timestamp": "2025-09-30T08:41:22.274Z",
+        "details": "Build successful, e2e has issues"
+      },
+      {
+        "name": "React 18",
+        "version": "^18.0.0",
+        "success": true,
+        "buildSuccess": true,
+        "e2eSuccess": false,
+        "timestamp": "2025-09-30T08:41:25.748Z",
+        "details": "Build successful, e2e has issues"
+      },
+      {
+        "name": "React 19",
+        "version": "^19.0.0",
+        "success": false,
+        "error": "Command failed: pnpm run build",
+        "timestamp": "2025-09-30T08:41:28.994Z"
+      }
+    ],
+    "eslint": [
+      {
+        "category": "ESLint",
+        "name": "ESLint 8 + TypeScript-ESLint 6",
+        "versions": {
+          "eslint": "^8.57.0",
+          "@typescript-eslint/parser": "^6.21.0",
+          "@typescript-eslint/eslint-plugin": "^6.21.0"
+        },
+        "success": false,
+        "error": "Command failed: pnpm run build",
+        "timestamp": "2025-09-30T08:41:36.015Z"
+      },
+      {
+        "category": "ESLint",
+        "name": "ESLint 9 + TypeScript-ESLint 7",
+        "versions": {
+          "eslint": "^9.0.0",
+          "@typescript-eslint/parser": "^7.18.0",
+          "@typescript-eslint/eslint-plugin": "^7.18.0"
+        },
+        "success": false,
+        "error": "Command failed: pnpm run build",
+        "timestamp": "2025-09-30T08:41:41.855Z"
+      },
+      {
+        "category": "ESLint",
+        "name": "ESLint 9 + TypeScript-ESLint 8 (Current)",
+        "versions": {
+          "eslint": "^9.36.0",
+          "@typescript-eslint/parser": "^8.44.1",
+          "@typescript-eslint/eslint-plugin": "^8.44.1"
+        },
+        "success": false,
+        "error": "Command failed: pnpm run build",
+        "timestamp": "2025-09-30T08:41:47.052Z"
+      },
+      {
+        "category": "Prettier",
+        "name": "Prettier 2.8",
+        "version": "^2.8.8",
+        "pluginVersion": "^4.2.1",
+        "success": true,
+        "prettierExecutes": true,
+        "formatSuccess": true,
+        "timestamp": "2025-09-30T08:41:50.543Z",
+        "details": "Prettier executes, format works"
+      },
+      {
+        "category": "Prettier",
+        "name": "Prettier 3.0",
+        "version": "^3.0.0",
+        "pluginVersion": "^5.0.0",
+        "success": true,
+        "prettierExecutes": true,
+        "formatSuccess": true,
+        "timestamp": "2025-09-30T08:41:52.847Z",
+        "details": "Prettier executes, format works"
+      },
+      {
+        "category": "Prettier",
+        "name": "Prettier 3.3 (Current)",
+        "version": "^3.3.0",
+        "pluginVersion": "^5.5.4",
+        "success": true,
+        "prettierExecutes": true,
+        "formatSuccess": true,
+        "timestamp": "2025-09-30T08:41:54.954Z",
+        "details": "Prettier executes, format works"
+      }
+    ],
+    "biome": [
+      {
+        "name": "Biome 1.8",
+        "version": "^1.8.3",
+        "success": true,
+        "checkExecutes": true,
+        "formatExecutes": true,
+        "migrationSupported": false,
+        "timestamp": "2025-09-30T08:41:58.255Z",
+        "details": "Check: OK, Format: OK",
+        "checkError": "Command failed: pnpm run biome:check -- --max-diagnostics=5\n--max-diagnostics=5 internalError/io  IN"
+      },
+      {
+        "name": "Biome 1.9",
+        "version": "^1.9.4",
+        "success": true,
+        "checkExecutes": true,
+        "formatExecutes": true,
+        "migrationSupported": false,
+        "timestamp": "2025-09-30T08:42:00.865Z",
+        "details": "Check: OK, Format: OK",
+        "checkError": "Command failed: pnpm run biome:check -- --max-diagnostics=5\n--max-diagnostics=5 internalError/io  IN"
+      },
+      {
+        "name": "Biome 2.0",
+        "version": "^2.0.0",
+        "success": true,
+        "checkExecutes": true,
+        "formatExecutes": true,
+        "migrationSupported": false,
+        "timestamp": "2025-09-30T08:42:15.734Z",
+        "details": "Check: OK, Format: OK",
+        "checkError": "Command failed: pnpm run biome:check -- --max-diagnostics=5\nbiome.json:18:14 deserialize ━━━━━━━━━━━"
+      },
+      {
+        "name": "Biome 2.1",
+        "version": "^2.1.1",
+        "success": true,
+        "checkExecutes": true,
+        "formatExecutes": true,
+        "migrationSupported": false,
+        "timestamp": "2025-09-30T08:42:30.235Z",
+        "details": "Check: OK, Format: OK",
+        "checkError": "Command failed: pnpm run biome:check -- --max-diagnostics=5\nbiome.json:18:14 deserialize ━━━━━━━━━━━"
+      },
+      {
+        "name": "Biome 2.2 (Current)",
+        "version": "^2.2.4",
+        "success": true,
+        "checkExecutes": true,
+        "formatExecutes": true,
+        "migrationSupported": false,
+        "timestamp": "2025-09-30T08:42:44.640Z",
+        "details": "Check: OK, Format: OK",
+        "checkError": "Command failed: pnpm run biome:check -- --max-diagnostics=5\nversion-compatibility-tests/core/react-v"
+      }
+    ]
+  }
+}
