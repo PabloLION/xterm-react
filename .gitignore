@@ -11,5 +11,6 @@ version-compatibility-tests/logs/
 version-compatibility-tests/consumer-app/pnpm-lock.yaml
 .compat-worktree/
 version-compatibility-tests/MATRIX_LATEST.json
+version-compatibility-tests/MATRIX_SUMMARY.md
 version-compatibility-tests/.work/
 package-lock.json
