@@ -20,6 +20,7 @@ This repo ships an in‑repo “consumer app” plus scripts to test the publish
   - Per‑scenario logs and `MATRIX_SUMMARY.json`: `version-compatibility-tests/logs/<timestamp>/`
 
 ## Version Resolution Details
+- Scope: the matrix targets React 18 and 19; React 17 is out of scope and not tested.
 - React and ReactDOM are pinned to the same version per scenario.
 - `@types/react` and `@types/react-dom` default to the latest patch that matches the React major (e.g., React 19.x → latest `@types/*` 19.x). This avoids stale types without forcing runtime patch parity.
 - Lint/format checks are scoped to the consumer app’s `src` to keep signal clear:
