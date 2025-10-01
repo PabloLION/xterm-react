@@ -12,11 +12,42 @@ const xfailPath = path.join(root, 'version-compatibility-tests', 'xfail.json')
 const XFAIL = fs.existsSync(xfailPath) ? JSON.parse(fs.readFileSync(xfailPath, 'utf8')) : []
 
 // Support scope: React 18 and 19 only
-const REACTS = ['18.3.1', '19.1.1']
-const TYPES = ['5.2.2', '5.4.5', '5.9.3']
-const ESLINTS = ['8-ts6', '9-ts8']
-const PRETTIERS = ['2.8', '3.0', '3.3']
-const BIOMES = ['2.0.0', '2.1.1', '2.2.4']
+let REACTS = ['18.3.1', '19.1.1']
+let TYPES = ['5.2.2', '5.4.5', '5.9.3']
+let ESLINTS = ['8-ts6', '9-ts8']
+let PRETTIERS = ['2.8', '3.0', '3.3']
+let BIOMES = ['2.0.0', '2.1.1', '2.2.4']
+
+// Optional quick mode and CLI filters
+function parseListArg(flag) {
+  const idx = process.argv.indexOf(`--${flag}`)
+  if (idx !== -1 && process.argv[idx + 1]) return process.argv[idx + 1].split(',').map(s => s.trim()).filter(Boolean)
+  return null
+}
+function filterAllowed(name, current, requested) {
+  const set = new Set(current)
+  const out = requested.filter(v => set.has(v))
+  if (out.length !== requested.length) {
+    const bad = requested.filter(v => !set.has(v))
+    console.warn(`[matrix] Ignoring unsupported ${name} values:`, bad.join(', '))
+  }
+  return out.length ? out : current
+}
+
+const quick = process.env.QUICK === '1' || process.argv.includes('--quick')
+if (quick) {
+  REACTS = [REACTS[REACTS.length - 1]] // latest React only
+  TYPES = [TYPES[TYPES.length - 1]]
+  ESLINTS = [ESLINTS[ESLINTS.length - 1]]
+  PRETTIERS = [PRETTIERS[PRETTIERS.length - 1]]
+  BIOMES = [BIOMES[BIOMES.length - 1]]
+}
+
+const rArg = parseListArg('reacts'); if (rArg) REACTS = filterAllowed('react', REACTS, rArg)
+const tArg = parseListArg('types'); if (tArg) TYPES = filterAllowed('typescript', TYPES, tArg)
+const eArg = parseListArg('eslint'); if (eArg) ESLINTS = filterAllowed('eslint', ESLINTS, eArg)
+const pArg = parseListArg('prettier'); if (pArg) PRETTIERS = filterAllowed('prettier', PRETTIERS, pArg)
+const bArg = parseListArg('biome'); if (bArg) BIOMES = filterAllowed('biome', BIOMES, bArg)
 
 function slug(parts) {
   return parts.map((p) => p.replace(/[^a-z0-9.\-]+/gi, '-')).join('+').toLowerCase()
@@ -93,7 +124,7 @@ function main() {
     .readdirSync(distDir)
     .filter((f) => f.endsWith('.tgz'))
     .map((f) => ({ f, t: fs.statSync(path.join(distDir, f)).ctimeMs }))
-    .sort((a, b) => b.t - a.t)[0]?.f
+    .sort((a, b) => (b.t - a.t) || a.f.localeCompare(b.f))[0]?.f
   if (!tgz) {
     console.error('Failed to find packed tarball under dist')
     process.exit(1)

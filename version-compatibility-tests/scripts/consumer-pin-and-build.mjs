@@ -71,8 +71,18 @@ function main() {
   let tgz = null
   if (args.tarball) {
     const abs = path.isAbsolute(args.tarball) ? args.tarball : path.join(repoRoot, args.tarball)
+    // Basic validation: must exist, be a .tgz, and resolve within repo
     if (!fs.existsSync(abs)) {
       console.error('Provided tarball not found:', abs)
+      process.exit(1)
+    }
+    if (!abs.endsWith('.tgz')) {
+      console.error('Provided tarball must be a .tgz file:', abs)
+      process.exit(1)
+    }
+    const relToRepo = path.relative(repoRoot, abs)
+    if (relToRepo.startsWith('..') || path.isAbsolute(relToRepo)) {
+      console.error('Provided tarball must be within the repository tree:', abs)
       process.exit(1)
     }
     tgz = path.basename(abs)
@@ -86,7 +96,8 @@ function main() {
       .readdirSync(distDir)
       .filter((f) => f.endsWith('.tgz'))
       .map((f) => ({ f, t: fs.statSync(path.join(distDir, f)).ctimeMs }))
-      .sort((a, b) => b.t - a.t)[0]?.f
+      .sort((a, b) => (b.t - a.t) || a.f.localeCompare(b.f))
+      [0]?.f
     if (!tgz) {
       console.error('No packed tarball found under version-compatibility-tests/dist')
       process.exit(1)
@@ -157,13 +168,13 @@ function main() {
     sh('pnpm exec vite build', { cwd: appDir })
     // Optional checks
     if (eslintPins) {
-      try { sh('pnpm exec eslint src --no-error-on-unmatched-pattern', { cwd: appDir }) } catch (e) { /* leave failure to user */ }
+      try { sh('pnpm exec eslint src --no-error-on-unmatched-pattern', { cwd: appDir }) } catch (e) { console.warn('ESLint check failed (non-blocking):', e?.message || String(e)) }
     }
     if (prettierPins) {
-      try { sh('pnpm exec prettier --check "src/**/*.{ts,tsx,js,jsx}"', { cwd: appDir }) } catch (e) { /* non-blocking */ }
+      try { sh('pnpm exec prettier --check "src/**/*.{ts,tsx,js,jsx}"', { cwd: appDir }) } catch (e) { console.warn('Prettier check failed (non-blocking):', e?.message || String(e)) }
     }
     if (biomePins) {
-      try { sh('pnpm exec biome check src', { cwd: appDir }) } catch (e) { /* non-blocking */ }
+      try { sh('pnpm exec biome check src', { cwd: appDir }) } catch (e) { console.warn('Biome check failed (non-blocking):', e?.message || String(e)) }
     }
   } finally {
     if (!args.keepPins) {
