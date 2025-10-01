@@ -98,12 +98,12 @@ function main() {
     if (!label) return null
     switch (label) {
       case '8-ts6':
-        return { eslint: '^8.57.0', '@typescript-eslint/parser': '^6.21.0', '@typescript-eslint/eslint-plugin': '^6.21.0' }
+        return { eslint: '^8.57.0', '@eslint/js': '^8.57.0', '@typescript-eslint/parser': '^6.21.0', '@typescript-eslint/eslint-plugin': '^6.21.0' }
       case '9-ts8':
-        return { eslint: '^9.36.0', '@typescript-eslint/parser': '^8.44.1', '@typescript-eslint/eslint-plugin': '^8.44.1' }
+        return { eslint: '^9.36.0', '@eslint/js': '^9.36.0', '@typescript-eslint/parser': '^8.44.1', '@typescript-eslint/eslint-plugin': '^8.44.1' }
       default:
         // allow raw version (e.g., 9.36.0)
-        return { eslint: label }
+        return { eslint: label, '@eslint/js': label }
     }
   }
   function mapPrettier(label) {
