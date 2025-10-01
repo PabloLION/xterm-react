@@ -27,7 +27,7 @@ function getLatestForMajor(name, major) {
 }
 
 function parseArgs(argv) {
-  const out = { keepPins: false }
+  const out = { keepPins: false, tarball: null }
   for (let i = 2; i < argv.length; i++) {
     const a = argv[i]
     const v = argv[i + 1]
@@ -39,9 +39,10 @@ function parseArgs(argv) {
       case '--plugin-react': out.pluginReact = v; i++; break
       case '--types-react': out.typesReact = v; i++; break
       case '--types-react-dom': out.typesReactDom = v; i++; break
+      case '--tarball': out.tarball = v; i++; break
       case '--keep-pins': out.keepPins = true; break
       case '--help':
-        console.log(`Usage: node consumer-pin-and-build.mjs [--react <ver>] [--react-dom <ver>] [--typescript <ver>] [--vite <ver>] [--plugin-react <ver>] [--types-react <ver>] [--types-react-dom <ver>] [--keep-pins]`)
+        console.log(`Usage: node consumer-pin-and-build.mjs [--react <ver>] [--react-dom <ver>] [--typescript <ver>] [--vite <ver>] [--plugin-react <ver>] [--types-react <ver>] [--types-react-dom <ver>] [--tarball <path>] [--keep-pins]`)
         process.exit(0)
       default:
         break
@@ -65,17 +66,31 @@ function main() {
     '@vitejs/plugin-react': args.pluginReact || getLatest('@vitejs/plugin-react')
   }
 
-  // Build and pack library tarball
+  // Build and/or use supplied tarball
   fs.mkdirSync(distDir, { recursive: true })
-  sh('pnpm pack --pack-destination version-compatibility-tests/dist', { cwd: repoRoot })
-  const tgz = fs
-    .readdirSync(distDir)
-    .filter((f) => f.endsWith('.tgz'))
-    .map((f) => ({ f, t: fs.statSync(path.join(distDir, f)).ctimeMs }))
-    .sort((a, b) => b.t - a.t)[0]?.f
-  if (!tgz) {
-    console.error('No packed tarball found under version-compatibility-tests/dist')
-    process.exit(1)
+  let tgz = null
+  if (args.tarball) {
+    const abs = path.isAbsolute(args.tarball) ? args.tarball : path.join(repoRoot, args.tarball)
+    if (!fs.existsSync(abs)) {
+      console.error('Provided tarball not found:', abs)
+      process.exit(1)
+    }
+    tgz = path.basename(abs)
+    // If tarball is outside distDir, copy it in for a stable relative path
+    if (path.dirname(abs) !== distDir) {
+      fs.copyFileSync(abs, path.join(distDir, tgz))
+    }
+  } else {
+    sh('pnpm pack --pack-destination version-compatibility-tests/dist', { cwd: repoRoot })
+    tgz = fs
+      .readdirSync(distDir)
+      .filter((f) => f.endsWith('.tgz'))
+      .map((f) => ({ f, t: fs.statSync(path.join(distDir, f)).ctimeMs }))
+      .sort((a, b) => b.t - a.t)[0]?.f
+    if (!tgz) {
+      console.error('No packed tarball found under version-compatibility-tests/dist')
+      process.exit(1)
+    }
   }
 
   // Optionally add tool pins (eslint/prettier/biome)
@@ -142,13 +157,13 @@ function main() {
     sh('pnpm exec vite build', { cwd: appDir })
     // Optional checks
     if (eslintPins) {
-      try { sh('pnpm exec eslint .', { cwd: appDir }) } catch (e) { /* leave failure to user */ }
+      try { sh('pnpm exec eslint src --no-error-on-unmatched-pattern', { cwd: appDir }) } catch (e) { /* leave failure to user */ }
     }
     if (prettierPins) {
-      try { sh('pnpm exec prettier --check .', { cwd: appDir }) } catch (e) { /* non-blocking */ }
+      try { sh('pnpm exec prettier --check "src/**/*.{ts,tsx,js,jsx}"', { cwd: appDir }) } catch (e) { /* non-blocking */ }
     }
     if (biomePins) {
-      try { sh('pnpm exec biome check .', { cwd: appDir }) } catch (e) { /* non-blocking */ }
+      try { sh('pnpm exec biome check src', { cwd: appDir }) } catch (e) { /* non-blocking */ }
     }
   } finally {
     if (!args.keepPins) {

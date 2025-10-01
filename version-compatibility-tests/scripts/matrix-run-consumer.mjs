@@ -5,6 +5,7 @@ import path from 'node:path'
 
 const root = process.cwd()
 const appDir = path.join(root, 'version-compatibility-tests', 'consumer-app')
+const distDir = path.join(root, 'version-compatibility-tests', 'dist')
 const logsRoot = path.join(root, 'version-compatibility-tests', 'logs', new Date().toISOString().replace(/[:.]/g, '-'))
 fs.mkdirSync(logsRoot, { recursive: true })
 
@@ -30,12 +31,12 @@ function sh(cmd, cwd, logFile) {
   }
 }
 
-function runScenario(react, ts, eslint, prettier, biome) {
+function runScenario(react, ts, eslint, prettier, biome, tarballName) {
   const scenario = slug([`react-${react}`, `ts-${ts}`, `eslint-${eslint}`, `prettier-${prettier}`, `biome-${biome}`])
   const dir = path.join(logsRoot, scenario)
   fs.mkdirSync(dir, { recursive: true })
 
-  const pinCmd = `node version-compatibility-tests/scripts/consumer-pin-and-build.mjs --react ${react} --react-dom ${react} --typescript ${ts} --eslint ${eslint} --prettier ${prettier} --biome ${biome}`
+  const pinCmd = `node version-compatibility-tests/scripts/consumer-pin-and-build.mjs --react ${react} --react-dom ${react} --typescript ${ts} --eslint ${eslint} --prettier ${prettier} --biome ${biome} --tarball version-compatibility-tests/dist/${tarballName}`
   const pinRes = sh(pinCmd, root, path.join(dir, 'pin-and-build.log'))
 
   // After build, run quick checks again to capture statuses independently
@@ -70,11 +71,33 @@ function* combos() {
 }
 
 function main() {
+  // Pack once for all scenarios
+  fs.mkdirSync(distDir, { recursive: true })
+  sh('pnpm pack --pack-destination version-compatibility-tests/dist', root, path.join(logsRoot, 'pack.log'))
+  const tgz = fs
+    .readdirSync(distDir)
+    .filter((f) => f.endsWith('.tgz'))
+    .map((f) => ({ f, t: fs.statSync(path.join(distDir, f)).ctimeMs }))
+    .sort((a, b) => b.t - a.t)[0]?.f
+  if (!tgz) {
+    console.error('Failed to find packed tarball under dist')
+    process.exit(1)
+  }
+
   const all = []
-  for (const [r, t, e, p, b] of combos()) all.push(runScenario(r, t, e, p, b))
+  for (const [r, t, e, p, b] of combos()) all.push(runScenario(r, t, e, p, b, tgz))
   const summaryPath = path.join(logsRoot, 'MATRIX_SUMMARY.json')
   fs.writeFileSync(summaryPath, JSON.stringify(all, null, 2))
+  // Write stable pointer
+  const latest = {
+    generatedAt: new Date().toISOString(),
+    summaryPath,
+    total: all.length,
+    passed: all.filter(s => s.steps.build && s.steps.pin_and_build).length
+  }
+  fs.writeFileSync(path.join(root, 'version-compatibility-tests', 'MATRIX_LATEST.json'), JSON.stringify(latest, null, 2))
   console.log('\nMatrix results written to', summaryPath)
+  console.log('Latest summary pointer written to version-compatibility-tests/MATRIX_LATEST.json')
 }
 
 main()
