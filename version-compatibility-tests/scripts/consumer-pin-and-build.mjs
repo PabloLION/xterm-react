@@ -4,18 +4,35 @@ import fs from 'node:fs'
 import path from 'node:path'
 
 const repoRoot = process.cwd()
-const appDir = path.join(repoRoot, 'version-compatibility-tests', 'consumer-app')
 const distDir = path.join(repoRoot, 'version-compatibility-tests', 'dist')
+
+// Allowlist of packages this script is permitted to resolve/pin
+const ALLOWED_PACKAGES = new Set([
+  'react', 'react-dom', 'typescript', '@types/react', '@types/react-dom',
+  'vite', '@vitejs/plugin-react',
+  'eslint', '@typescript-eslint/parser', '@typescript-eslint/eslint-plugin', '@eslint/js',
+  'prettier', 'eslint-plugin-prettier',
+  '@biomejs/biome'
+])
+
+function assertAllowedPackage(name) {
+  if (!ALLOWED_PACKAGES.has(name)) {
+    console.error(`[pin-and-build] Package name not allowed: ${name}`)
+    process.exit(1)
+  }
+}
 
 function sh(cmd, opts = {}) {
   return execSync(cmd, { stdio: 'inherit', ...opts })
 }
 
 function getLatest(name) {
+  assertAllowedPackage(name)
   return execSync(`npm view ${name} version`, { stdio: 'pipe' }).toString().trim()
 }
 
 function getLatestForMajor(name, major) {
+  assertAllowedPackage(name)
   try {
     const raw = execSync(`npm view ${name} versions --json`, { stdio: 'pipe' }).toString()
     const versions = JSON.parse(raw)
@@ -40,9 +57,10 @@ function parseArgs(argv) {
       case '--types-react': out.typesReact = v; i++; break
       case '--types-react-dom': out.typesReactDom = v; i++; break
       case '--tarball': out.tarball = v; i++; break
+      case '--app-dir': out.appDir = v; i++; break
       case '--keep-pins': out.keepPins = true; break
       case '--help':
-        console.log(`Usage: node consumer-pin-and-build.mjs [--react <ver>] [--react-dom <ver>] [--typescript <ver>] [--vite <ver>] [--plugin-react <ver>] [--types-react <ver>] [--types-react-dom <ver>] [--tarball <path>] [--keep-pins]`)
+        console.log(`Usage: node consumer-pin-and-build.mjs [--react <ver>] [--react-dom <ver>] [--typescript <ver>] [--vite <ver>] [--plugin-react <ver>] [--types-react <ver>] [--types-react-dom <ver>] [--tarball <path>] [--app-dir <dir>] [--keep-pins]`)
         process.exit(0)
       default:
         break
@@ -53,6 +71,15 @@ function parseArgs(argv) {
 
 function main() {
   const args = parseArgs(process.argv)
+  const appDir = (() => {
+    const d = args.appDir ? (path.isAbsolute(args.appDir) ? args.appDir : path.join(repoRoot, args.appDir)) : path.join(repoRoot, 'version-compatibility-tests', 'consumer-app')
+    const rel = path.relative(repoRoot, d)
+    if (rel.startsWith('..') || path.isAbsolute(rel)) {
+      console.error('[pin-and-build] --app-dir must be within the repository tree:', d)
+      process.exit(1)
+    }
+    return d
+  })()
   const react = args.react || getLatest('react')
   const reactDom = args.reactDom || getLatest('react-dom')
   const reactMajor = String(react).split('.')[0]
@@ -138,6 +165,11 @@ function main() {
   const eslintPins = mapEslint(args.eslint)
   const prettierPins = mapPrettier(args.prettier)
   const biomePins = mapBiome(args.biome)
+  // Validate pin objects against allowlist
+  for (const obj of [eslintPins, prettierPins, biomePins]) {
+    if (!obj) continue
+    for (const k of Object.keys(obj)) assertAllowedPackage(k)
+  }
 
   // Pin in consumer app
   const pkgPath = path.join(appDir, 'package.json')

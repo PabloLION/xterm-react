@@ -1,7 +1,8 @@
 #!/usr/bin/env node
-import { execSync } from 'node:child_process'
+import { execSync, exec } from 'node:child_process'
 import fs from 'node:fs'
 import path from 'node:path'
+import os from 'node:os'
 
 const root = process.cwd()
 const appDir = path.join(root, 'version-compatibility-tests', 'consumer-app')
@@ -65,19 +66,29 @@ function sh(cmd, cwd, logFile) {
   }
 }
 
-function runScenario(react, ts, eslint, prettier, biome, tarballName) {
+function shAsync(cmd, cwd, logFile) {
+  return new Promise((resolve) => {
+    exec(cmd, { cwd, maxBuffer: 10 * 1024 * 1024 }, (error, stdout, stderr) => {
+      const out = (stdout || '') + (stderr ? '\n' + stderr : '')
+      if (logFile) fs.writeFileSync(logFile, out)
+      resolve({ ok: !error, out })
+    })
+  })
+}
+
+async function runScenario(react, ts, eslint, prettier, biome, tarballName, appDirForRun) {
   const scenario = slug([`react-${react}`, `ts-${ts}`, `eslint-${eslint}`, `prettier-${prettier}`, `biome-${biome}`])
   const dir = path.join(logsRoot, scenario)
   fs.mkdirSync(dir, { recursive: true })
 
-  const pinCmd = `node version-compatibility-tests/scripts/consumer-pin-and-build.mjs --react ${react} --react-dom ${react} --typescript ${ts} --eslint ${eslint} --prettier ${prettier} --biome ${biome} --tarball version-compatibility-tests/dist/${tarballName}`
-  const pinRes = sh(pinCmd, root, path.join(dir, 'pin-and-build.log'))
+  const pinCmd = `node version-compatibility-tests/scripts/consumer-pin-and-build.mjs --react ${react} --react-dom ${react} --typescript ${ts} --eslint ${eslint} --prettier ${prettier} --biome ${biome} --tarball version-compatibility-tests/dist/${tarballName} --app-dir ${path.relative(root, appDirForRun)}`
+  const pinRes = await shAsync(pinCmd, root, path.join(dir, 'pin-and-build.log'))
 
   // After build, run quick checks again to capture statuses independently
-  const buildRes = sh('pnpm exec vite build', appDir, path.join(dir, 'build.log'))
-  const lintRes = sh('pnpm exec eslint .', appDir, path.join(dir, 'eslint.log'))
-  const formatRes = sh('pnpm exec prettier --check .', appDir, path.join(dir, 'prettier.log'))
-  const biomeRes = sh('pnpm exec biome check .', appDir, path.join(dir, 'biome.log'))
+  const buildRes = await shAsync('pnpm exec vite build', appDirForRun, path.join(dir, 'build.log'))
+  const lintRes = await shAsync('pnpm exec eslint .', appDirForRun, path.join(dir, 'eslint.log'))
+  const formatRes = await shAsync('pnpm exec prettier --check .', appDirForRun, path.join(dir, 'prettier.log'))
+  const biomeRes = await shAsync('pnpm exec biome check .', appDirForRun, path.join(dir, 'biome.log'))
 
   const expectedFail = XFAIL.some(x =>
     (x.react?.toString() ?? react) === react &&
@@ -116,7 +127,7 @@ function* combos() {
           for (const b of BIOMES) yield [r, t, e, p, b]
 }
 
-function main() {
+async function main() {
   // Pack once for all scenarios
   fs.mkdirSync(distDir, { recursive: true })
   sh('pnpm pack --pack-destination version-compatibility-tests/dist', root, path.join(logsRoot, 'pack.log'))
@@ -131,7 +142,46 @@ function main() {
   }
 
   const all = []
-  for (const [r, t, e, p, b] of combos()) all.push(runScenario(r, t, e, p, b, tgz))
+  const comboList = Array.from(combos())
+
+  // Concurrency setup
+  const cpuCount = Math.max(1, os.cpus()?.length || 1)
+  const maxDefault = Math.min(4, Math.max(1, cpuCount - 1))
+  function parseParallel() {
+    const idx = process.argv.indexOf('--parallel')
+    let n = idx !== -1 ? parseInt(process.argv[idx + 1], 10) : parseInt(process.env.PARALLEL || '1', 10)
+    if (!Number.isFinite(n) || n < 1) n = 1
+    n = Math.min(n, 8)
+    return n
+  }
+  const parallel = parseParallel()
+  const workRoot = path.join(root, 'version-compatibility-tests', '.work', path.basename(logsRoot))
+  fs.mkdirSync(workRoot, { recursive: true })
+  const workers = []
+  let next = 0
+
+  function prepareWorkerDir(i) {
+    const workerDir = path.join(workRoot, `w-${i}`, 'consumer-app')
+    fs.mkdirSync(path.dirname(workerDir), { recursive: true })
+    fs.cpSync(appDir, workerDir, { recursive: true, force: true })
+    return workerDir
+  }
+
+  const workerAppDirs = Array.from({ length: parallel }, (_, i) => prepareWorkerDir(i))
+
+  async function runWorker(i) {
+    const appDirForRun = workerAppDirs[i]
+    while (true) {
+      const idx = next++
+      if (idx >= comboList.length) break
+      const [r, t, e, p, b] = comboList[idx]
+      const res = await runScenario(r, t, e, p, b, tgz, appDirForRun)
+      all.push(res)
+    }
+  }
+
+  for (let i = 0; i < parallel; i++) workers.push(runWorker(i))
+  await Promise.all(workers)
   const summaryPath = path.join(logsRoot, 'MATRIX_SUMMARY.json')
   fs.writeFileSync(summaryPath, JSON.stringify(all, null, 2))
   // Write stable pointer

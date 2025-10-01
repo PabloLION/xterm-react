@@ -26,6 +26,12 @@ This repo ships an in‑repo “consumer app” plus scripts to test the publish
 - Filter specific versions (comma-separated, must exist in the arrays):
   - `pnpm run compat:matrix -- --reacts 19.1.1 --types 5.9.3 --eslint 9-ts8 --prettier 3.3 --biome 2.2.4`
 
+### Parallel mode (opt‑in)
+- Run scenarios concurrently using isolated worker app dirs (packs once):
+  - `PARALLEL=3 pnpm run compat:matrix` or `pnpm run compat:matrix -- --parallel 3`
+- Defaults to `1` (serial). Cap concurrency to avoid overloading (typical sweet spot: 2–4).
+- Logs and summary format are unchanged; workers reuse pnpm’s global store.
+
 ## Version Resolution Details
 - Scope: the matrix targets React 18 and 19; React 17 is out of scope and not tested.
 - React and ReactDOM are pinned to the same version per scenario.
