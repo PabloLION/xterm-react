@@ -28,13 +28,13 @@ function sh(cmd, opts = {}) {
 
 function getLatest(name) {
   assertAllowedPackage(name)
-  return execSync(`npm view ${name} version`, { stdio: 'pipe' }).toString().trim()
+  return execSync(`pnpm view ${name} version`, { stdio: 'pipe' }).toString().trim()
 }
 
 function getLatestForMajor(name, major) {
   assertAllowedPackage(name)
   try {
-    const raw = execSync(`npm view ${name} versions --json`, { stdio: 'pipe' }).toString()
+    const raw = execSync(`pnpm view ${name} versions --json`, { stdio: 'pipe' }).toString()
     const versions = JSON.parse(raw)
     const filtered = versions.filter(v => String(v).startsWith(`${major}.`))
     return filtered[filtered.length - 1] || getLatest(name)
