@@ -74,8 +74,6 @@ function appendRow(historyMd: string, dateIso: string, agg: ReturnType<typeof ag
         { type: 'tableCell', children: [text(dateIso)] },
         { type: 'tableCell', children: [text(String(agg.counts.PASS))] },
         { type: 'tableCell', children: [text(String(agg.counts.FAIL))] },
-        { type: 'tableCell', children: [text(String(agg.counts.XFAIL))] },
-        { type: 'tableCell', children: [text(String(agg.counts.XPASS))] },
         { type: 'tableCell', children: [code(agg.react)] },
         { type: 'tableCell', children: [code(agg.typescript)] },
         { type: 'tableCell', children: [code(agg.eslint)] },
@@ -98,4 +96,3 @@ function main() {
 }
 
 main()
-
