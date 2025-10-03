@@ -5,10 +5,12 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased]
 
 ### Added
+
 - `HISTORY.md` to capture compatibility matrix results, plus `scripts/update-history.ts` for automated updates.
 - Opt-in parallel execution and short CLI aliases for the compatibility matrix runner.
 
 ### Security
+
 - Allowlisted npm package names in the consumer pin/build script to mitigate typosquatting.
 
 ### Tooling

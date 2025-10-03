@@ -7,7 +7,6 @@
 - Docs: `docs/` (guides, compatibility notes)
 - Dev utils: `dev/`, e2e scaffolding under `e2e/` and `e2e-build/`
 - Compatibility harness: `version-compatibility-tests/` (consumer app + matrix)
-<<<<<<< HEAD
 - Shared config at root: `vite.config.mjs`, `biome.json`
 
 ## Build, Test, and Development Commands
@@ -15,7 +14,7 @@
 - Install: `pnpm install`
 - Dev playground: `pnpm dev` (Vite)
 - Build library: `pnpm build` (cleans `dist/`, compiles TS)
-<<<<<<< HEAD
+- Check (Biome): `pnpm check` (auto-apply) / `pnpm check:no-fix`
 - Check (Biome): `pnpm check` (auto-apply) / `pnpm check:no-fix`
 - Compatibility matrix: `pnpm compat:matrix` and `pnpm compat:matrix:summary`
 - Quick consumer build (latest): `pnpm compat:consumer:build-latest`
@@ -24,7 +23,6 @@
 
 - Language: TypeScript + React 18/19 patterns, functional components
 - Indentation: 2 spaces; trailing commas where valid
-<<<<<<< HEAD
 - Strings: repository defaults (Biome formatter)
 - Components: PascalCase (`XTerm`); hooks: `use*`; helpers: camelCase
 - Public APIs: explicit return types; avoid breaking changes without docs
