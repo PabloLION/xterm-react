@@ -25,7 +25,7 @@ const root = process.cwd();
 const latestPtr = path.join(
   root,
   "version-compatibility-tests",
-  "MATRIX_LATEST.json"
+  "MATRIX_LATEST.json",
 );
 const historyPath = path.join(root, "HISTORY.md");
 
@@ -53,7 +53,7 @@ function aggregate(summaryPath: string): {
   versions: AggregatedVersions;
 } {
   const scenarios: Scenario[] = JSON.parse(
-    fs.readFileSync(summaryPath, "utf8")
+    fs.readFileSync(summaryPath, "utf8"),
   );
 
   const versionSets = {
@@ -108,7 +108,7 @@ function buildRow(
   dateIso: string,
   pass: number,
   fail: number,
-  versions: AggregatedVersions
+  versions: AggregatedVersions,
 ): string {
   return `| ${dateIso} | ${pass} | ${fail} | \`${versions.react}\` | \`${versions.typescript}\` | \`${versions.eslint}\` | \`${versions.prettier}\` | \`${versions.biome}\` |`;
 }
@@ -145,7 +145,7 @@ function main(): void {
 
   const dateIso = (generatedAt || new Date().toISOString()).replace(
     /\..*Z$/,
-    "Z"
+    "Z",
   );
   const newRow = buildRow(dateIso, pass, fail, versions);
   const updated = insertRow(historyLines, newRow, dateIso).join("\n");
