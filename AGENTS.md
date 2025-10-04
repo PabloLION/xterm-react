@@ -15,7 +15,6 @@
 - Dev playground: `pnpm dev` (Vite)
 - Build library: `pnpm build` (cleans `dist/`, compiles TS)
 - Check (Biome): `pnpm check` (auto-apply) / `pnpm check:no-fix`
-- Check (Biome): `pnpm check` (auto-apply) / `pnpm check:no-fix`
 - Compatibility matrix: `pnpm compat:matrix` and `pnpm compat:matrix:summary`
 - Quick consumer build (latest): `pnpm compat:consumer:build-latest`
 
