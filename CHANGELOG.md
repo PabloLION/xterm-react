@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+### Added
+
+- `HISTORY.md` to capture compatibility matrix results, plus `scripts/update-history.ts` for automated updates.
+- Opt-in parallel execution and short CLI aliases for the compatibility matrix runner.
+
+### Security
+
+- Allowlisted npm package names in the consumer pin/build script to mitigate typosquatting.
+
+### Tooling
+
+- Husky pre-push hook that runs `pnpm check` (Biome auto-apply) before allowing pushes.
+- Replaced ESLint/Prettier with Biome for linting and formatting (`pnpm check` / `pnpm check:no-fix`).
+
 ## [1.2.0] - 2025-09-30
 
 ### Added
@@ -12,7 +28,7 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 
-- CI lint/format is guard-only (no auto-fix): runs `pnpm lint:no-fix -- --max-warnings=0`, Prettier check, and Biome check.
+- CI lint/format is guard-only (no auto-fix): runs `pnpm check:no-fix`.
 - Standardized on `pnpm`; removed `package-lock.json` in favor of `pnpm-lock.yaml`.
 - Release helper now uses `pnpm version` / `pnpm publish` and stages `CHANGELOG.md` alongside `VERSION.md`.
 - README install instructions updated to `@pablo-lion/xterm-react`.

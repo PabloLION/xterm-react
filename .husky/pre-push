@@ -1,0 +1,15 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+echo "[husky] Running biome check before push..."
+
+# Biome check with auto-apply to keep tree tidy
+pnpm run check || exit 1
+
+# Fail the push if the working tree or index is dirty after fixes
+if ! git diff --quiet || ! git diff --staged --quiet; then
+  echo "[husky] biome check applied fixes. Please commit them and push again."
+  exit 1
+fi
+
+echo "[husky] All good — proceeding with push."

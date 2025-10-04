@@ -8,8 +8,8 @@
 
 ## Tooling & Release Process
 
-- Update `scripts/prepare-publish.sh` to use pnpm (`pnpm version`, `pnpm publish`), stage `CHANGELOG.md`, and run `pnpm biome:check`/`pnpm test:versions`.
-- Fix `dev/git-hooks/pre-push` to call existing scripts (`pnpm lint`, `pnpm format`) or reintroduce a lint-staged config; remove the missing `lint:fix` script reference.
+- Update `scripts/prepare-publish.sh` to use pnpm (`pnpm version`, `pnpm publish`), stage `CHANGELOG.md`, and run `pnpm check:no-fix`/`pnpm test:versions`.
+- Fix `dev/git-hooks/pre-push` to call existing scripts (`pnpm check`) or reintroduce a lint-staged config; remove the missing `lint:fix` script reference.
 - Decide on a single lockfile—currently both `package-lock.json` and `pnpm-lock.yaml` are committed.
 - Declare the package format explicitly (e.g., add `"type": "module"` and an `exports` map) so Node consumers resolve the published dist correctly.
 
@@ -66,5 +66,5 @@ Planned topic branches and example commits
 - test/xterm-rtl-smoke
   - test(xterm): add RTL mount and imperative API smoke tests
     Decision: CI guard-only vs local auto-fix
-- CI (GitHub Actions) is a guard: check-only with `pnpm lint:no-fix --max-warnings=0`, `pnpm exec prettier --check .`, and `pnpm biome:check`. CI must not mutate files.
-- Local dev hooks (pre-push) run auto-fix: `pnpm lint` and `pnpm format`, then fail the push if diffs remain. This keeps PRs clean and enforces running our tools locally.
+- CI (GitHub Actions) is a guard: check-only with `pnpm check:no-fix` (Biome) and supporting matrix jobs. CI must not mutate files.
+- Local dev hooks (pre-push) run auto-fix: `pnpm check`, then fail the push if diffs remain. This keeps PRs clean and enforces running our tools locally.

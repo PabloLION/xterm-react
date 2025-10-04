@@ -21,7 +21,10 @@
     /* Interop Constraints */
     "verbatimModuleSyntax": true,
     /* Type Checking */
-    "strict": true
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true
     /* Completeness */
-  }
+  },
+  "include": ["src"]
 }

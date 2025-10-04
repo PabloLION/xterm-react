@@ -85,7 +85,7 @@ update_version_md() {
 run_checks() {
   pnpm install
   pnpm run lint
-  pnpm run biome:check
+  pnpm run check:no-fix
   pnpm run build
   # Optional but recommended: version compatibility smoke
   if [ -f "version-compatibility-tests/run-all-tests.js" ]; then

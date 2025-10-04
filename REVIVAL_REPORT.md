@@ -44,9 +44,9 @@ The `xterm-react` repository has been successfully assessed for compatibility wi
   - Code formatting
   - Unused variable detection
 - **Scripts Added**:
-  - `npm run biome:check` - Run Biome linting and type checking
-  - `npm run biome:fix` - Apply Biome auto-fixes
-  - `npm run biome:format` - Format code with Biome
+- `pnpm run check:no-fix` - Run Biome linting and type checking
+- `pnpm run check` - Apply Biome auto-fixes
+- `pnpm run check` - Format code with Biome (auto-applies fixing)
 
 ## Comprehensive Version Compatibility Testing
 

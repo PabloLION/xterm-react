@@ -238,7 +238,7 @@ export class XTerm extends React.Component<XTermProps> {
    * This replaces the `element` property in the `@xterm/xterm` class `Terminal`.
    * Assigned in constructor.
    */
-  readonly elementRef!: React.RefObject<HTMLDivElement>;
+  readonly elementRef!: React.RefObject<HTMLDivElement | null>;
 
   /**
    * XTerm.js Terminal object. Assigned in lifecycle componentDidMount.
@@ -295,14 +295,14 @@ export class XTerm extends React.Component<XTermProps> {
     // Add Custom Key Event Handler
     if (this.props.customKeyEventHandler) {
       this.terminal.attachCustomKeyEventHandler(
-        this.props.customKeyEventHandler
+        this.props.customKeyEventHandler,
       );
     }
 
     // Add Custom Wheel Event Handler
     if (this.props.customWheelEventHandler) {
       this.terminal.attachCustomWheelEventHandler(
-        this.props.customWheelEventHandler
+        this.props.customWheelEventHandler,
       );
     }
 

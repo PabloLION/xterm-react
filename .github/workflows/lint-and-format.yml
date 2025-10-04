@@ -30,11 +30,5 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Lint (verify, no auto-fix)
-        run: pnpm run lint:no-fix -- --max-warnings=0
-
-      - name: Prettier (verify, no write)
-        run: pnpm exec prettier --check .
-
-      - name: Biome (verify)
-        run: pnpm run biome:check
+      - name: Check (Biome, no auto-fix)
+        run: pnpm run check:no-fix
