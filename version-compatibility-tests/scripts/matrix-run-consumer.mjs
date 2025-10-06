@@ -1,9 +1,14 @@
 #!/usr/bin/env node
+// NOTE: This script remains ESM JavaScript to execute directly via `node`
+// inside CI runners without a compilation step. Shared helpers are covered by tests.
 import { execSync, exec } from 'node:child_process'
 import fs from 'node:fs'
 import path from 'node:path'
+import { pathToFileURL } from 'node:url'
 
 const root = process.cwd()
+const LOG_PREFIX = '[matrix]'
+const MAX_EXEC_BUFFER = 10 * 1024 * 1024
 const suiteDir = path.join(root, 'version-compatibility-tests')
 const appDir = path.join(suiteDir, 'consumer-app')
 const distDir = path.join(suiteDir, 'dist')
@@ -51,16 +56,20 @@ function parseListArg(names) {
 
 function warnDeprecated(oldName, newName) {
   if (process.argv.includes(`--${oldName}`)) {
-    console.warn(`[matrix] --${oldName} is deprecated; use --${newName}`)
+    console.warn(`${LOG_PREFIX} --${oldName} is deprecated; use --${newName}`)
   }
 }
 
 function filterAllowed(name, current, requested) {
   const set = new Set(current)
-  const out = requested.filter(value => set.has(value))
-  if (out.length !== requested.length) {
-    const bad = requested.filter(value => !set.has(value))
-    console.warn(`[matrix] Ignoring unsupported ${name} values: ${bad.join(', ')}`)
+  const out = []
+  const bad = []
+  for (const value of requested) {
+    if (set.has(value)) out.push(value)
+    else bad.push(value)
+  }
+  if (bad.length) {
+    console.warn(`${LOG_PREFIX} Ignoring unsupported ${name} values: ${bad.join(', ')}`)
   }
   return out.length ? out : current
 }
@@ -70,7 +79,7 @@ function filterEslintProfiles(requested) {
   const out = requested.map(ver => map.get(ver)).filter(Boolean)
   if (out.length !== requested.length) {
     const bad = requested.filter(ver => !map.has(ver))
-    console.warn(`[matrix] Ignoring unsupported eslint values: ${bad.join(', ')}`)
+    console.warn(`${LOG_PREFIX} Ignoring unsupported eslint values: ${bad.join(', ')}`)
   }
   return out.length ? out : ESLINT_VERSIONS
 }
@@ -101,7 +110,7 @@ if (linterFamilyArg) {
   const next = new Set()
   for (const entry of linterFamilyArg) {
     if (allowed.has(entry)) next.add(entry)
-    else console.warn(`[matrix] Ignoring unsupported linter family: ${entry}`)
+    else console.warn(`${LOG_PREFIX} Ignoring unsupported linter family: ${entry}`)
   }
   if (next.size) LINTER_FAMILIES = next
 }
@@ -130,7 +139,7 @@ function sh(cmd, cwd, logFile) {
 
 function shAsync(cmd, cwd, logFile) {
   return new Promise(resolve => {
-    exec(cmd, { cwd, maxBuffer: 10 * 1024 * 1024 }, (error, stdout, stderr) => {
+    exec(cmd, { cwd, maxBuffer: MAX_EXEC_BUFFER }, (error, stdout, stderr) => {
       const out = `${stdout || ''}${stderr ? '\n' + stderr : ''}`
       if (logFile) fs.writeFileSync(logFile, out)
       resolve({ ok: !error, out })
@@ -185,7 +194,7 @@ function listScenarios() {
   return scenarios
 }
 
-function matchesXfail(entry, scenario) {
+export function matchesXfail(entry, scenario) {
   if (entry.react && entry.react !== scenario.react) return false
   if (entry.typescript && entry.typescript !== scenario.typescript) return false
   const tool = scenario.linter.tool
@@ -272,7 +281,7 @@ async function runScenario(scenario, tarballName, appDirForRun) {
   }
 
   fs.writeFileSync(path.join(dir, 'summary.json'), JSON.stringify(summary, null, 2))
-  console.log(`${scenarioId}:`, steps)
+  console.log(`${LOG_PREFIX} ${scenarioId}:`, steps)
   return summary
 }
 
@@ -298,9 +307,9 @@ async function main() {
     .readdirSync(distDir)
     .filter(f => f.endsWith('.tgz'))
     .map(f => ({ f, t: fs.statSync(path.join(distDir, f)).ctimeMs }))
-    .sort((a, b) => (b.t - a.t) || a.f.localeCompare(b.f))[0]?.f
+    .sort((a, b) => b.t - a.t)[0]?.f
   if (!tgz) {
-    console.error('Failed to find packed tarball under dist')
+    console.error(`${LOG_PREFIX} Failed to find packed tarball under dist`)
     process.exit(1)
   }
 
@@ -311,6 +320,8 @@ async function main() {
   const workerAppDirs = Array.from({ length: parallel }, (_, i) => prepareWorkerDir(workRoot, i))
 
   const results = []
+  // Safe: Node.js event loop schedules these workers cooperatively, so the
+  // shared `next` counter increments atomically across async loops.
   let next = 0
 
   async function runWorker(workerIndex) {
@@ -336,8 +347,20 @@ async function main() {
     passed: results.filter(s => s.outcome === 'PASS').length
   }
   fs.writeFileSync(path.join(suiteDir, 'MATRIX_LATEST.json'), JSON.stringify(latest, null, 2))
-  console.log('\nMatrix results written to', summaryPath)
-  console.log('Latest summary pointer written to version-compatibility-tests/MATRIX_LATEST.json')
+  console.log(`${LOG_PREFIX}\nMatrix results written to ${summaryPath}`)
+  console.log(`${LOG_PREFIX} Latest summary pointer written to version-compatibility-tests/MATRIX_LATEST.json`)
 }
 
-main()
+const invokedAsScript = (() => {
+  const entry = process.argv[1]
+  if (!entry) return false
+  try {
+    return pathToFileURL(entry).href === import.meta.url
+  } catch {
+    return false
+  }
+})()
+
+if (invokedAsScript) {
+  main()
+}

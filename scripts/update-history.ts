@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import { pathToFileURL } from "node:url";
 
 type Outcome = "PASS" | "FAIL" | "XFAIL" | "XPASS";
 
@@ -34,6 +35,7 @@ const latestPtr = path.join(
   "MATRIX_LATEST.json",
 );
 const historyPath = path.join(root, "HISTORY.md");
+const LOG_PREFIX = "[history]";
 
 type LatestSummary = { generatedAt: string; summaryPath: string };
 
@@ -57,11 +59,11 @@ function loadLatestSummary(): LatestSummary {
   };
 }
 
-function formatSet(values: Set<string>): string {
+export function formatSet(values: Set<string>): string {
   return Array.from(values).sort().join(", ");
 }
 
-function summarizeLintSets(lintSets: LintSets): string {
+export function summarizeLintSets(lintSets: LintSets): string {
   const parts: string[] = [];
   if (lintSets.biome.size) {
     parts.push(`biome: ${formatSet(lintSets.biome)}`);
@@ -75,7 +77,7 @@ function summarizeLintSets(lintSets: LintSets): string {
   return parts.length ? parts.join(" | ") : "—";
 }
 
-function aggregate(summaryPath: string): {
+export function aggregate(summaryPath: string): {
   pass: number;
   fail: number;
   versions: AggregatedVersions;
@@ -135,7 +137,7 @@ function aggregate(summaryPath: string): {
   };
 }
 
-function buildRow(
+export function buildRow(
   dateIso: string,
   pass: number,
   fail: number,
@@ -144,7 +146,11 @@ function buildRow(
   return `| ${dateIso} | ${pass} | ${fail} | \`${versions.react}\` | \`${versions.typescript}\` | \`${versions.linting}\` |`;
 }
 
-function insertRow(table: string[], row: string, dateIso: string): string[] {
+export function insertRow(
+  table: string[],
+  row: string,
+  dateIso: string,
+): string[] {
   const headerIndex = table.findIndex((line) => line.startsWith("| Date"));
   if (headerIndex === -1) {
     throw new Error("Unable to locate history table header in HISTORY.md");
@@ -160,6 +166,9 @@ function insertRow(table: string[], row: string, dateIso: string): string[] {
   ) {
     const existingDate = table[insertIndex].split("|")[1]?.trim();
     if (existingDate === dateIso) {
+      console.log(
+        `${LOG_PREFIX} History entry for ${dateIso} already exists, skipping`,
+      );
       return table;
     }
     insertIndex += 1;
@@ -169,7 +178,7 @@ function insertRow(table: string[], row: string, dateIso: string): string[] {
   return table;
 }
 
-function main(): void {
+export function main(): void {
   const { generatedAt, summaryPath } = loadLatestSummary();
   const { pass, fail, versions } = aggregate(summaryPath);
   const historyLines = fs.readFileSync(historyPath, "utf8").split("\n");
@@ -182,7 +191,19 @@ function main(): void {
   const updated = insertRow(historyLines, newRow, dateIso).join("\n");
 
   fs.writeFileSync(historyPath, updated);
-  console.log("HISTORY.md updated for run at", dateIso);
+  console.log(`${LOG_PREFIX} HISTORY.md updated for run at ${dateIso}`);
 }
 
-main();
+const invokedAsScript = (() => {
+  const entry = process.argv[1];
+  if (!entry) return false;
+  try {
+    return pathToFileURL(entry).href === import.meta.url;
+  } catch {
+    return false;
+  }
+})();
+
+if (invokedAsScript) {
+  main();
+}
