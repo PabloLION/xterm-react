@@ -107,7 +107,31 @@ Lint families table:
   - PASS: not in xfail and all steps succeed.
   - FAIL: not in xfail and any step fails.
   - XFAIL: listed in xfail and a step fails (known, non‑blocking).
-  - XPASS: listed in xfail but all steps succeed (unexpected pass; remove from xfail).
+- XPASS: listed in xfail but all steps succeed (unexpected pass; remove from xfail).
+
+## Troubleshooting Failures
+
+- Review the per-scenario directory under `version-compatibility-tests/logs/<timestamp>/` for
+  `summary.json` plus raw command output (install/build/lint). `MATRIX_SUMMARY.json` surfaces the
+  failing scenario slug.
+- Re-run a single scenario by filtering to that combination, for example:
+  `pnpm run compat:matrix -- --linter eslint-prettier -r 19.1.1 -t 5.9.3 --eslint 9.13.0 --prettier 3.6.2`.
+- Common causes: missing peer dependencies in the consumer app, incompatible TypeScript/react-dom
+  pairs, or lint/format rules diverging. Fix the issue in the library or consumer harness, then
+  re-run `pnpm run compat:matrix`.
+- If the failure is known but unresolved, add an entry to `xfail.json` (see below) so CI summaries
+  highlight it as XFAIL rather than FAIL.
+
+## XFAIL Policy
+
+- Treat XFAIL as an explicit waiver: only add entries when the incompatibility is understood and
+  tracked (e.g. upstream React beta bug, tooling regression) and is acceptable short-term.
+- Entries should be as specific as possible (React, TypeScript, linter family, and versions). Avoid
+  wildcards until pattern matching is implemented.
+- When a scenario unexpectedly passes (`XPASS`), remove the matching XFAIL entry in the same PR to
+  keep the list tidy.
+- Periodically audit `xfail.json` alongside test runs to ensure we do not regress on previously
+  waived combinations.
 
 ## Housekeeping
 

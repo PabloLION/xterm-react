@@ -34,6 +34,10 @@ export default function App() {
 }
 ```
 
+> The component's `elementRef` is a `React.RefObject<HTMLDivElement | null>`.
+> Always guard against `null` before calling imperative APIs (e.g.
+> `ref.current?.focus()`), especially during initial render.
+
 ### Docs
 
 For the documentation of the `XTerm` component, check [XTerm-React Docs](./docs.md).
@@ -94,6 +98,10 @@ pnpm compat:matrix         # run curated matrix and write logs
 pnpm compat:matrix:summary # generate Markdown summary for the latest run
 # Examples: `pnpm compat:matrix -- --linter biome` (Biome-only) or `--linter eslint-prettier --eslint 9.13.0 --prettier 3.6.2`
 ```
+
+> Migration: legacy scripts such as `pnpm run test:versions`, `pnpm run test:react`,
+> `pnpm run test:eslint`, and `pnpm run test:biome` have been removed. Use the
+> filtered `pnpm run compat:matrix` commands above instead.
 
 For a quick smoke on the latest combo:
 
