@@ -12,6 +12,7 @@
   - Keep exact pins for reproducibility.
   - Optionally maintain a versions.json manifest committed to the repo to diff against.
   - Ensure the workflow does not publish; it only updates test pins and artifacts.
+  - Follow-up: once the curated matrix is stable, hook a lightweight GitHub Actions job (latest-only scenario) into the main branch to guard regressions.
 
 ## Addons & UI Enhancements
 - Document official addon usage with this wrapper, starting with `@xterm/addon-fit`.

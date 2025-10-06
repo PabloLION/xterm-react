@@ -80,7 +80,10 @@ This library officially supports and is continuously tested against the followin
 
 - React: 18.3.x, 19.1.x (React 17 is out of scope)
 - TypeScript: 5.2.2, 5.4.5, 5.9.3
-- Biome: 2.0.0, 2.1.1, 2.2.4 (lint + format for both TS and JS sources)
+- Linting / formatting families:
+  - Biome: 2.0.0, 2.1.1, 2.2.4
+  - ESLint: 8.57.0, 9.13.0 (paired with `@eslint/js` + `@typescript-eslint/parser`)
+  - Prettier: 3.3.3, 3.6.2
 
 Latest matrix summary: `version-compatibility-tests/MATRIX_SUMMARY.md`
 
@@ -89,6 +92,7 @@ Run the matrix locally:
 ```sh
 pnpm compat:matrix         # run curated matrix and write logs
 pnpm compat:matrix:summary # generate Markdown summary for the latest run
+# Examples: `pnpm compat:matrix -- --linter biome` (Biome-only) or `--linter eslint-prettier --eslint 9.13.0 --prettier 3.6.2`
 ```
 
 For a quick smoke on the latest combo:
