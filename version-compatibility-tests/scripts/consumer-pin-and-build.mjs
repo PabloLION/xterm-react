@@ -8,10 +8,13 @@ const distDir = path.join(repoRoot, 'version-compatibility-tests', 'dist')
 
 // Allowlist of packages this script is permitted to resolve/pin
 const ALLOWED_PACKAGES = new Set([
-  'react', 'react-dom', 'typescript', '@types/react', '@types/react-dom',
-  'vite', '@vitejs/plugin-react',
-  'eslint', '@typescript-eslint/parser', '@typescript-eslint/eslint-plugin', '@eslint/js',
-  'prettier', 'eslint-plugin-prettier',
+  'react',
+  'react-dom',
+  'typescript',
+  '@types/react',
+  '@types/react-dom',
+  'vite',
+  '@vitejs/plugin-react',
   '@biomejs/biome'
 ])
 
@@ -58,9 +61,10 @@ function parseArgs(argv) {
       case '--types-react-dom': out.typesReactDom = v; i++; break
       case '--tarball': out.tarball = v; i++; break
       case '--app-dir': out.appDir = v; i++; break
+      case '--biome': out.biome = v; i++; break
       case '--keep-pins': out.keepPins = true; break
       case '--help':
-        console.log(`Usage: node consumer-pin-and-build.mjs [--react <ver>] [--react-dom <ver>] [--typescript <ver>] [--vite <ver>] [--plugin-react <ver>] [--types-react <ver>] [--types-react-dom <ver>] [--tarball <path>] [--app-dir <dir>] [--keep-pins]`)
+        console.log(`Usage: node consumer-pin-and-build.mjs [--react <ver>] [--react-dom <ver>] [--typescript <ver>] [--vite <ver>] [--plugin-react <ver>] [--types-react <ver>] [--types-react-dom <ver>] [--biome <ver>] [--tarball <path>] [--app-dir <dir>] [--keep-pins]`)
         process.exit(0)
       default:
         break
@@ -132,43 +136,17 @@ function main() {
   }
 
   // Optionally add tool pins (eslint/prettier/biome)
-  function mapEslint(label) {
-    if (!label) return null
-    switch (label) {
-      case '8-ts6':
-        return { eslint: '^8.57.0', '@eslint/js': '^8.57.0', '@typescript-eslint/parser': '^6.21.0', '@typescript-eslint/eslint-plugin': '^6.21.0' }
-      case '9-ts8':
-        return { eslint: '^9.36.0', '@eslint/js': '^9.36.0', '@typescript-eslint/parser': '^8.44.1', '@typescript-eslint/eslint-plugin': '^8.44.1' }
-      default:
-        // allow raw version (e.g., 9.36.0)
-        return { eslint: label, '@eslint/js': label }
-    }
-  }
-  function mapPrettier(label) {
-    if (!label) return null
-    switch (label) {
-      case '2.8':
-        return { prettier: '^2.8.8', 'eslint-plugin-prettier': '^4.2.1' }
-      case '3.0':
-        return { prettier: '^3.0.0', 'eslint-plugin-prettier': '^5.0.0' }
-      case '3.3':
-        return { prettier: '^3.3.0', 'eslint-plugin-prettier': '^5.5.4' }
-      default:
-        return { prettier: label }
-    }
-  }
   function mapBiome(label) {
     if (!label) return null
     return { '@biomejs/biome': label }
   }
 
-  const eslintPins = mapEslint(args.eslint)
-  const prettierPins = mapPrettier(args.prettier)
   const biomePins = mapBiome(args.biome)
-  // Validate pin objects against allowlist
-  for (const obj of [eslintPins, prettierPins, biomePins]) {
-    if (!obj) continue
-    for (const k of Object.keys(obj)) assertAllowedPackage(k)
+  if (biomePins) {
+    for (const k of Object.keys(biomePins)) assertAllowedPackage(k)
+    if (biomePins['@biomejs/biome']) {
+      versions['@biomejs/biome'] = biomePins['@biomejs/biome']
+    }
   }
 
   // Pin in consumer app
@@ -188,8 +166,6 @@ function main() {
     '@types/react-dom': versions['@types/react-dom'],
     vite: versions.vite,
     '@vitejs/plugin-react': versions['@vitejs/plugin-react'],
-    ...(eslintPins || {}),
-    ...(prettierPins || {}),
     ...(biomePins || {})
   }
   fs.writeFileSync(pkgPath, JSON.stringify(pkg, null, 2))
@@ -198,16 +174,7 @@ function main() {
   try {
     sh('pnpm install', { cwd: appDir })
     sh('pnpm exec vite build', { cwd: appDir })
-    // Optional checks
-    if (eslintPins) {
-      try { sh('pnpm exec eslint src --no-error-on-unmatched-pattern', { cwd: appDir }) } catch (e) { console.warn('ESLint check failed (non-blocking):', e?.message || String(e)) }
-    }
-    if (prettierPins) {
-      try { sh('pnpm exec prettier --check "src/**/*.{ts,tsx,js,jsx}"', { cwd: appDir }) } catch (e) { console.warn('Prettier check failed (non-blocking):', e?.message || String(e)) }
-    }
-    if (biomePins) {
-      try { sh('pnpm exec biome check src', { cwd: appDir }) } catch (e) { console.warn('Biome check failed (non-blocking):', e?.message || String(e)) }
-    }
+    try { sh('pnpm exec biome check --config-path biome.json .', { cwd: appDir }) } catch (e) { console.warn('Biome check failed (non-blocking):', e?.message || String(e)) }
   } finally {
     if (!args.keepPins) {
       // Restore original consumer package.json to avoid git noise

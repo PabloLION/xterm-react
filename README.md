@@ -80,9 +80,7 @@ This library officially supports and is continuously tested against the followin
 
 - React: 18.3.x, 19.1.x (React 17 is out of scope)
 - TypeScript: 5.2.2, 5.4.5, 5.9.3
-- ESLint: 8 (typescript-eslint 6), 9 (typescript-eslint 8)
-- Prettier: 2.8, 3.0, 3.3
-- Biome: 2.0.0, 2.1.1, 2.2.4
+- Biome: 2.0.0, 2.1.1, 2.2.4 (lint + format for both TS and JS sources)
 
 Latest matrix summary: `version-compatibility-tests/MATRIX_SUMMARY.md`
 

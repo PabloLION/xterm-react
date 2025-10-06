@@ -7,8 +7,6 @@ interface Scenario {
   versions?: {
     react?: string;
     ts?: string;
-    eslint?: string;
-    prettier?: string;
     biome?: string;
   };
 }
@@ -16,8 +14,6 @@ interface Scenario {
 interface AggregatedVersions {
   react: string;
   typescript: string;
-  eslint: string;
-  prettier: string;
   biome: string;
 }
 
@@ -59,8 +55,6 @@ function aggregate(summaryPath: string): {
   const versionSets = {
     react: new Set<string>(),
     typescript: new Set<string>(),
-    eslint: new Set<string>(),
-    prettier: new Set<string>(),
     biome: new Set<string>(),
   };
 
@@ -80,12 +74,6 @@ function aggregate(summaryPath: string): {
     if (scenario.versions?.ts) {
       versionSets.typescript.add(scenario.versions.ts);
     }
-    if (scenario.versions?.eslint) {
-      versionSets.eslint.add(scenario.versions.eslint);
-    }
-    if (scenario.versions?.prettier) {
-      versionSets.prettier.add(scenario.versions.prettier);
-    }
     if (scenario.versions?.biome) {
       versionSets.biome.add(scenario.versions.biome);
     }
@@ -97,8 +85,6 @@ function aggregate(summaryPath: string): {
     versions: {
       react: formatSet(versionSets.react),
       typescript: formatSet(versionSets.typescript),
-      eslint: formatSet(versionSets.eslint),
-      prettier: formatSet(versionSets.prettier),
       biome: formatSet(versionSets.biome),
     },
   };
@@ -110,7 +96,7 @@ function buildRow(
   fail: number,
   versions: AggregatedVersions,
 ): string {
-  return `| ${dateIso} | ${pass} | ${fail} | \`${versions.react}\` | \`${versions.typescript}\` | \`${versions.eslint}\` | \`${versions.prettier}\` | \`${versions.biome}\` |`;
+  return `| ${dateIso} | ${pass} | ${fail} | \`${versions.react}\` | \`${versions.typescript}\` | \`${versions.biome}\` |`;
 }
 
 function insertRow(table: string[], row: string, dateIso: string): string[] {

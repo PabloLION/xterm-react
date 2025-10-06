@@ -1,7 +1,7 @@
 # Backlog
 
 ## CI: Track and update to latest versions for consumer tests
-- Goal: Add a CI workflow that periodically checks registry “latest” versions for key dependencies (React, ReactDOM, TypeScript, ESLint/@typescript-eslint, Prettier, Biome, Vite/@vitejs/plugin-react).
+- Goal: Add a CI workflow that periodically checks registry “latest” versions for key dependencies (React, ReactDOM, TypeScript, Biome, Vite/@vitejs/plugin-react).
 - Trigger: Scheduled (e.g., daily/weekly) and manual dispatch.
 - Action:
   - Resolve current latest versions (`pnpm view <pkg> version`).

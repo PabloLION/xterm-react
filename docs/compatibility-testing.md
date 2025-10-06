@@ -1,6 +1,6 @@
 # Compatibility Testing Guide
 
-This repo ships an in‑repo “consumer app” plus scripts to test the published package across multiple ecosystem versions (React, TypeScript, ESLint, Prettier, Biome). Tests run against a packed tarball of the library to mirror real consumer usage.
+This repo ships an in‑repo “consumer app” plus scripts to test the published package across multiple ecosystem versions (React, TypeScript, Biome). Tests run against a packed tarball of the library to mirror real consumer usage.
 
 ## What’s Included
 - Consumer app: `version-compatibility-tests/consumer-app` (Vite + React) that imports `@pablo-lion/xterm-react`.
@@ -8,7 +8,7 @@ This repo ships an in‑repo “consumer app” plus scripts to test the publish
   - Resolves and pins exact versions, aligns `@types/*` to the React major, installs, and builds.
   - Flags: `--react`, `--react-dom`, `--typescript`, `--vite`, `--plugin-react`, `--types-react`, `--types-react-dom`, `--tarball <path>`, `--keep-pins`.
 - Matrix runner: `version-compatibility-tests/scripts/matrix-run-consumer.mjs`
-  - Packs the library once, iterates a curated matrix of React×TS×ESLint×Prettier×Biome, builds the consumer app per scenario, and writes logs + a JSON summary.
+  - Packs the library once, iterates a curated matrix of React×TS×Biome, builds the consumer app per scenario, and writes logs + a JSON summary.
 
 ## Quick Start
 - Single “latest” combo (pins and restores package.json after run):
@@ -24,8 +24,8 @@ This repo ships an in‑repo “consumer app” plus scripts to test the publish
 - Run a reduced set (latest of each dimension):
   - `QUICK=1 pnpm run compat:matrix` or `pnpm run compat:matrix -- --quick`
 - Filter specific versions (comma-separated, must exist in the arrays):
-  - Long flags: `pnpm run compat:matrix -- --react 19.1.1 --typescript 5.9.3 --eslint 9-ts8 --prettier 3.3 --biome 2.2.4`
-  - Short flags: `pnpm run compat:matrix -- -r 19.1.1 -t 5.9.3 -e 9-ts8 -p 3.3 -b 2.2.4`
+  - Long flags: `pnpm run compat:matrix -- --react 19.1.1 --typescript 5.9.3 --biome 2.2.4`
+  - Short flags: `pnpm run compat:matrix -- -r 19.1.1 -t 5.9.3 -b 2.2.4`
 
 ### Parallel mode (opt‑in)
 - Run scenarios concurrently using isolated worker app dirs (packs once):
@@ -37,14 +37,11 @@ This repo ships an in‑repo “consumer app” plus scripts to test the publish
 - Scope: the matrix targets React 18 and 19; React 17 is out of scope and not tested.
 - React and ReactDOM are pinned to the same version per scenario.
 - `@types/react` and `@types/react-dom` default to the latest patch that matches the React major (e.g., React 19.x → latest `@types/*` 19.x). This avoids stale types without forcing runtime patch parity.
-- Lint/format checks are scoped to the consumer app’s `src` to keep signal clear:
-  - ESLint: `eslint src`
-  - Prettier: `prettier --check "src/**/*.{ts,tsx,js,jsx}"`
-  - Biome: `biome check src`
+- Biome checks are scoped to the consumer app (TypeScript + JavaScript sources) to keep signal clear: `pnpm exec biome check --config-path biome.json .`
 
 ## Extending the Matrix
 - Edit `version-compatibility-tests/scripts/matrix-run-consumer.mjs` arrays:
-  - `REACTS`, `TYPES`, `ESLINTS` (`8-ts6`, `9-ts8`, or explicit versions), `PRETTIERS`, `BIOMES`.
+  - `REACTS`, `TYPES`, `BIOMES`.
 - Add new dimensions by expanding the pin script to accept more flags and updating the runner to pass them through.
 
 ## Status Semantics (PASS / FAIL / XFAIL / XPASS)

@@ -15,8 +15,6 @@ const XFAIL = fs.existsSync(xfailPath) ? JSON.parse(fs.readFileSync(xfailPath, '
 // Support scope: React 18 and 19 only
 let REACTS = ['18.3.1', '19.1.1']
 let TYPES = ['5.2.2', '5.4.5', '5.9.3']
-let ESLINTS = ['8-ts6', '9-ts8']
-let PRETTIERS = ['2.8', '3.0', '3.3']
 let BIOMES = ['2.0.0', '2.1.1', '2.2.4']
 
 // Optional quick mode and CLI filters
@@ -55,22 +53,15 @@ const quick = process.env.QUICK === '1' || process.argv.includes('--quick')
 if (quick) {
   REACTS = [REACTS[REACTS.length - 1]] // latest React only
   TYPES = [TYPES[TYPES.length - 1]]
-  ESLINTS = [ESLINTS[ESLINTS.length - 1]]
-  PRETTIERS = [PRETTIERS[PRETTIERS.length - 1]]
   BIOMES = [BIOMES[BIOMES.length - 1]]
 }
 
-// New flags (preferred): --react, --typescript, --eslint, --prettier, --biome
-// Short aliases: -r, -t, -e, -p, -b
+// Flags: --react, --typescript, --biome (short aliases: -r, -t, -b)
 const rArg = parseListArgMulti(['--react', '-r'])
 const tArg = parseListArgMulti(['--typescript', '-t'])
-const eArg = parseListArgMulti(['--eslint', '-e'])
-const pArg = parseListArgMulti(['--prettier', '-p'])
 const bArg = parseListArgMulti(['--biome', '-b'])
 if (rArg) REACTS = filterAllowed('react', REACTS, rArg)
 if (tArg) TYPES = filterAllowed('typescript', TYPES, tArg)
-if (eArg) ESLINTS = filterAllowed('eslint', ESLINTS, eArg)
-if (pArg) PRETTIERS = filterAllowed('prettier', PRETTIERS, pArg)
 if (bArg) BIOMES = filterAllowed('biome', BIOMES, bArg)
 
 // Soft deprecation warnings for legacy flags (still parsed via parseArgValue if present)
@@ -103,36 +94,30 @@ function shAsync(cmd, cwd, logFile) {
   })
 }
 
-async function runScenario(react, ts, eslint, prettier, biome, tarballName, appDirForRun) {
-  const scenario = slug([`react-${react}`, `ts-${ts}`, `eslint-${eslint}`, `prettier-${prettier}`, `biome-${biome}`])
+async function runScenario(react, ts, biome, tarballName, appDirForRun) {
+  const scenario = slug([`react-${react}`, `ts-${ts}`, `biome-${biome}`])
   const dir = path.join(logsRoot, scenario)
   fs.mkdirSync(dir, { recursive: true })
 
-  const pinCmd = `node version-compatibility-tests/scripts/consumer-pin-and-build.mjs --react ${react} --react-dom ${react} --typescript ${ts} --eslint ${eslint} --prettier ${prettier} --biome ${biome} --tarball version-compatibility-tests/dist/${tarballName} --app-dir ${path.relative(root, appDirForRun)}`
+  const pinCmd = `node version-compatibility-tests/scripts/consumer-pin-and-build.mjs --react ${react} --react-dom ${react} --typescript ${ts} --biome ${biome} --tarball version-compatibility-tests/dist/${tarballName} --app-dir ${path.relative(root, appDirForRun)}`
   const pinRes = await shAsync(pinCmd, root, path.join(dir, 'pin-and-build.log'))
 
-  // After build, run quick checks again to capture statuses independently
+  // After build, run checks again to capture statuses independently
   const buildRes = await shAsync('pnpm exec vite build', appDirForRun, path.join(dir, 'build.log'))
-  const lintRes = await shAsync('pnpm exec eslint .', appDirForRun, path.join(dir, 'eslint.log'))
-  const formatRes = await shAsync('pnpm exec prettier --check .', appDirForRun, path.join(dir, 'prettier.log'))
-  const biomeRes = await shAsync('pnpm exec biome check .', appDirForRun, path.join(dir, 'biome.log'))
+  const biomeRes = await shAsync('pnpm exec biome check --config-path biome.json .', appDirForRun, path.join(dir, 'biome.log'))
 
   const expectedFail = XFAIL.some(x =>
     (x.react?.toString() ?? react) === react &&
     (x.typescript?.toString() ?? ts) === ts &&
-    (x.eslint?.toString() ?? eslint) === eslint &&
-    (x.prettier?.toString() ?? prettier) === prettier &&
     (x.biome?.toString() ?? biome) === biome
   )
 
   const summary = {
     scenario,
-    versions: { react, ts, eslint, prettier, biome },
+    versions: { react, ts, biome },
     steps: {
       pin_and_build: pinRes.ok,
       build: buildRes.ok,
-      eslint: lintRes.ok,
-      prettier: formatRes.ok,
       biome: biomeRes.ok
     },
     expected_fail: expectedFail,
@@ -149,9 +134,7 @@ async function runScenario(react, ts, eslint, prettier, biome, tarballName, appD
 function* combos() {
   for (const r of REACTS)
     for (const t of TYPES)
-      for (const e of ESLINTS)
-        for (const p of PRETTIERS)
-          for (const b of BIOMES) yield [r, t, e, p, b]
+      for (const b of BIOMES) yield [r, t, b]
 }
 
 async function main() {
@@ -173,7 +156,6 @@ async function main() {
 
   // Concurrency setup
   const cpuCount = Math.max(1, os.cpus()?.length || 1)
-  const maxDefault = Math.min(4, Math.max(1, cpuCount - 1))
   function parseParallel() {
     const idx = process.argv.indexOf('--parallel')
     let n = idx !== -1 ? parseInt(process.argv[idx + 1], 10) : parseInt(process.env.PARALLEL || '1', 10)
