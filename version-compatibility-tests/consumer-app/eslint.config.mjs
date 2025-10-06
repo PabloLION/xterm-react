@@ -1,5 +1,6 @@
 import js from '@eslint/js'
 import tsParser from '@typescript-eslint/parser'
+import prettier from 'eslint-config-prettier'
 
 export default [
   { ignores: ['dist/**', 'node_modules/**'] },
@@ -13,6 +14,6 @@ export default [
       globals: { window: 'readonly', document: 'readonly' }
     },
     rules: {}
-  }
+  },
+  prettier
 ]
-

@@ -6,7 +6,6 @@ import path from 'node:path'
 const repoRoot = process.cwd()
 const distDir = path.join(repoRoot, 'version-compatibility-tests', 'dist')
 
-// Allowlist of packages this script is permitted to resolve/pin
 const ALLOWED_PACKAGES = new Set([
   'react',
   'react-dom',
@@ -15,7 +14,12 @@ const ALLOWED_PACKAGES = new Set([
   '@types/react-dom',
   'vite',
   '@vitejs/plugin-react',
-  '@biomejs/biome'
+  '@biomejs/biome',
+  'eslint',
+  '@eslint/js',
+  '@typescript-eslint/parser',
+  'eslint-config-prettier',
+  'prettier'
 ])
 
 function assertAllowedPackage(name) {
@@ -62,9 +66,14 @@ function parseArgs(argv) {
       case '--tarball': out.tarball = v; i++; break
       case '--app-dir': out.appDir = v; i++; break
       case '--biome': out.biome = v; i++; break
+      case '--eslint': out.eslint = v; i++; break
+      case '--eslint-js': out.eslintJs = v; i++; break
+      case '--ts-eslint-parser': out.tsEslintParser = v; i++; break
+      case '--prettier': out.prettier = v; i++; break
+      case '--eslint-config-prettier': out.eslintConfigPrettier = v; i++; break
       case '--keep-pins': out.keepPins = true; break
       case '--help':
-        console.log(`Usage: node consumer-pin-and-build.mjs [--react <ver>] [--react-dom <ver>] [--typescript <ver>] [--vite <ver>] [--plugin-react <ver>] [--types-react <ver>] [--types-react-dom <ver>] [--biome <ver>] [--tarball <path>] [--app-dir <dir>] [--keep-pins]`)
+        console.log(`Usage: node consumer-pin-and-build.mjs [--react <ver>] [--react-dom <ver>] [--typescript <ver>] [--vite <ver>] [--plugin-react <ver>] [--types-react <ver>] [--types-react-dom <ver>] [--biome <ver>] [--eslint <ver>] [--eslint-js <ver>] [--ts-eslint-parser <ver>] [--prettier <ver>] [--eslint-config-prettier <ver>] [--tarball <path>] [--app-dir <dir>] [--keep-pins]`)
         process.exit(0)
       default:
         break
@@ -84,6 +93,7 @@ function main() {
     }
     return d
   })()
+
   const react = args.react || getLatest('react')
   const reactDom = args.reactDom || getLatest('react-dom')
   const reactMajor = String(react).split('.')[0]
@@ -97,12 +107,34 @@ function main() {
     '@vitejs/plugin-react': args.pluginReact || getLatest('@vitejs/plugin-react')
   }
 
-  // Build and/or use supplied tarball
+  const lintDevDeps = {}
+  if (args.biome) {
+    assertAllowedPackage('@biomejs/biome')
+    lintDevDeps['@biomejs/biome'] = args.biome
+  }
+  if (args.eslint) {
+    assertAllowedPackage('eslint')
+    const eslintVersion = args.eslint
+    lintDevDeps.eslint = eslintVersion
+    const eslintJsVersion = args.eslintJs || eslintVersion
+    assertAllowedPackage('@eslint/js')
+    lintDevDeps['@eslint/js'] = eslintJsVersion
+    const parserVersion = args.tsEslintParser || getLatest('@typescript-eslint/parser')
+    assertAllowedPackage('@typescript-eslint/parser')
+    lintDevDeps['@typescript-eslint/parser'] = parserVersion
+    const configPrettier = args.eslintConfigPrettier || getLatest('eslint-config-prettier')
+    assertAllowedPackage('eslint-config-prettier')
+    lintDevDeps['eslint-config-prettier'] = configPrettier
+  }
+  if (args.prettier) {
+    assertAllowedPackage('prettier')
+    lintDevDeps.prettier = args.prettier
+  }
+
   fs.mkdirSync(distDir, { recursive: true })
   let tgz = null
   if (args.tarball) {
     const abs = path.isAbsolute(args.tarball) ? args.tarball : path.join(repoRoot, args.tarball)
-    // Basic validation: must exist, be a .tgz, and resolve within repo
     if (!fs.existsSync(abs)) {
       console.error('Provided tarball not found:', abs)
       process.exit(1)
@@ -117,7 +149,6 @@ function main() {
       process.exit(1)
     }
     tgz = path.basename(abs)
-    // If tarball is outside distDir, copy it in for a stable relative path
     if (path.dirname(abs) !== distDir) {
       fs.copyFileSync(abs, path.join(distDir, tgz))
     }
@@ -125,31 +156,15 @@ function main() {
     sh('pnpm pack --pack-destination version-compatibility-tests/dist', { cwd: repoRoot })
     tgz = fs
       .readdirSync(distDir)
-      .filter((f) => f.endsWith('.tgz'))
-      .map((f) => ({ f, t: fs.statSync(path.join(distDir, f)).ctimeMs }))
-      .sort((a, b) => (b.t - a.t) || a.f.localeCompare(b.f))
-      [0]?.f
+      .filter(f => f.endsWith('.tgz'))
+      .map(f => ({ f, t: fs.statSync(path.join(distDir, f)).ctimeMs }))
+      .sort((a, b) => (b.t - a.t) || a.f.localeCompare(b.f))[0]?.f
     if (!tgz) {
       console.error('No packed tarball found under version-compatibility-tests/dist')
       process.exit(1)
     }
   }
 
-  // Optionally add tool pins (eslint/prettier/biome)
-  function mapBiome(label) {
-    if (!label) return null
-    return { '@biomejs/biome': label }
-  }
-
-  const biomePins = mapBiome(args.biome)
-  if (biomePins) {
-    for (const k of Object.keys(biomePins)) assertAllowedPackage(k)
-    if (biomePins['@biomejs/biome']) {
-      versions['@biomejs/biome'] = biomePins['@biomejs/biome']
-    }
-  }
-
-  // Pin in consumer app
   const pkgPath = path.join(appDir, 'package.json')
   const originalPkg = fs.readFileSync(pkgPath, 'utf8')
   const pkg = JSON.parse(originalPkg)
@@ -166,24 +181,31 @@ function main() {
     '@types/react-dom': versions['@types/react-dom'],
     vite: versions.vite,
     '@vitejs/plugin-react': versions['@vitejs/plugin-react'],
-    ...(biomePins || {})
+    ...lintDevDeps
   }
   fs.writeFileSync(pkgPath, JSON.stringify(pkg, null, 2))
 
-  // Install & build
   try {
     sh('pnpm install', { cwd: appDir })
     sh('pnpm exec vite build', { cwd: appDir })
-    try { sh('pnpm exec biome check --config-path biome.json .', { cwd: appDir }) } catch (e) { console.warn('Biome check failed (non-blocking):', e?.message || String(e)) }
+    if (args.biome) {
+      try {
+        sh('pnpm exec biome check --config-path biome.json .', { cwd: appDir })
+      } catch (error) {
+        console.warn('Biome check failed (non-blocking):', error?.message || String(error))
+      }
+    }
   } finally {
     if (!args.keepPins) {
-      // Restore original consumer package.json to avoid git noise
       fs.writeFileSync(pkgPath, originalPkg)
     }
   }
 
+  const loggedVersions = { ...versions, ...lintDevDeps }
   console.log('\nPinned versions:')
-  for (const [k, v] of Object.entries(versions)) console.log(`- ${k} = ${v}`)
+  for (const [k, v] of Object.entries(loggedVersions)) {
+    console.log(`- ${k} = ${v}`)
+  }
   console.log(`Tarball: ${tgz}`)
   console.log('Consumer app built. Run `pnpm exec vite preview` in consumer app to view.')
 }

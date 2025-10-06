@@ -35,16 +35,33 @@ function summarize(summaryPath) {
   const arr = JSON.parse(fs.readFileSync(summaryPath, 'utf8'))
   const counts = { PASS: 0, FAIL: 0, XFAIL: 0, XPASS: 0 }
   const byReact = new Map()
+  const byLinter = new Map()
+  const lintSets = {
+    biome: new Set(),
+    eslint: new Set(),
+    prettier: new Set()
+  }
   const fails = []
   const xfails = []
   const xpasses = []
 
   for (const s of arr) {
     const outcome = s.outcome || (s.steps?.build && s.steps?.pin_and_build ? 'PASS' : 'FAIL')
-    counts[outcome] = (counts[outcome] || 0) + 1
+    counts[outcome] = (counts[outcome] ?? 0) + 1
     const r = s.versions?.react || 'unknown'
     if (!byReact.has(r)) byReact.set(r, { PASS: 0, FAIL: 0, XFAIL: 0, XPASS: 0 })
     byReact.get(r)[outcome]++
+    const linter = s.versions?.linter
+    const linterTool = linter?.tool || 'unknown'
+    if (!byLinter.has(linterTool)) byLinter.set(linterTool, { PASS: 0, FAIL: 0, XFAIL: 0, XPASS: 0 })
+    byLinter.get(linterTool)[outcome]++
+    if (linter) {
+      if (linter.tool === 'biome' && linter.version) lintSets.biome.add(linter.version)
+      if (linter.tool === 'eslint-prettier') {
+        if (linter.eslint) lintSets.eslint.add(linter.eslint)
+        if (linter.prettier) lintSets.prettier.add(linter.prettier)
+      }
+    }
     if (outcome === 'FAIL') fails.push(s)
     if (outcome === 'XFAIL') xfails.push(s)
     if (outcome === 'XPASS') xpasses.push(s)
@@ -65,6 +82,22 @@ function summarize(summaryPath) {
     md += `- ${react}: PASS ${c.PASS} / FAIL ${c.FAIL} / XFAIL ${c.XFAIL} / XPASS ${c.XPASS}\n`
   }
   md += `\n`
+  md += `## By Linter Tool\n\n`
+  for (const [tool, c] of byLinter.entries()) {
+    md += `- ${tool}: PASS ${c.PASS} / FAIL ${c.FAIL} / XFAIL ${c.XFAIL} / XPASS ${c.XPASS}\n`
+  }
+  md += `\n`
+  const lintParts = []
+  if (lintSets.biome.size) lintParts.push(`biome: ${Array.from(lintSets.biome).sort().join(', ')}`)
+  if (lintSets.eslint.size) lintParts.push(`eslint: ${Array.from(lintSets.eslint).sort().join(', ')}`)
+  if (lintSets.prettier.size) lintParts.push(`prettier: ${Array.from(lintSets.prettier).sort().join(', ')}`)
+  if (lintParts.length) {
+    md += `### Linter Versions\n\n`
+    for (const part of lintParts) {
+      md += `- ${part}\n`
+    }
+    md += `\n`
+  }
   if (fails.length) {
     md += `## FAIL\n\n`
     for (const s of fails) {

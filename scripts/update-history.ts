@@ -1,20 +1,30 @@
 import fs from "node:fs";
 import path from "node:path";
 
+type Outcome = "PASS" | "FAIL" | "XFAIL" | "XPASS";
+
+interface LinterVersionBase {
+  tool?: string;
+  version?: string;
+  eslint?: string;
+  prettier?: string;
+  [key: string]: unknown;
+}
+
 interface Scenario {
-  outcome?: "PASS" | "FAIL" | "XFAIL" | "XPASS";
-  steps?: { pin_and_build?: boolean; build?: boolean };
+  outcome?: Outcome;
+  steps?: Record<string, boolean>;
   versions?: {
     react?: string;
-    ts?: string;
-    biome?: string;
+    typescript?: string;
+    linter?: LinterVersionBase;
   };
 }
 
 interface AggregatedVersions {
   react: string;
   typescript: string;
-  biome: string;
+  linting: string;
 }
 
 const root = process.cwd();
@@ -25,7 +35,15 @@ const latestPtr = path.join(
 );
 const historyPath = path.join(root, "HISTORY.md");
 
-function loadLatestSummary(): { generatedAt: string; summaryPath: string } {
+type LatestSummary = { generatedAt: string; summaryPath: string };
+
+type LintSets = {
+  biome: Set<string>;
+  eslint: Set<string>;
+  prettier: Set<string>;
+};
+
+function loadLatestSummary(): LatestSummary {
   if (!fs.existsSync(latestPtr)) {
     throw new Error(`Missing MATRIX_LATEST.json at ${latestPtr}`);
   }
@@ -43,6 +61,20 @@ function formatSet(values: Set<string>): string {
   return Array.from(values).sort().join(", ");
 }
 
+function summarizeLintSets(lintSets: LintSets): string {
+  const parts: string[] = [];
+  if (lintSets.biome.size) {
+    parts.push(`biome: ${formatSet(lintSets.biome)}`);
+  }
+  if (lintSets.eslint.size) {
+    parts.push(`eslint: ${formatSet(lintSets.eslint)}`);
+  }
+  if (lintSets.prettier.size) {
+    parts.push(`prettier: ${formatSet(lintSets.prettier)}`);
+  }
+  return parts.length ? parts.join(" | ") : "—";
+}
+
 function aggregate(summaryPath: string): {
   pass: number;
   fail: number;
@@ -55,27 +87,40 @@ function aggregate(summaryPath: string): {
   const versionSets = {
     react: new Set<string>(),
     typescript: new Set<string>(),
+  };
+  const lintSets: LintSets = {
     biome: new Set<string>(),
+    eslint: new Set<string>(),
+    prettier: new Set<string>(),
   };
 
   let pass = 0;
   let fail = 0;
 
   for (const scenario of scenarios) {
-    const outcome =
+    const outcome: Outcome =
       scenario.outcome ||
-      (scenario.steps?.build && scenario.steps.pin_and_build ? "PASS" : "FAIL");
-    if (outcome === "PASS") pass += 1;
-    else if (outcome === "FAIL") fail += 1;
+      (Object.values(scenario.steps ?? {}).every(Boolean) ? "PASS" : "FAIL");
+    if (outcome === "PASS" || outcome === "XPASS") pass += 1;
+    if (outcome === "FAIL" || outcome === "XFAIL") fail += 1;
 
     if (scenario.versions?.react) {
       versionSets.react.add(scenario.versions.react);
     }
-    if (scenario.versions?.ts) {
-      versionSets.typescript.add(scenario.versions.ts);
+    if (scenario.versions?.typescript) {
+      versionSets.typescript.add(scenario.versions.typescript);
     }
-    if (scenario.versions?.biome) {
-      versionSets.biome.add(scenario.versions.biome);
+
+    const linter = scenario.versions?.linter;
+    if (linter?.tool === "biome" && typeof linter.version === "string") {
+      lintSets.biome.add(linter.version);
+    } else if (linter?.tool === "eslint-prettier") {
+      if (typeof linter.eslint === "string") {
+        lintSets.eslint.add(linter.eslint);
+      }
+      if (typeof linter.prettier === "string") {
+        lintSets.prettier.add(linter.prettier);
+      }
     }
   }
 
@@ -85,7 +130,7 @@ function aggregate(summaryPath: string): {
     versions: {
       react: formatSet(versionSets.react),
       typescript: formatSet(versionSets.typescript),
-      biome: formatSet(versionSets.biome),
+      linting: summarizeLintSets(lintSets),
     },
   };
 }
@@ -96,7 +141,7 @@ function buildRow(
   fail: number,
   versions: AggregatedVersions,
 ): string {
-  return `| ${dateIso} | ${pass} | ${fail} | \`${versions.react}\` | \`${versions.typescript}\` | \`${versions.biome}\` |`;
+  return `| ${dateIso} | ${pass} | ${fail} | \`${versions.react}\` | \`${versions.typescript}\` | \`${versions.linting}\` |`;
 }
 
 function insertRow(table: string[], row: string, dateIso: string): string[] {
@@ -105,7 +150,7 @@ function insertRow(table: string[], row: string, dateIso: string): string[] {
     throw new Error("Unable to locate history table header in HISTORY.md");
   }
 
-  const startOfRows = headerIndex + 2; // skip header + separator
+  const startOfRows = headerIndex + 2;
   let insertIndex = startOfRows;
 
   while (
@@ -115,7 +160,7 @@ function insertRow(table: string[], row: string, dateIso: string): string[] {
   ) {
     const existingDate = table[insertIndex].split("|")[1]?.trim();
     if (existingDate === dateIso) {
-      return table; // already recorded
+      return table;
     }
     insertIndex += 1;
   }
