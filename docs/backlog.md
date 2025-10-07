@@ -48,3 +48,12 @@
 - Interactive selection: prompt to pick scenarios to run (useful locally).
 - Parallel execution tuning: dynamic concurrency cap and worker reuse between batches.
 - CI integration: scheduled run that uploads logs + summary as artifacts (non-blocking).
+
+## Consumer App Architecture
+- Investigate migrating compatibility scripts (`consumer-pin-and-build`, `matrix-run-consumer`, `summarize-matrix`) from `.mjs` to TypeScript:
+  - Decide on build flow (tsc output, distribution paths) and ensure CI keeps zero-build execution simple.
+  - Retain current JS entry points until the TypeScript toolchain is solid to avoid workflow breakage.
+- Evaluate maintaining dual consumer apps (JS + TS) to exercise both ecosystems:
+  - Ensure each app is a full React project using `.jsx` / `.tsx` files as appropriate.
+  - Reuse shared configuration where possible; document differences in `docs/compatibility-testing.md`.
+- Capture outcomes in the future BMAD roadmap once the process tooling is ready; for now track progress here.
