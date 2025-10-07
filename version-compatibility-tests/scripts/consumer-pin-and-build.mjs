@@ -153,15 +153,15 @@ function main() {
         console.error(`${LOG_PREFIX} Provided tarball must be a .tgz file:`, abs)
         process.exit(1)
       }
-      const relToRepo = path.relative(repoRoot, abs)
-      const normalized = path.normalize(relToRepo)
-      if (normalized.startsWith('..') || path.isAbsolute(normalized)) {
+      const resolved = fs.realpathSync(abs)
+      const relToRepo = path.relative(repoRoot, resolved)
+      if (relToRepo.startsWith('..') || path.isAbsolute(relToRepo)) {
         console.error(`${LOG_PREFIX} Provided tarball must be within the repository tree:`, abs)
         process.exit(1)
       }
       tgz = path.basename(abs)
-      if (path.dirname(abs) !== distDir) {
-        fs.copyFileSync(abs, path.join(distDir, tgz))
+      if (path.dirname(resolved) !== distDir) {
+        fs.copyFileSync(resolved, path.join(distDir, tgz))
       }
     } else {
       sh('pnpm pack --pack-destination version-compatibility-tests/dist', { cwd: repoRoot })
@@ -169,7 +169,10 @@ function main() {
         .readdirSync(distDir)
         .filter(f => f.endsWith('.tgz'))
         .map(f => ({ f, t: fs.statSync(path.join(distDir, f)).ctimeMs }))
-        .sort((a, b) => b.t - a.t)[0]?.f
+        .sort((a, b) => {
+          const diff = b.t - a.t
+          return diff !== 0 ? diff : b.f.localeCompare(a.f)
+        })[0]?.f
       if (!tgz) {
         console.error(`${LOG_PREFIX} No packed tarball found under version-compatibility-tests/dist`)
         process.exit(1)
