@@ -36,13 +36,13 @@ Detailed lint families:
 
 Lint families table:
 
-| Biome    | ESLint   | Prettier |
-| -------- | -------- | -------- |
-| `2.0.0`  | `8.57.0` | `3.3.3`  |
-| `2.1.1`  | `9.13.0` | `3.6.2`  |
-| `2.2.4`  |          |          |
+| Biome   | ESLint   | Prettier |
+| ------- | -------- | -------- |
+| `2.0.0` | `8.57.0` | `3.3.3`  |
+| `2.1.1` | `9.13.0` | `3.6.2`  |
+| `2.2.4` |          |          |
 
-*ESLint entries use matching `@eslint/js` and `@typescript-eslint/parser` majors.*
+_ESLint entries use matching `@eslint/js` and `@typescript-eslint/parser` majors._
 
 ### Filters and quick mode
 
@@ -122,6 +122,24 @@ Lint families table:
 - If the failure is known but unresolved, add an entry to `xfail.json` (see below) so CI summaries
   highlight it as XFAIL rather than FAIL.
 
+### Common Issues
+
+#### Build Fails with "Cannot find module"
+
+If you see module resolution errors:
+
+1. Check the consumer app's `package.json` was restored (pin script does this automatically)
+2. Verify the tarball path with `--tarball ./xterm-react-x.y.z.tgz`
+3. Clean consumer app: `rm -rf version-compatibility-tests/consumer-app/node_modules`
+
+#### XPASS Detection
+
+If a scenario passes but was marked XFAIL:
+
+1. This indicates the underlying issue was fixed
+2. Remove the entry from `version-compatibility-tests/xfail.json`
+3. Commit the update to recognize the fix
+
 ## XFAIL Policy
 
 - Treat XFAIL as an explicit waiver: only add entries when the incompatibility is understood and
@@ -132,6 +150,41 @@ Lint families table:
   keep the list tidy.
 - Periodically audit `xfail.json` alongside test runs to ensure we do not regress on previously
   waived combinations.
+
+### When to Add XFAIL
+
+Add entries when a known incompatibility exists and:
+
+- The issue is in an external dependency (React/TypeScript/tooling)
+- Fixing requires waiting for upstream releases
+- The failure is deterministic and expected
+
+### When to Remove XFAIL
+
+Remove entries when:
+
+- The scenario starts passing (XPASS detected)
+- The dependency combination is no longer supported
+- The underlying issue has a workaround
+
+### Format
+
+Each entry must specify exact versions to avoid false matches.
+
+## Migration from Legacy System
+
+The old compatibility testing system used three separate test files:
+
+- `core/react-versions-test.js`
+- `devtools/biome-versions-test.js`
+- `devtools/eslint-versions-test.js`
+
+The new system consolidates these into a single matrix runner. To migrate:
+
+1. Remove old test scripts and reports
+2. Update CI workflows to use `pnpm run compat:matrix`
+3. Configure XFAIL entries in `version-compatibility-tests/xfail.json`
+4. Run matrix with `--quick` for smoke tests or full matrix for releases
 
 ## Housekeeping
 
