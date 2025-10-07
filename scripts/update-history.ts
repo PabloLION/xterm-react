@@ -45,6 +45,19 @@ type LintSets = {
   prettier: Set<string>;
 };
 
+function parseFlags(argv: string[]): { force: boolean } {
+  let force = false;
+  for (const arg of argv) {
+    if (arg === "--force") {
+      force = true;
+    } else if (arg === "--help" || arg === "-h") {
+      console.log(`${LOG_PREFIX} Usage: pnpm history:update [--force]`);
+      process.exit(0);
+    }
+  }
+  return { force };
+}
+
 function loadLatestSummary(): LatestSummary {
   if (!fs.existsSync(latestPtr)) {
     throw new Error(`Missing MATRIX_LATEST.json at ${latestPtr}`);
@@ -185,7 +198,8 @@ export function insertRow(
   return table;
 }
 
-export function main(): void {
+export function main(argv: string[] = process.argv): void {
+  const { force } = parseFlags(argv.slice(2));
   const { generatedAt, summaryPath } = loadLatestSummary();
   const { pass, fail, versions } = aggregate(summaryPath);
   const historyLines = fs.readFileSync(historyPath, "utf8").split("\n");
@@ -195,7 +209,7 @@ export function main(): void {
     "Z",
   );
   const newRow = buildRow(dateIso, pass, fail, versions);
-  const updated = insertRow(historyLines, newRow, dateIso).join("\n");
+  const updated = insertRow(historyLines, newRow, dateIso, force).join("\n");
 
   fs.writeFileSync(historyPath, updated);
   console.log(`${LOG_PREFIX} HISTORY.md updated for run at ${dateIso}`);
@@ -212,5 +226,5 @@ const invokedAsScript = (() => {
 })();
 
 if (invokedAsScript) {
-  main();
+  main(process.argv);
 }

@@ -90,10 +90,7 @@ test("buildRow formats row correctly", () => {
 });
 
 test("insertRow appends row at end when no existing dates", () => {
-  const lines = [
-    "| Date | PASS | FAIL |",
-    "| ---- | ---: | ---: |",
-  ];
+  const lines = ["| Date | PASS | FAIL |", "| ---- | ---: | ---: |"];
   const row =
     "| 2025-10-05T00:00:00Z | 100 | 0 | `18.3.1` | `5.4.5` | `biome: 2.2.4` |";
 
