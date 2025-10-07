@@ -147,6 +147,14 @@ function shAsync(cmd, cwd, logFile) {
   })
 }
 
+/**
+ * Generate a slug identifier for a scenario
+ * @param {Object} details - Scenario details
+ * @param {string} details.react - React version
+ * @param {string} details.typescript - TypeScript version
+ * @param {Object} details.linter - Linter configuration
+ * @returns {string} Slug string
+ */
 function scenarioSlug(details) {
   const base = [`react-${details.react}`, `ts-${details.typescript}`]
   if (details.linter.tool === 'biome') {
@@ -157,6 +165,10 @@ function scenarioSlug(details) {
   return slug(base)
 }
 
+/**
+ * Generate list of all test scenarios from configured version matrices
+ * @returns {Array<Object>} Array of scenario objects
+ */
 function listScenarios() {
   const scenarios = []
   const lintFamilies = Array.from(LINTER_FAMILIES)
@@ -194,6 +206,16 @@ function listScenarios() {
   return scenarios
 }
 
+/**
+ * Check if an XFAIL entry matches a scenario
+ * @param {Object} entry - XFAIL entry from xfail.json
+ * @param {Object} scenario - Test scenario
+ * @param {string} scenario.react - React version
+ * @param {string} scenario.typescript - TypeScript version
+ * @param {Object} scenario.linter - Linter configuration
+ * @param {string} scenario.linter.tool - Linter tool name ('biome' or 'eslint-prettier')
+ * @returns {boolean}
+ */
 export function matchesXfail(entry, scenario) {
   if (entry.react && entry.react !== scenario.react) return false
   if (entry.typescript && entry.typescript !== scenario.typescript) return false
@@ -211,6 +233,16 @@ export function matchesXfail(entry, scenario) {
   return true
 }
 
+/**
+ * Run a single test scenario
+ * @param {Object} scenario - Test scenario configuration
+ * @param {string} scenario.react - React version
+ * @param {string} scenario.typescript - TypeScript version
+ * @param {Object} scenario.linter - Linter configuration
+ * @param {string} tarballName - Name of the tarball file to install
+ * @param {string} appDirForRun - Consumer app directory for this scenario
+ * @returns {Promise<Object>} Scenario result with outcome and version info
+ */
 async function runScenario(scenario, tarballName, appDirForRun) {
   const { react, typescript, linter } = scenario
   const scenarioId = scenarioSlug(scenario)
@@ -307,7 +339,10 @@ async function main() {
     .readdirSync(distDir)
     .filter(f => f.endsWith('.tgz'))
     .map(f => ({ f, t: fs.statSync(path.join(distDir, f)).ctimeMs }))
-    .sort((a, b) => b.t - a.t)[0]?.f
+    .sort((a, b) => {
+      const timeDiff = b.t - a.t
+      return timeDiff !== 0 ? timeDiff : b.f.localeCompare(a.f)
+    })[0]?.f
   if (!tgz) {
     console.error(`${LOG_PREFIX} Failed to find packed tarball under dist`)
     process.exit(1)
@@ -320,8 +355,9 @@ async function main() {
   const workerAppDirs = Array.from({ length: parallel }, (_, i) => prepareWorkerDir(workRoot, i))
 
   const results = []
-  // Safe: Node.js event loop schedules these workers cooperatively, so the
-  // shared `next` counter increments atomically across async loops.
+  // Thread-safe: Node.js is single-threaded, so the shared `next` counter
+  // increments atomically within the event loop. Each worker's async iteration
+  // yields control, allowing other workers to run without race conditions.
   let next = 0
 
   async function runWorker(workerIndex) {

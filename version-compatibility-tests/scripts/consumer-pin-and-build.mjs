@@ -9,6 +9,7 @@ import { pathToFileURL } from 'node:url'
 const repoRoot = process.cwd()
 const distDir = path.join(repoRoot, 'version-compatibility-tests', 'dist')
 const LOG_PREFIX = '[pin-and-build]'
+const MAX_EXEC_BUFFER = 10 * 1024 * 1024
 
 const ALLOWED_PACKAGES = new Set([
   'react',
@@ -94,13 +95,13 @@ function main() {
     const args = parseArgs(process.argv)
     const appDir = (() => {
       const d = args.appDir ? (path.isAbsolute(args.appDir) ? args.appDir : path.join(repoRoot, args.appDir)) : path.join(repoRoot, 'version-compatibility-tests', 'consumer-app')
-      const rel = path.relative(repoRoot, d)
-      const normalized = path.normalize(rel)
-      if (normalized.startsWith('..') || path.isAbsolute(normalized)) {
+      const real = fs.realpathSync(d)
+      const rel = path.relative(repoRoot, real)
+      if (rel.startsWith('..') || path.isAbsolute(rel)) {
         console.error(`${LOG_PREFIX} --app-dir must be within the repository tree:`, d)
         process.exit(1)
       }
-      return d
+      return real
     })()
 
     const react = args.react || getLatest('react')
