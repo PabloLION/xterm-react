@@ -9,6 +9,9 @@
     "dist"
   ],
   "scripts": {
+    "bmad:refresh": "bmad-method install -f -i codex",
+    "bmad:list": "bmad-method list:agents",
+    "bmad:validate": "bmad-method validate",
     "dev": "vite",
     "check": "biome check --write .",
     "check:no-fix": "biome check .",

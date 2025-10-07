@@ -14,3 +14,8 @@ version-compatibility-tests/MATRIX_LATEST.json
 version-compatibility-tests/MATRIX_SUMMARY.md
 version-compatibility-tests/.work/
 package-lock.json
+
+# BMAD (local only)
+.bmad/
+.bmad-core/
+.bmad-*/
