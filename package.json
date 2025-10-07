@@ -12,7 +12,7 @@
     "check": "biome check --write .",
     "check:no-fix": "biome check .",
     "build": "npx rimraf dist && tsc",
-    "test": "echo \"Error: no test specified, maybe you want to use `dev`\" && exit 1",
+    "test": "NODE_OPTIONS=\"--loader ./tests/css-loader.mjs --require ./tests/css-require-hook.cjs\" tsx --test tests/**/*.test.ts",
     "publish": "./scripts/prepare-publish.sh",
     "compat:consumer:build-latest": "node version-compatibility-tests/scripts/consumer-pin-and-build.mjs",
     "compat:matrix": "node version-compatibility-tests/scripts/matrix-run-consumer.mjs",

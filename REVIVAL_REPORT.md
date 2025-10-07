@@ -44,9 +44,8 @@ The `xterm-react` repository has been successfully assessed for compatibility wi
   - Code formatting
   - Unused variable detection
 - **Scripts Added**:
-- `pnpm run check:no-fix` - Run Biome linting and type checking
-- `pnpm run check` - Apply Biome auto-fixes
-- `pnpm run check` - Format code with Biome (auto-applies fixing)
+- `pnpm run check:no-fix` - Run Biome linting and formatting without writes
+- `pnpm run check` - Run Biome with safe auto-fixes (format + lint)
 
 ## Comprehensive Version Compatibility Testing
 
@@ -57,18 +56,13 @@ Created a comprehensive version compatibility test suite that validates the repo
 #### Test Categories
 
 - **Core Dependencies**: React (17, 18, 19), TypeScript, @xterm/xterm
-- **Development Tools**: ESLint ecosystem, Prettier, Biome versions
+- **Development Tools**: Biome versions (lint + format for TS/JS)
 
-#### Test Commands
+#### Test Command
 
 ```bash
-# Run all version compatibility tests
-npm run test:versions
-
-# Individual test categories
-npm run test:react     # React version compatibility
-npm run test:eslint    # ESLint ecosystem compatibility
-npm run test:biome     # Biome version compatibility
+# Run curated matrix (React × TypeScript × Biome)
+pnpm run compat:matrix
 ```
 
 #### Test Features

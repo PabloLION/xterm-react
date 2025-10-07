@@ -34,6 +34,10 @@ export default function App() {
 }
 ```
 
+> The component's `elementRef` is a `React.RefObject<HTMLDivElement | null>`.
+> Always guard against `null` before calling imperative APIs (e.g.
+> `ref.current?.focus()`), especially during initial render.
+
 ### Docs
 
 For the documentation of the `XTerm` component, check [XTerm-React Docs](./docs.md).
@@ -69,6 +73,41 @@ I'll add a full docs later.
 ## Development
 
 For development purposes, this project uses `vite` for a streamlined and efficient workflow.
+
+## Compatibility
+<!-- compat-matrix-badge:begin -->
+Compatibility status: PASS 1 · FAIL 0 · XFAIL 0 · XPASS 0 — latest: version-compatibility-tests/MATRIX_SUMMARY.md
+<!-- compat-matrix-badge:end -->
+
+
+This library officially supports and is continuously tested against the following toolchain matrix via an in-repo consumer app (see docs/compatibility-testing.md):
+
+- React: 18.3.x, 19.1.x (React 17 is out of scope)
+- TypeScript: 5.2.2, 5.4.5, 5.9.3
+- Linting / formatting families:
+  - Biome: 2.0.0, 2.1.1, 2.2.4
+  - ESLint: 8.57.0, 9.13.0 (paired with `@eslint/js` + `@typescript-eslint/parser`)
+  - Prettier: 3.3.3, 3.6.2
+
+Latest matrix summary: `version-compatibility-tests/MATRIX_SUMMARY.md`
+
+Run the matrix locally:
+
+```sh
+pnpm compat:matrix         # run curated matrix and write logs
+pnpm compat:matrix:summary # generate Markdown summary for the latest run
+# Examples: `pnpm compat:matrix -- --linter biome` (Biome-only) or `--linter eslint-prettier --eslint 9.13.0 --prettier 3.6.2`
+```
+
+> Migration: legacy scripts such as `pnpm run test:versions`, `pnpm run test:react`,
+> `pnpm run test:eslint`, and `pnpm run test:biome` have been removed. Use the
+> filtered `pnpm run compat:matrix` commands above instead.
+
+For a quick smoke on the latest combo:
+
+```sh
+pnpm compat:consumer:build-latest
+```
 
 ## Release
 

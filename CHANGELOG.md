@@ -8,15 +8,22 @@ All notable changes to this project will be documented in this file.
 
 - `HISTORY.md` to capture compatibility matrix results, plus `scripts/update-history.ts` for automated updates.
 - Opt-in parallel execution and short CLI aliases for the compatibility matrix runner.
+- Node-based unit tests that exercise the compatibility tooling (`aggregate`, `matchesXfail`,
+  `assertAllowedPackage`) and a consumer-app render smoke test.
+
+### Fixed
+
+- Updated `elementRef` type to properly reflect React's `createRef<T>()` return type which can be null before mount.
 
 ### Security
 
 - Allowlisted npm package names in the consumer pin/build script to mitigate typosquatting.
 
 ### Tooling
-
 - Husky pre-push hook that runs `pnpm check` (Biome auto-apply) before allowing pushes.
 - Replaced ESLint/Prettier with Biome for linting and formatting (`pnpm check` / `pnpm check:no-fix`).
+- Removed the legacy `test:versions`/`test:*` scripts in favour of the consolidated
+  `compat:matrix` commands; CI workflows should invoke `pnpm run compat:matrix` instead.
 
 ## [1.2.0] - 2025-09-30
 
