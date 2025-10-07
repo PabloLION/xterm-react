@@ -150,6 +150,7 @@ export function insertRow(
   table: string[],
   row: string,
   dateIso: string,
+  force = false,
 ): string[] {
   const headerIndex = table.findIndex((line) => line.startsWith("| Date"));
   if (headerIndex === -1) {
@@ -166,10 +167,16 @@ export function insertRow(
   ) {
     const existingDate = table[insertIndex].split("|")[1]?.trim();
     if (existingDate === dateIso) {
+      if (!force) {
+        throw new Error(
+          `Row with date ${dateIso} already exists. Use --force to overwrite.`,
+        );
+      }
       console.log(
-        `${LOG_PREFIX} History entry for ${dateIso} already exists, skipping`,
+        `${LOG_PREFIX} Replacing existing entry for ${dateIso} (--force enabled)`,
       );
-      return table;
+      table.splice(insertIndex, 1);
+      break;
     }
     insertIndex += 1;
   }
