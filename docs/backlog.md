@@ -57,3 +57,9 @@
   - Ensure each app is a full React project using `.jsx` / `.tsx` files as appropriate.
   - Reuse shared configuration where possible; document differences in `docs/compatibility-testing.md`.
 - Capture outcomes in the future BMAD roadmap once the process tooling is ready; for now track progress here.
+
+## Documentation System
+- Merge the legacy docs (`README.md`, `docs.md`, existing guides) with the BMAD-generated structure (PRD, architecture, stories folders):
+  - Define single navigation hierarchy under `docs/` and update links.
+  - Decide how BMAD outputs and handcrafted guides coexist (naming conventions, index page).
+  - Update contributor guidance so new documents land in the unified system.
