@@ -11,6 +11,10 @@ All notable changes to this project will be documented in this file.
 - Node-based unit tests that exercise the compatibility tooling (`aggregate`, `matchesXfail`,
   `assertAllowedPackage`) and a consumer-app render smoke test.
 
+### Fixed
+
+- Updated `elementRef` type to properly reflect React's `createRef<T>()` return type which can be null before mount.
+
 ### Security
 
 - Allowlisted npm package names in the consumer pin/build script to mitigate typosquatting.
