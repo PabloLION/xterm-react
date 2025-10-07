@@ -1,8 +1,8 @@
-## XTerm React
+# XTerm React
 
 This project provides a React component that integrates the [xterm.js](https://xtermjs.org/) terminal emulator library. It aims to offer a more up-to-date and flexible alternative to [existing solutions](https://github.com/robert-harbison/xterm-for-react)(last commit Jul 8, 2022), with a focus on performance, code style, and additional functionality.
 
-### Live Example
+## Live Example
 
 - On Replit: <https://replit.com/@PabloLION/XTerm-React?v=1>
 - A example page with mb github pages. #TODO
@@ -40,7 +40,7 @@ export default function App() {
 
 ### Docs
 
-For the documentation of the `XTerm` component, check [XTerm-React Docs](./docs.md).
+For project guides and component references, start with the [Documentation Index](./docs/index.md).
 
 - See also [official xterm.js documentation](https://xtermjs.org/docs/api/terminal/).
 
@@ -78,7 +78,6 @@ For development purposes, this project uses `vite` for a streamlined and efficie
 <!-- compat-matrix-badge:begin -->
 Compatibility status: PASS 1 · FAIL 0 · XFAIL 0 · XPASS 0 — latest: version-compatibility-tests/MATRIX_SUMMARY.md
 <!-- compat-matrix-badge:end -->
-
 
 This library officially supports and is continuously tested against the following toolchain matrix via an in-repo consumer app (see docs/compatibility-testing.md):
 
