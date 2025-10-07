@@ -1,6 +1,7 @@
 # Backlog
 
 ## CI: Track and update to latest versions for consumer tests
+
 - Goal: Add a CI workflow that periodically checks registry “latest” versions for key dependencies (React, ReactDOM, TypeScript, Biome, Vite/@vitejs/plugin-react).
 - Trigger: Scheduled (e.g., daily/weekly) and manual dispatch.
 - Action:
@@ -15,6 +16,7 @@
   - Follow-up: once the curated matrix is stable, hook a lightweight GitHub Actions job (latest-only scenario) into the main branch to guard regressions.
 
 ## Addons & UI Enhancements
+
 - Document official addon usage with this wrapper, starting with `@xterm/addon-fit`.
   - Add a short guide and React example (ResizeObserver) in `docs/` and link from README.
   - Clarify that fit must run after mount and on container resize.
@@ -24,14 +26,14 @@
 - Add a convenience util/hook for fitting (e.g., `useXtermFit(addon)`), optional.
 - Add a consumer-app scenario that loads FitAddon and validates build + basic render.
 
-## Notifications
-- Add an optional notifier step after `compat:matrix:summary` to surface results:
-  - GitHub PR comment updater (when running on a PR) with totals and a link to the summary.
-  - GitHub Discussions/Issues poster for scheduled runs.
-  - (Optional) Webhook integration (Slack/Teams) configured via secrets.
-- Keep notifications opt-in and non-blocking; wire via a small script (e.g., `scripts/notify-compat.mjs`).
+## Release Signals
+
+- Lightweight CI job to ensure `MATRIX_LATEST.json` (or summary path) is newer than the last release tag.
+- Require manual approval/override when summary is stale instead of auto-running the full matrix in CI.
+- Integrate release checklist output (from pm-checklist) into the PRD and make the release script enforce completion.
 
 ## Result History
+
 - Goal: provide historical trend of PASS/FAIL counts and notable changes across runs.
 - Storage options (for discussion):
   - Commit an aggregated `version-compatibility-tests/HISTORY.json`/`.md` updated by summarizer (pros: in-repo visibility; cons: noisy diffs).
@@ -43,6 +45,7 @@
   - Add a README link to the history page when enabled.
 
 ## Matrix Improvements
+
 - Incremental runs: detect unchanged scenarios and skip (hash pins + tarball version).
 - Matrix pre-validation: flag incompatible tool combos before execution.
 - Interactive selection: prompt to pick scenarios to run (useful locally).
@@ -50,6 +53,7 @@
 - CI integration: scheduled run that uploads logs + summary as artifacts (non-blocking).
 
 ## Consumer App Architecture
+
 - Investigate migrating compatibility scripts (`consumer-pin-and-build`, `matrix-run-consumer`, `summarize-matrix`) from `.mjs` to TypeScript:
   - Decide on build flow (tsc output, distribution paths) and ensure CI keeps zero-build execution simple.
   - Retain current JS entry points until the TypeScript toolchain is solid to avoid workflow breakage.
@@ -59,7 +63,16 @@
 - Capture outcomes in the future BMAD roadmap once the process tooling is ready; for now track progress here.
 
 ## Documentation System
+
 - Merge the legacy docs (`README.md`, `docs.md`, existing guides) with the BMAD-generated structure (PRD, architecture, stories folders):
   - Define single navigation hierarchy under `docs/` and update links.
   - Decide how BMAD outputs and handcrafted guides coexist (naming conventions, index page).
   - Update contributor guidance so new documents land in the unified system.
+
+## Runtime Coverage
+
+- Expand the compatibility matrix with a runtime dimension covering Node 14.x, Node 16.x, Node 18 LTS, Node 20 LTS, Node 24.x (current), Node 25+ (current branch), plus Bun release channels (stable and preview/nightly where applicable).
+- Expose CLI flags to target specific runtimes (default to latest Node LTS) and document curated subsets to avoid combinatorial explosion.
+- CI strategy: run latest Node LTS lane by default; provide manual/approval jobs (or local scripts) for the remaining Node/Bun runtimes; document when each lane should be exercised (pre-release, nightly, manual verification).
+- Provide Bun smoke tests and document any limitations or polyfills.
+- Update README/docs with runtime support statement; track future targets (e.g., Deno) here.
