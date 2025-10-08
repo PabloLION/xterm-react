@@ -25,6 +25,13 @@ const DEFAULT_ESLINTS = [
   { eslint: '9.13.0', eslintJs: '9.13.0', tsParser: '8.45.0' }
 ]
 const DEFAULT_PRETTIERS = ['3.3.3', '3.6.2']
+const RUNTIME_CATALOG = [
+  { id: 'node20', tool: 'node', versionSpec: '20', label: 'node20' },
+  { id: 'node22', tool: 'node', versionSpec: '22', label: 'node22' },
+  { id: 'node24', tool: 'node', versionSpec: '24', label: 'node24' },
+  { id: 'bun-stable', tool: 'bun', versionSpec: 'stable', label: 'bun-stable' }
+]
+const DEFAULT_RUNTIME_IDS = ['node20']
 
 let REACTS = [...DEFAULT_REACTS]
 let TYPESCRIPT_VERSIONS = [...DEFAULT_TYPESCRIPT]
@@ -32,6 +39,7 @@ let BIOME_VERSIONS = [...DEFAULT_BIOMES]
 let ESLINT_VERSIONS = [...DEFAULT_ESLINTS]
 let PRETTIER_VERSIONS = [...DEFAULT_PRETTIERS]
 let LINTER_FAMILIES = new Set(['biome', 'eslint-prettier'])
+let RUNTIMES = DEFAULT_RUNTIME_IDS.map(id => RUNTIME_CATALOG.find(runtime => runtime.id === id)).filter(Boolean)
 
 function parseArgValue(names) {
   const argv = process.argv.slice(2)
@@ -99,6 +107,7 @@ const biomeArg = parseListArg(['--biome', '-b'])
 const eslintArg = parseListArg(['--eslint'])
 const prettierArg = parseListArg(['--prettier'])
 const linterFamilyArg = parseListArg(['--linter', '-l'])
+const runtimeArg = parseListArg(['--runtime'])
 
 if (reactArg) REACTS = filterAllowed('react', REACTS, reactArg)
 if (tsArg) TYPESCRIPT_VERSIONS = filterAllowed('typescript', TYPESCRIPT_VERSIONS, tsArg)
@@ -113,6 +122,34 @@ if (linterFamilyArg) {
     else console.warn(`${LOG_PREFIX} Ignoring unsupported linter family: ${entry}`)
   }
   if (next.size) LINTER_FAMILIES = next
+}
+
+if (runtimeArg) {
+  const catalogMap = new Map(RUNTIME_CATALOG.map(runtime => [runtime.id, runtime]))
+  let requested = runtimeArg
+  if (runtimeArg.includes('all')) {
+    requested = RUNTIME_CATALOG.map(runtime => runtime.id)
+  }
+  const filtered = requested
+    .map(id => {
+      if (!catalogMap.has(id)) {
+        console.warn(`${LOG_PREFIX} Ignoring unsupported runtime: ${id}`)
+        return null
+      }
+      const runtime = catalogMap.get(id)
+      if (runtime.tool === 'bun') {
+        console.warn(`${LOG_PREFIX} Bun runtime (${id}) is not yet implemented; skipping`)
+        return null
+      }
+      return runtime
+    })
+    .filter(Boolean)
+  if (filtered.length) {
+    RUNTIMES = filtered
+  } else {
+    console.warn(`${LOG_PREFIX} Falling back to default runtime set (${DEFAULT_RUNTIME_IDS.join(', ')})`)
+    RUNTIMES = DEFAULT_RUNTIME_IDS.map(id => RUNTIME_CATALOG.find(runtime => runtime.id === id)).filter(Boolean)
+  }
 }
 
 warnDeprecated('reacts', 'react')
@@ -156,7 +193,7 @@ function shAsync(cmd, cwd, logFile) {
  * @returns {string} Slug string
  */
 function scenarioSlug(details) {
-  const base = [`react-${details.react}`, `ts-${details.typescript}`]
+  const base = [`runtime-${details.runtime.label}`, `react-${details.react}`, `ts-${details.typescript}`]
   if (details.linter.tool === 'biome') {
     base.push(`biome-${details.linter.version}`)
   } else {
@@ -172,31 +209,35 @@ function scenarioSlug(details) {
 function listScenarios() {
   const scenarios = []
   const lintFamilies = Array.from(LINTER_FAMILIES)
-  for (const react of REACTS) {
-    for (const typescript of TYPESCRIPT_VERSIONS) {
-      for (const family of lintFamilies) {
-        if (family === 'biome') {
-          for (const version of BIOME_VERSIONS) {
-            scenarios.push({
-              react,
-              typescript,
-              linter: { tool: 'biome', version }
-            })
-          }
-        } else if (family === 'eslint-prettier') {
-          for (const eslintProfile of ESLINT_VERSIONS) {
-            for (const prettier of PRETTIER_VERSIONS) {
+  for (const runtime of RUNTIMES) {
+    for (const react of REACTS) {
+      for (const typescript of TYPESCRIPT_VERSIONS) {
+        for (const family of lintFamilies) {
+          if (family === 'biome') {
+            for (const version of BIOME_VERSIONS) {
               scenarios.push({
+                runtime,
                 react,
                 typescript,
-                linter: {
-                  tool: 'eslint-prettier',
-                  eslint: eslintProfile.eslint,
-                  eslintJs: eslintProfile.eslintJs,
-                  tsParser: eslintProfile.tsParser,
-                  prettier
-                }
+                linter: { tool: 'biome', version }
               })
+            }
+          } else if (family === 'eslint-prettier') {
+            for (const eslintProfile of ESLINT_VERSIONS) {
+              for (const prettier of PRETTIER_VERSIONS) {
+                scenarios.push({
+                  runtime,
+                  react,
+                  typescript,
+                  linter: {
+                    tool: 'eslint-prettier',
+                    eslint: eslintProfile.eslint,
+                    eslintJs: eslintProfile.eslintJs,
+                    tsParser: eslintProfile.tsParser,
+                    prettier
+                  }
+                })
+              }
             }
           }
         }
@@ -244,7 +285,7 @@ export function matchesXfail(entry, scenario) {
  * @returns {Promise<Object>} Scenario result with outcome and version info
  */
 async function runScenario(scenario, tarballName, appDirForRun) {
-  const { react, typescript, linter } = scenario
+  const { runtime, react, typescript, linter } = scenario
   const scenarioId = scenarioSlug(scenario)
   const dir = path.join(logsRoot, scenarioId)
   fs.mkdirSync(dir, { recursive: true })
@@ -298,6 +339,11 @@ async function runScenario(scenario, tarballName, appDirForRun) {
   const summary = {
     scenario: scenarioId,
     versions: {
+      runtime: {
+        id: runtime.id,
+        tool: runtime.tool,
+        version: runtime.versionSpec
+      },
       react,
       typescript,
       linter: linter.tool === 'biome'
@@ -336,6 +382,29 @@ function prepareWorkerDir(workRoot, i) {
   return workerDir
 }
 
+let activeRuntimeKey = null
+
+function ensureRuntime(runtime) {
+  const key = `${runtime.tool}:${runtime.versionSpec}`
+  if (activeRuntimeKey === key) return true
+  if (runtime.tool === 'node') {
+    const logFile = path.join(logsRoot, `runtime-${runtime.label}.log`)
+    console.log(`${LOG_PREFIX} Activating runtime ${runtime.label}`)
+    const res = sh(`pnpm env use --global ${runtime.versionSpec}`, root, logFile)
+    if (!res.ok) {
+      console.error(`${LOG_PREFIX} Failed to activate Node runtime ${runtime.label}`)
+      console.error(res.out)
+      process.exit(1)
+    }
+    activeRuntimeKey = key
+    return true
+  }
+
+  console.warn(`${LOG_PREFIX} Runtime ${runtime.label} (${runtime.tool}) is not implemented yet; skipping scenarios`)
+  activeRuntimeKey = key
+  return false
+}
+
 async function main() {
   fs.mkdirSync(distDir, { recursive: true })
   sh('pnpm pack --pack-destination version-compatibility-tests/dist', root, path.join(logsRoot, 'pack.log'))
@@ -353,30 +422,50 @@ async function main() {
   }
 
   const scenarios = listScenarios()
-  const parallel = parseParallel()
-  const workRoot = path.join(suiteDir, '.work', path.basename(logsRoot))
-  fs.mkdirSync(workRoot, { recursive: true })
-  const workerAppDirs = Array.from({ length: parallel }, (_, i) => prepareWorkerDir(workRoot, i))
-
-  const results = []
-  // Thread-safe: Node.js is single-threaded, so the shared `next` counter
-  // increments atomically within the event loop. Each worker's async iteration
-  // yields control, allowing other workers to run without race conditions.
-  let next = 0
-
-  async function runWorker(workerIndex) {
-    const appDirForRun = workerAppDirs[workerIndex]
-    while (true) {
-      const currentIndex = next++
-      if (currentIndex >= scenarios.length) break
-      const scenario = scenarios[currentIndex]
-      const res = await runScenario(scenario, tgz, appDirForRun)
-      results.push(res)
-    }
+  const scenariosByRuntime = new Map()
+  for (const scenario of scenarios) {
+    const list = scenariosByRuntime.get(scenario.runtime.id) || []
+    list.push(scenario)
+    scenariosByRuntime.set(scenario.runtime.id, list)
   }
 
-  const workers = Array.from({ length: parallel }, (_, i) => runWorker(i))
-  await Promise.all(workers)
+  const requestedParallel = parseParallel()
+  const results = []
+
+  for (const runtime of RUNTIMES) {
+    const batch = scenariosByRuntime.get(runtime.id)
+    if (!batch || !batch.length) continue
+
+    if (!ensureRuntime(runtime)) {
+      console.warn(`${LOG_PREFIX} Skipping scenarios for runtime ${runtime.label}`)
+      continue
+    }
+
+    const parallel = Math.min(requestedParallel, batch.length)
+    console.log(`${LOG_PREFIX} Runtime ${runtime.label}: ${batch.length} scenarios (parallel ${parallel})`)
+
+    const workRoot = path.join(suiteDir, '.work', `${path.basename(logsRoot)}-${runtime.id}`)
+    fs.mkdirSync(workRoot, { recursive: true })
+    const workerAppDirs = Array.from({ length: parallel }, (_, i) => prepareWorkerDir(workRoot, i))
+
+    let next = 0
+    const batchResults = []
+
+    async function runWorker(workerIndex) {
+      const appDirForRun = workerAppDirs[workerIndex]
+      while (true) {
+        const currentIndex = next++
+        if (currentIndex >= batch.length) break
+        const scenario = batch[currentIndex]
+        const res = await runScenario(scenario, tgz, appDirForRun)
+        batchResults.push(res)
+      }
+    }
+
+    const workers = Array.from({ length: parallel }, (_, i) => runWorker(i))
+    await Promise.all(workers)
+    results.push(...batchResults)
+  }
 
   const summaryPath = path.join(logsRoot, 'MATRIX_SUMMARY.json')
   fs.writeFileSync(summaryPath, JSON.stringify(results, null, 2))

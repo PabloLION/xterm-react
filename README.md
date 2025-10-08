@@ -87,6 +87,7 @@ This library officially supports and is continuously tested against the followin
   - Biome: 2.0.0, 2.1.1, 2.2.4
   - ESLint: 8.57.0, 9.13.0 (paired with `@eslint/js` + `@typescript-eslint/parser`)
   - Prettier: 3.3.3, 3.6.2
+- Runtime: Node 20 LTS by default; additional Node streams (`node22`, `node24`, `node25`) can be exercised with `--runtime` flags (see the compatibility guide).
 
 Latest matrix summary: `version-compatibility-tests/MATRIX_SUMMARY.md`
 

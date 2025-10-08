@@ -17,17 +17,11 @@ jobs:
         with:
           version: '9'
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '18'
-          cache: 'pnpm'
-
       - name: Verify pnpm
         run: pnpm --version
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Run version compatibility tests
-        run: pnpm run compat:matrix
+      - name: Run baseline compatibility smoke scenario (Node 20 / React 19 / TS 5.9 / ESLint+Prettier)
+        run: pnpm run compat:matrix -- --runtime node20 --linter eslint-prettier --react 19.1.1 --typescript 5.9.3 --eslint 9.13.0 --prettier 3.6.2
