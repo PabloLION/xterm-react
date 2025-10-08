@@ -15,7 +15,37 @@ const distDir = path.join(suiteDir, 'dist')
 const logsRoot = path.join(suiteDir, 'logs', new Date().toISOString().replace(/[:.]/g, '-'))
 fs.mkdirSync(logsRoot, { recursive: true })
 const xfailPath = path.join(suiteDir, 'xfail.json')
-const XFAIL = fs.existsSync(xfailPath) ? JSON.parse(fs.readFileSync(xfailPath, 'utf8')) : []
+const XFAIL = (() => {
+  if (!fs.existsSync(xfailPath)) return []
+  const raw = JSON.parse(fs.readFileSync(xfailPath, 'utf8'))
+  if (!Array.isArray(raw)) {
+    throw new Error(`${LOG_PREFIX} xfail.json must contain an array of entries`)
+  }
+  return raw.map((entry, index) => {
+    try {
+      validateXfailEntry(entry)
+    } catch (error) {
+      throw new Error(`${LOG_PREFIX} Invalid xfail entry at index ${index}: ${error.message}`)
+    }
+    return entry
+  })
+})()
+
+function validateXfailEntry(entry) {
+  if (!entry || typeof entry !== 'object') throw new Error('entry must be an object')
+  if (!entry.react) throw new Error('missing "react" field')
+  if (!entry.typescript) throw new Error('missing "typescript" field')
+  if (!entry.linter) throw new Error('missing "linter" field')
+
+  if (entry.linter === 'biome') {
+    if (!entry.biome) throw new Error('biome entries must include "biome" version')
+  } else if (entry.linter === 'eslint-prettier') {
+    if (!entry.eslint) throw new Error('eslint-prettier entries must include "eslint" version')
+    if (!entry.prettier) throw new Error('eslint-prettier entries must include "prettier" version')
+  } else {
+    throw new Error(`unsupported linter "${entry.linter}"`)
+  }
+}
 
 const DEFAULT_REACTS = ['18.3.1', '19.1.1']
 const DEFAULT_TYPESCRIPT = ['5.2.2', '5.4.5', '5.9.3']
