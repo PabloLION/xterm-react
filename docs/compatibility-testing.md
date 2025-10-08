@@ -17,10 +17,11 @@ This repo ships an in‑repo “consumer app” plus scripts to test the publish
   - `pnpm run compat:consumer:build-latest`
   - Preview: `cd version-compatibility-tests/consumer-app && pnpm exec vite preview`
 - Full curated matrix:
-  - `pnpm run compat:matrix`
+- `pnpm run compat:matrix`
+  - Exits non-zero when any scenario reports `FAIL` or `XPASS` (so CI and local scripts stop on regressions).
+  - Automatically generates JSON + Markdown summaries in `version-compatibility-tests/logs/<timestamp>/` and updates the stable aliases below.
   - Latest summary pointer: `version-compatibility-tests/MATRIX_LATEST.json`
   - Latest Markdown summary (stable alias): `version-compatibility-tests/MATRIX_SUMMARY.md`
-  - Per‑scenario logs and `MATRIX_SUMMARY.json`: `version-compatibility-tests/logs/<timestamp>/`
 
 ### Matrix Snapshot
 
@@ -107,7 +108,7 @@ _ESLint entries use matching `@eslint/js` and `@typescript-eslint/parser` majors
   - PASS: not in xfail and all steps succeed.
   - FAIL: not in xfail and any step fails.
   - XFAIL: listed in xfail and a step fails (known, non‑blocking).
-- XPASS: listed in xfail but all steps succeed (unexpected pass; remove from xfail).
+- XPASS: listed in xfail but all steps succeed (unexpected pass; remove from xfail). The matrix command treats XPASS as a blocking condition and exits with code `1`.
 
 ## Troubleshooting Failures
 

@@ -376,15 +376,43 @@ async function main() {
 
   const summaryPath = path.join(logsRoot, 'MATRIX_SUMMARY.json')
   fs.writeFileSync(summaryPath, JSON.stringify(results, null, 2))
+
+  const counts = {
+    total: results.length,
+    pass: results.filter(s => s.outcome === 'PASS').length,
+    fail: results.filter(s => s.outcome === 'FAIL').length,
+    xfail: results.filter(s => s.outcome === 'XFAIL').length,
+    xpass: results.filter(s => s.outcome === 'XPASS').length
+  }
+
   const latest = {
     generatedAt: new Date().toISOString(),
     summaryPath,
-    total: results.length,
-    passed: results.filter(s => s.outcome === 'PASS').length
+    totals: counts
   }
   fs.writeFileSync(path.join(suiteDir, 'MATRIX_LATEST.json'), JSON.stringify(latest, null, 2))
   console.log(`${LOG_PREFIX}\nMatrix results written to ${summaryPath}`)
   console.log(`${LOG_PREFIX} Latest summary pointer written to version-compatibility-tests/MATRIX_LATEST.json`)
+
+  const summaryLog = path.join(logsRoot, 'summarize.log')
+  const summarizeCmd = `node version-compatibility-tests/scripts/summarize-matrix.mjs ${summaryPath}`
+  const summaryRes = sh(summarizeCmd, root, summaryLog)
+  if (!summaryRes.ok) {
+    console.error(`${LOG_PREFIX} Failed to generate Markdown summary. See ${summaryLog}`)
+    process.exit(1)
+  }
+
+  const hasBlockingOutcome = counts.fail > 0 || counts.xpass > 0
+  if (hasBlockingOutcome) {
+    console.error(
+      `${LOG_PREFIX} Blocking scenarios detected (FAIL=${counts.fail}, XPASS=${counts.xpass}). See logs under ${logsRoot}`
+    )
+    process.exit(1)
+  }
+
+  if (counts.xfail > 0) {
+    console.warn(`${LOG_PREFIX} ${counts.xfail} scenarios marked as expected failures.`)
+  }
 }
 
 const invokedAsScript = (() => {
