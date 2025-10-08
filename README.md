@@ -76,7 +76,7 @@ For development purposes, this project uses `vite` for a streamlined and efficie
 
 ## Compatibility
 <!-- compat-matrix-badge:begin -->
-Compatibility status: PASS 1 · FAIL 0 · XFAIL 0 · XPASS 0 — latest: version-compatibility-tests/MATRIX_SUMMARY.md
+Compatibility status: PASS 2 · FAIL 0 · XFAIL 0 · XPASS 0 — latest: version-compatibility-tests/MATRIX_SUMMARY.md
 <!-- compat-matrix-badge:end -->
 
 This library officially supports and is continuously tested against the following toolchain matrix via an in-repo consumer app (see docs/compatibility-testing.md):

@@ -273,10 +273,14 @@ async function runScenario(scenario, tarballName, appDirForRun) {
 
   const lintSteps = {}
   if (linter.tool === 'biome') {
-    lintSteps.biome = await shAsync('pnpm exec biome check --config-path biome.json .', appDirForRun, path.join(dir, 'biome.log'))
+    lintSteps.biome = await shAsync('pnpm exec biome check src', appDirForRun, path.join(dir, 'biome.log'))
   } else {
     lintSteps.eslint = await shAsync('pnpm exec eslint --config eslint.config.mjs "src/**/*.{ts,tsx,js,jsx}"', appDirForRun, path.join(dir, 'eslint.log'))
-    lintSteps.prettier = await shAsync('pnpm exec prettier --check "src/**/*.{ts,tsx,js,jsx}"', appDirForRun, path.join(dir, 'prettier.log'))
+    lintSteps.prettier = await shAsync(
+      'pnpm exec prettier --config .prettierrc.json --check "src/**/*.{ts,tsx,js,jsx}"',
+      appDirForRun,
+      path.join(dir, 'prettier.log')
+    )
   }
 
   const steps = {
