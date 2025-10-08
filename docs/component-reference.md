@@ -1,8 +1,8 @@
-## XTerm React Docs
+# XTerm React Component Reference
 
-### Props
+## Props
 
-## 'XTerm' Props
+### `XTerm` Props
 
 **`Prop` with '?' is optional.**
 

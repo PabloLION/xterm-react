@@ -64,7 +64,7 @@
 
 ## Documentation System
 
-- Merge the legacy docs (`README.md`, `docs.md`, existing guides) with the BMAD-generated structure (PRD, architecture, stories folders):
+- Merge the legacy docs (`README.md`, `docs/component-reference.md`, existing guides) with the BMAD-generated structure (PRD, architecture, stories folders):
   - Define single navigation hierarchy under `docs/` and update links.
   - Decide how BMAD outputs and handcrafted guides coexist (naming conventions, index page).
   - Update contributor guidance so new documents land in the unified system.

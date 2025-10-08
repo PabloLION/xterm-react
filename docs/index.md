@@ -9,7 +9,7 @@
 | [Architecture](./architecture.md) | Brownfield integration plan covering tooling, consumers, runtime coverage, and release visibility. |
 | [Compatibility Harness Guide](./compatibility-testing.md) | How to run the matrix, interpret results, and maintain the consumer app tooling. |
 | [Backlog](./backlog.md) | Deferred work, follow-up tasks, and future enhancements. |
-| [Component Reference](../docs.md) | Current `XTerm` prop table, addon examples, and usage notes (to be migrated into this folder). |
+| [Component Reference](./component-reference.md) | `XTerm` prop table, addon examples, and usage notes. |
 
 ## Getting Started
 
@@ -17,7 +17,7 @@
 2. Review the [PRD](./prd.md) to understand scope and priorities.
 3. Follow the [Architecture](./architecture.md) plan before implementing significant changes.
 4. Consult the [Compatibility Harness Guide](./compatibility-testing.md) prior to running matrix scripts.
-5. Use the [Component Reference](../docs.md) for API details until it is relocated under `docs/`.
+5. Use the [Component Reference](./component-reference.md) for API details and addon examples.
 
 ## Contribution Checklist (High Level)
 
