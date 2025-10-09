@@ -14,8 +14,49 @@ const appDir = path.join(suiteDir, 'consumer-app')
 const distDir = path.join(suiteDir, 'dist')
 const logsRoot = path.join(suiteDir, 'logs', new Date().toISOString().replace(/[:.]/g, '-'))
 fs.mkdirSync(logsRoot, { recursive: true })
+const RUNTIME_CATALOG = [
+  { id: 'node20', tool: 'node', versionSpec: '20', label: 'node20' },
+  { id: 'node22', tool: 'node', versionSpec: '22', label: 'node22' },
+  { id: 'node24', tool: 'node', versionSpec: '24', label: 'node24' }
+]
+const RUNTIME_IDS = new Set(RUNTIME_CATALOG.map(runtime => runtime.id))
+const DEFAULT_RUNTIME_IDS = ['node20']
 const xfailPath = path.join(suiteDir, 'xfail.json')
-const XFAIL = fs.existsSync(xfailPath) ? JSON.parse(fs.readFileSync(xfailPath, 'utf8')) : []
+const XFAIL = (() => {
+  if (!fs.existsSync(xfailPath)) return []
+  const raw = JSON.parse(fs.readFileSync(xfailPath, 'utf8'))
+  if (!Array.isArray(raw)) {
+    throw new Error(`${LOG_PREFIX} xfail.json must contain an array of entries`)
+  }
+  return raw.map((entry, index) => {
+    try {
+      validateXfailEntry(entry)
+    } catch (error) {
+      throw new Error(`${LOG_PREFIX} Invalid xfail entry at index ${index}: ${error.message}`)
+    }
+    return entry
+  })
+})()
+
+export function validateXfailEntry(entry) {
+  if (!entry || typeof entry !== 'object') throw new Error('entry must be an object')
+  if (!entry.react) throw new Error('missing "react" field')
+  if (!entry.typescript) throw new Error('missing "typescript" field')
+  if (!entry.linter) throw new Error('missing "linter" field')
+  if (entry.runtime) {
+    if (typeof entry.runtime !== 'string') throw new Error('"runtime" must be a string when provided')
+    if (!RUNTIME_IDS.has(entry.runtime)) throw new Error(`runtime "${entry.runtime}" is not recognised`)
+  }
+
+  if (entry.linter === 'biome') {
+    if (!entry.biome) throw new Error('biome entries must include "biome" version')
+  } else if (entry.linter === 'eslint-prettier') {
+    if (!entry.eslint) throw new Error('eslint-prettier entries must include "eslint" version')
+    if (!entry.prettier) throw new Error('eslint-prettier entries must include "prettier" version')
+  } else {
+    throw new Error(`unsupported linter "${entry.linter}"`)
+  }
+}
 
 const DEFAULT_REACTS = ['18.3.1', '19.1.1']
 const DEFAULT_TYPESCRIPT = ['5.2.2', '5.4.5', '5.9.3']
@@ -32,6 +73,11 @@ let BIOME_VERSIONS = [...DEFAULT_BIOMES]
 let ESLINT_VERSIONS = [...DEFAULT_ESLINTS]
 let PRETTIER_VERSIONS = [...DEFAULT_PRETTIERS]
 let LINTER_FAMILIES = new Set(['biome', 'eslint-prettier'])
+let RUNTIMES = DEFAULT_RUNTIME_IDS.map(id => RUNTIME_CATALOG.find(runtime => runtime.id === id)).filter(Boolean)
+
+const originalNodeVersion = process.version.startsWith('v') ? process.version.slice(1) : process.version
+let restoreNodeVersion = null
+let runtimeMutated = false
 
 function parseArgValue(names) {
   const argv = process.argv.slice(2)
@@ -99,6 +145,7 @@ const biomeArg = parseListArg(['--biome', '-b'])
 const eslintArg = parseListArg(['--eslint'])
 const prettierArg = parseListArg(['--prettier'])
 const linterFamilyArg = parseListArg(['--linter', '-l'])
+const runtimeArg = parseListArg(['--runtime'])
 
 if (reactArg) REACTS = filterAllowed('react', REACTS, reactArg)
 if (tsArg) TYPESCRIPT_VERSIONS = filterAllowed('typescript', TYPESCRIPT_VERSIONS, tsArg)
@@ -113,6 +160,30 @@ if (linterFamilyArg) {
     else console.warn(`${LOG_PREFIX} Ignoring unsupported linter family: ${entry}`)
   }
   if (next.size) LINTER_FAMILIES = next
+}
+
+if (runtimeArg) {
+  const catalogMap = new Map(RUNTIME_CATALOG.map(runtime => [runtime.id, runtime]))
+  let requested = runtimeArg
+  if (runtimeArg.includes('all')) {
+    requested = RUNTIME_CATALOG.map(runtime => runtime.id)
+  }
+  const filtered = requested
+    .map(id => {
+      if (!catalogMap.has(id)) {
+        console.warn(`${LOG_PREFIX} Ignoring unsupported runtime: ${id}`)
+        return null
+      }
+      const runtime = catalogMap.get(id)
+      return runtime
+    })
+    .filter(Boolean)
+  if (filtered.length) {
+    RUNTIMES = filtered
+  } else {
+    console.warn(`${LOG_PREFIX} Falling back to default runtime set (${DEFAULT_RUNTIME_IDS.join(', ')})`)
+    RUNTIMES = DEFAULT_RUNTIME_IDS.map(id => RUNTIME_CATALOG.find(runtime => runtime.id === id)).filter(Boolean)
+  }
 }
 
 warnDeprecated('reacts', 'react')
@@ -156,7 +227,7 @@ function shAsync(cmd, cwd, logFile) {
  * @returns {string} Slug string
  */
 function scenarioSlug(details) {
-  const base = [`react-${details.react}`, `ts-${details.typescript}`]
+  const base = [`runtime-${details.runtime.label}`, `react-${details.react}`, `ts-${details.typescript}`]
   if (details.linter.tool === 'biome') {
     base.push(`biome-${details.linter.version}`)
   } else {
@@ -172,31 +243,35 @@ function scenarioSlug(details) {
 function listScenarios() {
   const scenarios = []
   const lintFamilies = Array.from(LINTER_FAMILIES)
-  for (const react of REACTS) {
-    for (const typescript of TYPESCRIPT_VERSIONS) {
-      for (const family of lintFamilies) {
-        if (family === 'biome') {
-          for (const version of BIOME_VERSIONS) {
-            scenarios.push({
-              react,
-              typescript,
-              linter: { tool: 'biome', version }
-            })
-          }
-        } else if (family === 'eslint-prettier') {
-          for (const eslintProfile of ESLINT_VERSIONS) {
-            for (const prettier of PRETTIER_VERSIONS) {
+  for (const runtime of RUNTIMES) {
+    for (const react of REACTS) {
+      for (const typescript of TYPESCRIPT_VERSIONS) {
+        for (const family of lintFamilies) {
+          if (family === 'biome') {
+            for (const version of BIOME_VERSIONS) {
               scenarios.push({
+                runtime,
                 react,
                 typescript,
-                linter: {
-                  tool: 'eslint-prettier',
-                  eslint: eslintProfile.eslint,
-                  eslintJs: eslintProfile.eslintJs,
-                  tsParser: eslintProfile.tsParser,
-                  prettier
-                }
+                linter: { tool: 'biome', version }
               })
+            }
+          } else if (family === 'eslint-prettier') {
+            for (const eslintProfile of ESLINT_VERSIONS) {
+              for (const prettier of PRETTIER_VERSIONS) {
+                scenarios.push({
+                  runtime,
+                  react,
+                  typescript,
+                  linter: {
+                    tool: 'eslint-prettier',
+                    eslint: eslintProfile.eslint,
+                    eslintJs: eslintProfile.eslintJs,
+                    tsParser: eslintProfile.tsParser,
+                    prettier
+                  }
+                })
+              }
             }
           }
         }
@@ -210,6 +285,7 @@ function listScenarios() {
  * Check if an XFAIL entry matches a scenario
  * @param {Object} entry - XFAIL entry from xfail.json
  * @param {Object} scenario - Test scenario
+ * @param {Object} scenario.runtime - Runtime descriptor
  * @param {string} scenario.react - React version
  * @param {string} scenario.typescript - TypeScript version
  * @param {Object} scenario.linter - Linter configuration
@@ -217,6 +293,7 @@ function listScenarios() {
  * @returns {boolean}
  */
 export function matchesXfail(entry, scenario) {
+  if (entry.runtime && entry.runtime !== scenario.runtime?.id) return false
   if (entry.react && entry.react !== scenario.react) return false
   if (entry.typescript && entry.typescript !== scenario.typescript) return false
   const tool = scenario.linter.tool
@@ -244,7 +321,7 @@ export function matchesXfail(entry, scenario) {
  * @returns {Promise<Object>} Scenario result with outcome and version info
  */
 async function runScenario(scenario, tarballName, appDirForRun) {
-  const { react, typescript, linter } = scenario
+  const { runtime, react, typescript, linter } = scenario
   const scenarioId = scenarioSlug(scenario)
   const dir = path.join(logsRoot, scenarioId)
   fs.mkdirSync(dir, { recursive: true })
@@ -273,10 +350,14 @@ async function runScenario(scenario, tarballName, appDirForRun) {
 
   const lintSteps = {}
   if (linter.tool === 'biome') {
-    lintSteps.biome = await shAsync('pnpm exec biome check --config-path biome.json .', appDirForRun, path.join(dir, 'biome.log'))
+    lintSteps.biome = await shAsync('pnpm exec biome check src', appDirForRun, path.join(dir, 'biome.log'))
   } else {
     lintSteps.eslint = await shAsync('pnpm exec eslint --config eslint.config.mjs "src/**/*.{ts,tsx,js,jsx}"', appDirForRun, path.join(dir, 'eslint.log'))
-    lintSteps.prettier = await shAsync('pnpm exec prettier --check "src/**/*.{ts,tsx,js,jsx}"', appDirForRun, path.join(dir, 'prettier.log'))
+    lintSteps.prettier = await shAsync(
+      'pnpm exec prettier --config .prettierrc.json --check "src/**/*.{ts,tsx,js,jsx}"',
+      appDirForRun,
+      path.join(dir, 'prettier.log')
+    )
   }
 
   const steps = {
@@ -294,6 +375,11 @@ async function runScenario(scenario, tarballName, appDirForRun) {
   const summary = {
     scenario: scenarioId,
     versions: {
+      runtime: {
+        id: runtime.id,
+        tool: runtime.tool,
+        version: runtime.versionSpec
+      },
       react,
       typescript,
       linter: linter.tool === 'biome'
@@ -325,66 +411,234 @@ function parseParallel() {
   return value
 }
 
+const WORKER_ALWAYS_COPY = new Set(['package.json', 'pnpm-lock.yaml', 'yarn.lock', 'package-lock.json'])
+const WORKER_SKIP = new Set(['node_modules', 'dist'])
+
+function symlinkOrCopy(source, target, isDirectory) {
+  try {
+    fs.symlinkSync(source, target, isDirectory ? 'dir' : 'file')
+  } catch {
+    if (isDirectory) {
+      fs.cpSync(source, target, { recursive: true })
+    } else {
+      fs.copyFileSync(source, target)
+    }
+  }
+}
+
 function prepareWorkerDir(workRoot, i) {
   const workerDir = path.join(workRoot, `w-${i}`, 'consumer-app')
-  fs.mkdirSync(path.dirname(workerDir), { recursive: true })
-  fs.cpSync(appDir, workerDir, { recursive: true, force: true })
+  fs.rmSync(path.dirname(workerDir), { recursive: true, force: true })
+  fs.mkdirSync(workerDir, { recursive: true })
+
+  const entries = fs.readdirSync(appDir, { withFileTypes: true })
+  for (const entry of entries) {
+    const name = entry.name
+    if (WORKER_SKIP.has(name)) continue
+    const sourcePath = path.join(appDir, name)
+    const targetPath = path.join(workerDir, name)
+
+    if (entry.isSymbolicLink()) {
+      let resolvedTarget = null
+      let targetStat = null
+      try {
+        const linkTarget = fs.readlinkSync(sourcePath)
+        resolvedTarget = path.isAbsolute(linkTarget) ? linkTarget : path.resolve(path.dirname(sourcePath), linkTarget)
+        targetStat = fs.statSync(resolvedTarget)
+        symlinkOrCopy(resolvedTarget, targetPath, targetStat.isDirectory())
+      } catch (error) {
+        if (!resolvedTarget || !targetStat) {
+          try {
+            resolvedTarget = fs.realpathSync(sourcePath)
+            targetStat = fs.statSync(resolvedTarget)
+          } catch (innerError) {
+            console.warn(`${LOG_PREFIX} Failed to resolve symlink ${sourcePath}: ${innerError?.message || innerError}`)
+          }
+        }
+        console.warn(`${LOG_PREFIX} Failed to recreate symlink ${sourcePath}: ${error?.message || error}. Falling back to copy.`)
+        const fallbackSource = resolvedTarget || sourcePath
+        let fallbackStat = targetStat
+        if (!fallbackStat) {
+          try {
+            fallbackStat = fs.statSync(fallbackSource)
+          } catch (statError) {
+            console.warn(`${LOG_PREFIX} Failed to stat fallback source ${fallbackSource}: ${statError?.message || statError}`)
+          }
+        }
+        if (fallbackStat?.isDirectory()) {
+          fs.cpSync(fallbackSource, targetPath, { recursive: true, dereference: true })
+        } else {
+          fs.copyFileSync(fallbackSource, targetPath)
+        }
+      }
+      continue
+    }
+
+    if (WORKER_ALWAYS_COPY.has(name)) {
+      fs.copyFileSync(sourcePath, targetPath)
+      continue
+    }
+
+    if (entry.isDirectory()) {
+      symlinkOrCopy(sourcePath, targetPath, true)
+    } else if (entry.isFile()) {
+      symlinkOrCopy(sourcePath, targetPath, false)
+    }
+  }
   return workerDir
 }
 
-async function main() {
-  fs.mkdirSync(distDir, { recursive: true })
-  sh('pnpm pack --pack-destination version-compatibility-tests/dist', root, path.join(logsRoot, 'pack.log'))
-  const tgz = fs
-    .readdirSync(distDir)
-    .filter(f => f.endsWith('.tgz'))
-    .map(f => ({ f, t: fs.statSync(path.join(distDir, f)).ctimeMs }))
-    .sort((a, b) => {
-      const timeDiff = b.t - a.t
-      return timeDiff !== 0 ? timeDiff : b.f.localeCompare(a.f)
-    })[0]?.f
-  if (!tgz) {
-    console.error(`${LOG_PREFIX} Failed to find packed tarball under dist`)
-    process.exit(1)
-  }
+let activeRuntimeKey = null
 
-  const scenarios = listScenarios()
-  const parallel = parseParallel()
-  const workRoot = path.join(suiteDir, '.work', path.basename(logsRoot))
-  fs.mkdirSync(workRoot, { recursive: true })
-  const workerAppDirs = Array.from({ length: parallel }, (_, i) => prepareWorkerDir(workRoot, i))
-
-  const results = []
-  // Thread-safe: Node.js is single-threaded, so the shared `next` counter
-  // increments atomically within the event loop. Each worker's async iteration
-  // yields control, allowing other workers to run without race conditions.
-  let next = 0
-
-  async function runWorker(workerIndex) {
-    const appDirForRun = workerAppDirs[workerIndex]
-    while (true) {
-      const currentIndex = next++
-      if (currentIndex >= scenarios.length) break
-      const scenario = scenarios[currentIndex]
-      const res = await runScenario(scenario, tgz, appDirForRun)
-      results.push(res)
+function ensureRuntime(runtime) {
+  const key = `${runtime.tool}:${runtime.versionSpec}`
+  if (activeRuntimeKey === key) return true
+  if (runtime.tool === 'node') {
+    const logFile = path.join(logsRoot, `runtime-${runtime.label}.log`)
+    console.log(`${LOG_PREFIX} Activating runtime ${runtime.label}`)
+    if (!restoreNodeVersion) restoreNodeVersion = originalNodeVersion
+    const res = sh(`pnpm env use --global ${runtime.versionSpec}`, root, logFile)
+    if (!res.ok) {
+      console.error(`${LOG_PREFIX} Failed to activate Node runtime ${runtime.label}`)
+      console.error(res.out)
+      process.exit(1)
     }
+    activeRuntimeKey = key
+    runtimeMutated = true
+    return true
   }
 
-  const workers = Array.from({ length: parallel }, (_, i) => runWorker(i))
-  await Promise.all(workers)
+  console.warn(`${LOG_PREFIX} Runtime ${runtime.label} (${runtime.tool}) is not implemented yet; skipping scenarios`)
+  activeRuntimeKey = key
+  return false
+}
 
-  const summaryPath = path.join(logsRoot, 'MATRIX_SUMMARY.json')
-  fs.writeFileSync(summaryPath, JSON.stringify(results, null, 2))
-  const latest = {
-    generatedAt: new Date().toISOString(),
-    summaryPath,
-    total: results.length,
-    passed: results.filter(s => s.outcome === 'PASS').length
+function restoreNodeRuntime() {
+  if (!runtimeMutated || !restoreNodeVersion) return
+  const logFile = path.join(logsRoot, 'runtime-restore.log')
+  const res = sh(`pnpm env use --global ${restoreNodeVersion}`, root, logFile)
+  if (!res.ok) {
+    console.warn(`${LOG_PREFIX} Failed to restore Node runtime ${restoreNodeVersion}: ${res.out}`)
+  } else {
+    activeRuntimeKey = `node:${restoreNodeVersion}`
   }
-  fs.writeFileSync(path.join(suiteDir, 'MATRIX_LATEST.json'), JSON.stringify(latest, null, 2))
-  console.log(`${LOG_PREFIX}\nMatrix results written to ${summaryPath}`)
-  console.log(`${LOG_PREFIX} Latest summary pointer written to version-compatibility-tests/MATRIX_LATEST.json`)
+  runtimeMutated = false
+}
+
+async function main() {
+  try {
+    fs.mkdirSync(distDir, { recursive: true })
+    sh('pnpm pack --pack-destination version-compatibility-tests/dist', root, path.join(logsRoot, 'pack.log'))
+    const tgz = fs
+      .readdirSync(distDir)
+      .filter(f => f.endsWith('.tgz'))
+      .map(f => ({ f, t: fs.statSync(path.join(distDir, f)).ctimeMs }))
+      .sort((a, b) => {
+        const timeDiff = b.t - a.t
+        if (timeDiff !== 0) return timeDiff
+        // When multiple packs land within the same millisecond, prefer the lexicographically
+        // greatest filename (pnpm appends incremental suffixes) so the newest tarball wins.
+        return b.f.localeCompare(a.f)
+      })[0]?.f
+    if (!tgz) {
+      console.error(`${LOG_PREFIX} Failed to find packed tarball under dist`)
+      process.exit(1)
+    }
+
+    const scenarios = listScenarios()
+    const scenariosByRuntime = new Map()
+    for (const scenario of scenarios) {
+      const list = scenariosByRuntime.get(scenario.runtime.id) || []
+      list.push(scenario)
+      scenariosByRuntime.set(scenario.runtime.id, list)
+    }
+
+    const requestedParallel = parseParallel()
+    const results = []
+
+    for (const runtime of RUNTIMES) {
+      const batch = scenariosByRuntime.get(runtime.id)
+      if (!batch || !batch.length) continue
+
+      if (!ensureRuntime(runtime)) {
+        console.warn(`${LOG_PREFIX} Skipping scenarios for runtime ${runtime.label}`)
+        continue
+      }
+
+      const parallel = Math.min(requestedParallel, batch.length)
+      console.log(`${LOG_PREFIX} Runtime ${runtime.label}: ${batch.length} scenarios (parallel ${parallel})`)
+
+      const workRoot = path.join(suiteDir, '.work', `${path.basename(logsRoot)}-${runtime.id}`)
+      fs.mkdirSync(workRoot, { recursive: true })
+      const workerAppDirs = Array.from({ length: parallel }, (_, i) => prepareWorkerDir(workRoot, i))
+
+      let next = 0
+      const batchResults = []
+
+      async function runWorker(workerIndex) {
+        const appDirForRun = workerAppDirs[workerIndex]
+        while (true) {
+          const currentIndex = next++
+          if (currentIndex >= batch.length) break
+          const scenario = batch[currentIndex]
+          try {
+            const res = await runScenario(scenario, tgz, appDirForRun)
+            batchResults.push(res)
+          } catch (error) {
+            const scenarioId = scenarioSlug(scenario)
+            console.error(`${LOG_PREFIX} ${scenarioId}: unexpected error`, error)
+            throw error
+          }
+        }
+      }
+
+      const workers = Array.from({ length: parallel }, (_, i) => runWorker(i))
+      await Promise.all(workers)
+      results.push(...batchResults)
+    }
+
+    const summaryPath = path.join(logsRoot, 'MATRIX_SUMMARY.json')
+    fs.writeFileSync(summaryPath, JSON.stringify(results, null, 2))
+
+    const counts = {
+      total: results.length,
+      pass: results.filter(s => s.outcome === 'PASS').length,
+      fail: results.filter(s => s.outcome === 'FAIL').length,
+      xfail: results.filter(s => s.outcome === 'XFAIL').length,
+      xpass: results.filter(s => s.outcome === 'XPASS').length
+    }
+
+    const latest = {
+      generatedAt: new Date().toISOString(),
+      summaryPath,
+      totals: counts
+    }
+    fs.writeFileSync(path.join(suiteDir, 'MATRIX_LATEST.json'), JSON.stringify(latest, null, 2))
+    console.log(`${LOG_PREFIX}\nMatrix results written to ${summaryPath}`)
+    console.log(`${LOG_PREFIX} Latest summary pointer written to version-compatibility-tests/MATRIX_LATEST.json`)
+
+    const summaryLog = path.join(logsRoot, 'summarize.log')
+    const summarizeCmd = `node version-compatibility-tests/scripts/summarize-matrix.mjs ${summaryPath}`
+    const summaryRes = sh(summarizeCmd, root, summaryLog)
+    if (!summaryRes.ok) {
+      console.error(`${LOG_PREFIX} Failed to generate Markdown summary. See ${summaryLog}`)
+      process.exit(1)
+    }
+
+    const hasBlockingOutcome = counts.fail > 0 || counts.xpass > 0
+    if (hasBlockingOutcome) {
+      console.error(
+        `${LOG_PREFIX} Blocking scenarios detected (FAIL=${counts.fail}, XPASS=${counts.xpass}). See logs under ${logsRoot}`
+      )
+      process.exit(1)
+    }
+
+    if (counts.xfail > 0) {
+      console.warn(`${LOG_PREFIX} ${counts.xfail} scenarios marked as expected failures.`)
+    }
+  } finally {
+    restoreNodeRuntime()
+  }
 }
 
 const invokedAsScript = (() => {
@@ -398,5 +652,8 @@ const invokedAsScript = (() => {
 })()
 
 if (invokedAsScript) {
-  main()
+  main().catch(error => {
+    console.error(`${LOG_PREFIX} Unhandled error`, error)
+    process.exit(1)
+  })
 }

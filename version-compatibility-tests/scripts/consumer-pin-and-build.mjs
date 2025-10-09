@@ -182,11 +182,14 @@ function main() {
     const pkgPath = path.join(appDir, 'package.json')
     const originalPkg = fs.readFileSync(pkgPath, 'utf8')
     const pkg = JSON.parse(originalPkg)
+    const tarballAbsolute = path.join(distDir, tgz)
+    const tarballRelative = path.relative(appDir, tarballAbsolute).split(path.sep).join('/')
+    const tarballSpecifier = tarballRelative.startsWith('.') ? `file:${tarballRelative}` : `file:./${tarballRelative}`
     pkg.dependencies = {
       ...(pkg.dependencies || {}),
       react: versions.react,
       'react-dom': versions['react-dom'],
-      '@pablo-lion/xterm-react': `file:../dist/${tgz}`
+      '@pablo-lion/xterm-react': tarballSpecifier
     }
     pkg.devDependencies = {
       ...(pkg.devDependencies || {}),

@@ -24,6 +24,8 @@ All notable changes to this project will be documented in this file.
 - Replaced ESLint/Prettier with Biome for linting and formatting (`pnpm check` / `pnpm check:no-fix`).
 - Removed the legacy `test:versions`/`test:*` scripts in favour of the consolidated
   `compat:matrix` commands; CI workflows should invoke `pnpm run compat:matrix` instead.
+- Pinned the harness to `@xterm/xterm` 5.5.0 (caret range; reflected in `package.json`) and ensured matrix lint scenarios use consistent formatting.
+- Compatibility matrix runner now fails fast on `FAIL`/`XPASS`, reuses the Markdown summary helper, and formats the consumer app consistently for lint scenarios.
 
 ## [1.2.0] - 2025-09-30
 

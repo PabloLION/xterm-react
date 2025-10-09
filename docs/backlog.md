@@ -64,15 +64,11 @@
 
 ## Documentation System
 
-- Merge the legacy docs (`README.md`, `docs.md`, existing guides) with the BMAD-generated structure (PRD, architecture, stories folders):
+- Merge the legacy docs (`README.md`, `docs/component-reference.md`, existing guides) with the BMAD-generated structure (PRD, architecture, stories folders):
   - Define single navigation hierarchy under `docs/` and update links.
   - Decide how BMAD outputs and handcrafted guides coexist (naming conventions, index page).
   - Update contributor guidance so new documents land in the unified system.
 
 ## Runtime Coverage
 
-- Expand the compatibility matrix with a runtime dimension covering Node 14.x, Node 16.x, Node 18 LTS, Node 20 LTS, Node 24.x (current), Node 25+ (current branch), plus Bun release channels (stable and preview/nightly where applicable).
-- Expose CLI flags to target specific runtimes (default to latest Node LTS) and document curated subsets to avoid combinatorial explosion.
-- CI strategy: run latest Node LTS lane by default; provide manual/approval jobs (or local scripts) for the remaining Node/Bun runtimes; document when each lane should be exercised (pre-release, nightly, manual verification).
-- Provide Bun smoke tests and document any limitations or polyfills.
-- Update README/docs with runtime support statement; track future targets (e.g., Deno) here.
+- Covered by **Epic 5 – Runtime Coverage (Node & Bun)** in `docs/prd.md`. Use that epic/stories to track implementation details and move cards into execution when ready.

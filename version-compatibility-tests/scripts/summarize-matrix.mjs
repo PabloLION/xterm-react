@@ -34,6 +34,7 @@ function findLatestSummary() {
 function summarize(summaryPath) {
   const arr = JSON.parse(fs.readFileSync(summaryPath, 'utf8'))
   const counts = { PASS: 0, FAIL: 0, XFAIL: 0, XPASS: 0 }
+  const byRuntime = new Map()
   const byReact = new Map()
   const byLinter = new Map()
   const lintSets = {
@@ -48,6 +49,13 @@ function summarize(summaryPath) {
   for (const s of arr) {
     const outcome = s.outcome || (s.steps?.build && s.steps?.pin_and_build ? 'PASS' : 'FAIL')
     counts[outcome] = (counts[outcome] ?? 0) + 1
+    const runtimeInfo = s.versions?.runtime
+    const runtimeLabel = runtimeInfo
+      ? `${runtimeInfo.id} (${runtimeInfo.tool}@${runtimeInfo.version})`
+      : 'unknown'
+    if (!byRuntime.has(runtimeLabel)) byRuntime.set(runtimeLabel, { PASS: 0, FAIL: 0, XFAIL: 0, XPASS: 0 })
+    byRuntime.get(runtimeLabel)[outcome]++
+
     const r = s.versions?.react || 'unknown'
     if (!byReact.has(r)) byReact.set(r, { PASS: 0, FAIL: 0, XFAIL: 0, XPASS: 0 })
     byReact.get(r)[outcome]++
@@ -77,6 +85,11 @@ function summarize(summaryPath) {
   md += `- FAIL: ${counts.FAIL}\n`
   md += `- XFAIL: ${counts.XFAIL}\n`
   md += `- XPASS: ${counts.XPASS}\n\n`
+  md += `## By Runtime\n\n`
+  for (const [runtime, c] of byRuntime.entries()) {
+    md += `- ${runtime}: PASS ${c.PASS} / FAIL ${c.FAIL} / XFAIL ${c.XFAIL} / XPASS ${c.XPASS}\n`
+  }
+  md += `\n`
   md += `## By React\n\n`
   for (const [react, c] of byReact.entries()) {
     md += `- ${react}: PASS ${c.PASS} / FAIL ${c.FAIL} / XFAIL ${c.XFAIL} / XPASS ${c.XPASS}\n`

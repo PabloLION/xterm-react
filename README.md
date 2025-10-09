@@ -1,8 +1,8 @@
-## XTerm React
+# XTerm React
 
 This project provides a React component that integrates the [xterm.js](https://xtermjs.org/) terminal emulator library. It aims to offer a more up-to-date and flexible alternative to [existing solutions](https://github.com/robert-harbison/xterm-for-react)(last commit Jul 8, 2022), with a focus on performance, code style, and additional functionality.
 
-### Live Example
+## Live Example
 
 - On Replit: <https://replit.com/@PabloLION/XTerm-React?v=1>
 - A example page with mb github pages. #TODO
@@ -40,7 +40,7 @@ export default function App() {
 
 ### Docs
 
-For the documentation of the `XTerm` component, check [XTerm-React Docs](./docs.md).
+For project guides and component references, start with the [Documentation Index](./docs/index.md).
 
 - See also [official xterm.js documentation](https://xtermjs.org/docs/api/terminal/).
 
@@ -76,9 +76,8 @@ For development purposes, this project uses `vite` for a streamlined and efficie
 
 ## Compatibility
 <!-- compat-matrix-badge:begin -->
-Compatibility status: PASS 1 · FAIL 0 · XFAIL 0 · XPASS 0 — latest: version-compatibility-tests/MATRIX_SUMMARY.md
+Compatibility status: PASS 2 · FAIL 0 · XFAIL 0 · XPASS 0 — latest: version-compatibility-tests/MATRIX_SUMMARY.md
 <!-- compat-matrix-badge:end -->
-
 
 This library officially supports and is continuously tested against the following toolchain matrix via an in-repo consumer app (see docs/compatibility-testing.md):
 
@@ -88,6 +87,7 @@ This library officially supports and is continuously tested against the followin
   - Biome: 2.0.0, 2.1.1, 2.2.4
   - ESLint: 8.57.0, 9.13.0 (paired with `@eslint/js` + `@typescript-eslint/parser`)
   - Prettier: 3.3.3, 3.6.2
+- Runtime: Node 20 LTS by default; additional Node streams (`node22`, `node24`, `node25`) can be exercised with `--runtime` flags (see the compatibility guide).
 
 Latest matrix summary: `version-compatibility-tests/MATRIX_SUMMARY.md`
 

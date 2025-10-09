@@ -222,6 +222,8 @@ Objective: Extend compatibility validation to cover Node LTS releases and Bun so
 
 ### Story 5.1 Runtime matrix column
 
+Status: **Implemented** (branch `feat/story-5-1-runtime-matrix`, smoke checks: `pnpm compat:matrix -- --runtime node20 --linter eslint-prettier --react 19.1.1 --typescript 5.9.3 --eslint 9.13.0 --prettier 3.6.2`)
+
 As a maintainer,
 I want the compatibility matrix to include a runtime dimension (Node LTS and Bun),
 so that we can validate the library across the environments we claim to support.

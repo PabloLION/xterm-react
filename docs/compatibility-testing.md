@@ -18,9 +18,25 @@ This repo ships an in‑repo “consumer app” plus scripts to test the publish
   - Preview: `cd version-compatibility-tests/consumer-app && pnpm exec vite preview`
 - Full curated matrix:
   - `pnpm run compat:matrix`
+  - Exits non-zero when any scenario reports `FAIL` or `XPASS` (so CI and local scripts stop on regressions).
+  - Automatically generates JSON + Markdown summaries in `version-compatibility-tests/logs/<timestamp>/` and updates the stable aliases below.
   - Latest summary pointer: `version-compatibility-tests/MATRIX_LATEST.json`
   - Latest Markdown summary (stable alias): `version-compatibility-tests/MATRIX_SUMMARY.md`
-  - Per‑scenario logs and `MATRIX_SUMMARY.json`: `version-compatibility-tests/logs/<timestamp>/`
+  - Additional runtimes: `pnpm run compat:matrix -- --runtime node20,node22` (use `--runtime all` for Node 20/22/24). Bun lanes are planned; requesting `bun-stable` currently reports an unsupported-runtime warning.
+
+### Runtime support snapshot
+
+The current matrix runs on the host runtime (Node 18.x in CI) while we build out the runtime dimension described in Epic 5. We still track the lifecycle of the Node versions we intend to cover so we know where legacy support ends:
+
+| Runtime      | Lifecycle Status (Oct 2025)            | Notes                                                       |
+| ------------ | -------------------------------------- | ----------------------------------------------------------- |
+| Node 20.x    | Active LTS                             | Supported through April 30, 2026; current default target.   |
+| Node 22.x    | Current release (enters LTS Oct 2024)  | Projected LTS support through April 30, 2027.               |
+| Node 24.x    | Upcoming release (enters LTS Oct 2025) | Align coverage once released (projected LTS through 2028).  |
+| Node 25.x    | Current “odd” stream (non-LTS)         | Short-lived cadence; include for “latest” smoke tests only. |
+| Bun (stable) | Continuous releases                    | (lane pending) No LTS program; track stable.                |
+
+Legacy Node 14/16/18 have exited vendor support, so they are intentionally omitted from the future matrix; we’ll focus on currently supported LTS/current streams going forward. When the runtime column lands, matrix flags such as `--runtime node20` or `--runtime node22` will select the appropriate toolchain, and the README will surface a runtime support badge. Until then, use the table above to decide which local environment to test against and consult Epic 5 for implementation progress. Bun support will land in a later iteration; until then the runner will treat bun requests as unsupported.
 
 ### Matrix Snapshot
 
@@ -107,7 +123,7 @@ _ESLint entries use matching `@eslint/js` and `@typescript-eslint/parser` majors
   - PASS: not in xfail and all steps succeed.
   - FAIL: not in xfail and any step fails.
   - XFAIL: listed in xfail and a step fails (known, non‑blocking).
-- XPASS: listed in xfail but all steps succeed (unexpected pass; remove from xfail).
+- XPASS: listed in xfail but all steps succeed (unexpected pass; remove from xfail). The matrix command treats XPASS as a blocking condition and exits with code `1`.
 
 ## Troubleshooting Failures
 
