@@ -487,8 +487,14 @@ async function main() {
         const currentIndex = next++
         if (currentIndex >= batch.length) break
         const scenario = batch[currentIndex]
-        const res = await runScenario(scenario, tgz, appDirForRun)
-        batchResults.push(res)
+        try {
+          const res = await runScenario(scenario, tgz, appDirForRun)
+          batchResults.push(res)
+        } catch (error) {
+          const scenarioId = scenarioSlug(scenario)
+          console.error(`${LOG_PREFIX} ${scenarioId}: unexpected error`, error)
+          throw error
+        }
       }
     }
 
@@ -549,5 +555,8 @@ const invokedAsScript = (() => {
 })()
 
 if (invokedAsScript) {
-  main()
+  main().catch(error => {
+    console.error(`${LOG_PREFIX} Unhandled error`, error)
+    process.exit(1)
+  })
 }
