@@ -446,7 +446,10 @@ async function main() {
     .map(f => ({ f, t: fs.statSync(path.join(distDir, f)).ctimeMs }))
     .sort((a, b) => {
       const timeDiff = b.t - a.t
-      return timeDiff !== 0 ? timeDiff : b.f.localeCompare(a.f)
+      if (timeDiff !== 0) return timeDiff
+      // When multiple packs land within the same millisecond, prefer the lexicographically
+      // greatest filename (pnpm appends incremental suffixes) so the newest tarball wins.
+      return b.f.localeCompare(a.f)
     })[0]?.f
   if (!tgz) {
     console.error(`${LOG_PREFIX} Failed to find packed tarball under dist`)
