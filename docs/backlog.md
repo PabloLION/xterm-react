@@ -1,5 +1,12 @@
 # Backlog
 
+## Contribution Conventions
+
+- Branch names follow `<type>/<scope>-<short-desc>` (kebab-case). Examples: `feat/story-5-2-runtime-ci-strategy`, `fix/xterm-prop-updates`.
+- Commits use Conventional style `<type>(scope): imperative summary` capped at 72 characters.
+- CI GitHub Actions run guard-only tasks (`pnpm check:no-fix`); they must not auto-fix files.
+- Local Husky hooks run `pnpm check` (auto-fix enabled) and block pushes if changes remain uncommitted.
+
 ## CI: Track and update to latest versions for consumer tests
 
 - Goal: Add a CI workflow that periodically checks registry “latest” versions for key dependencies (React, ReactDOM, TypeScript, Biome, Vite/@vitejs/plugin-react).
@@ -31,6 +38,8 @@
 - Lightweight CI job to ensure `MATRIX_LATEST.json` (or summary path) is newer than the last release tag.
 - Require manual approval/override when summary is stale instead of auto-running the full matrix in CI.
 - Integrate release checklist output (from pm-checklist) into the PRD and make the release script enforce completion.
+- Update `scripts/prepare-publish.sh` so `run_checks` uses existing scripts (`pnpm check`, `pnpm check:no-fix`, `pnpm build`, `pnpm test`); the current `pnpm run lint` call fails because no `lint` script exists.
+- Align `VERSION.md` entries with `CHANGELOG.md` so release artifacts stay consistent across documents.
 
 ## Result History
 
@@ -72,3 +81,8 @@
 ## Runtime Coverage
 
 - Covered by **Epic 5 – Runtime Coverage (Node & Bun)** in `docs/prd.md`. Use that epic/stories to track implementation details and move cards into execution when ready.
+
+## Component Lifecycle & Testing
+
+- Implement dynamic prop handling in `src/XTerm.tsx` so addon/link handler updates detach stale listeners and apply new props without remounting.
+- Add React Testing Library smoke tests covering mount/unmount and imperative APIs (focus, blur, write, scroll, selection) to guard future regressions.
