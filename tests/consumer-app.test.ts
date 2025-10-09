@@ -1,9 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import React from "react";
+import reactDomPackage from "react-dom/package.json" with { type: "json" };
 import { renderToString } from "react-dom/server";
-
-import reactDomPackage from "react-dom/package.json" assert { type: "json" };
 
 import App from "../version-compatibility-tests/consumer-app/src/App";
 
