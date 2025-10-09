@@ -1,7 +1,17 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { matchesXfail } from "../version-compatibility-tests/scripts/matrix-run-consumer.mjs";
+import {
+  matchesXfail,
+  validateXfailEntry,
+} from "../version-compatibility-tests/scripts/matrix-run-consumer.mjs";
+
+const runtime = {
+  id: "node20",
+  tool: "node",
+  versionSpec: "20",
+  label: "node20",
+};
 
 test("matchesXfail recognises biome combos", () => {
   const entry = {
@@ -11,6 +21,7 @@ test("matchesXfail recognises biome combos", () => {
     biome: "2.2.4",
   };
   const scenario = {
+    runtime,
     react: "19.1.1",
     typescript: "5.4.5",
     linter: { tool: "biome", version: "2.2.4" },
@@ -27,6 +38,7 @@ test("matchesXfail rejects mismatched linter families", () => {
     biome: "2.2.4",
   };
   const scenario = {
+    runtime,
     react: "19.1.1",
     typescript: "5.4.5",
     linter: {
@@ -49,6 +61,7 @@ test("matchesXfail enforces eslint and prettier version matches", () => {
     eslint: "8.57.0",
   };
   const scenario = {
+    runtime,
     react: "19.1.1",
     typescript: "5.4.5",
     linter: {
@@ -61,4 +74,46 @@ test("matchesXfail enforces eslint and prettier version matches", () => {
   };
 
   assert.equal(matchesXfail(entry, scenario), false);
+});
+
+test("matchesXfail respects runtime qualifier", () => {
+  const entry = {
+    runtime: "node22",
+    react: "19.1.1",
+    typescript: "5.4.5",
+    linter: "biome",
+    biome: "2.2.4",
+  };
+  const scenario = {
+    runtime,
+    react: "19.1.1",
+    typescript: "5.4.5",
+    linter: { tool: "biome", version: "2.2.4" },
+  };
+
+  assert.equal(matchesXfail(entry, scenario), false);
+});
+
+test("validateXfailEntry accepts optional runtime", () => {
+  assert.doesNotThrow(() =>
+    validateXfailEntry({
+      runtime: "node20",
+      react: "19.1.1",
+      typescript: "5.4.5",
+      linter: "biome",
+      biome: "2.2.4",
+    }),
+  );
+});
+
+test("validateXfailEntry rejects unknown runtime id", () => {
+  assert.throws(() =>
+    validateXfailEntry({
+      runtime: "bun-stable",
+      react: "19.1.1",
+      typescript: "5.4.5",
+      linter: "biome",
+      biome: "2.2.4",
+    }),
+  );
 });

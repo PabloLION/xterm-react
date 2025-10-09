@@ -19,6 +19,7 @@ const RUNTIME_CATALOG = [
   { id: 'node22', tool: 'node', versionSpec: '22', label: 'node22' },
   { id: 'node24', tool: 'node', versionSpec: '24', label: 'node24' }
 ]
+const RUNTIME_IDS = new Set(RUNTIME_CATALOG.map(runtime => runtime.id))
 const DEFAULT_RUNTIME_IDS = ['node20']
 const xfailPath = path.join(suiteDir, 'xfail.json')
 const XFAIL = (() => {
@@ -37,11 +38,15 @@ const XFAIL = (() => {
   })
 })()
 
-function validateXfailEntry(entry) {
+export function validateXfailEntry(entry) {
   if (!entry || typeof entry !== 'object') throw new Error('entry must be an object')
   if (!entry.react) throw new Error('missing "react" field')
   if (!entry.typescript) throw new Error('missing "typescript" field')
   if (!entry.linter) throw new Error('missing "linter" field')
+  if (entry.runtime) {
+    if (typeof entry.runtime !== 'string') throw new Error('"runtime" must be a string when provided')
+    if (!RUNTIME_IDS.has(entry.runtime)) throw new Error(`runtime "${entry.runtime}" is not recognised`)
+  }
 
   if (entry.linter === 'biome') {
     if (!entry.biome) throw new Error('biome entries must include "biome" version')
@@ -276,6 +281,7 @@ function listScenarios() {
  * Check if an XFAIL entry matches a scenario
  * @param {Object} entry - XFAIL entry from xfail.json
  * @param {Object} scenario - Test scenario
+ * @param {Object} scenario.runtime - Runtime descriptor
  * @param {string} scenario.react - React version
  * @param {string} scenario.typescript - TypeScript version
  * @param {Object} scenario.linter - Linter configuration
@@ -283,6 +289,7 @@ function listScenarios() {
  * @returns {boolean}
  */
 export function matchesXfail(entry, scenario) {
+  if (entry.runtime && entry.runtime !== scenario.runtime?.id) return false
   if (entry.react && entry.react !== scenario.react) return false
   if (entry.typescript && entry.typescript !== scenario.typescript) return false
   const tool = scenario.linter.tool
