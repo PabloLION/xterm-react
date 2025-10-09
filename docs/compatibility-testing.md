@@ -22,7 +22,7 @@ This repo ships an in‑repo “consumer app” plus scripts to test the publish
   - Automatically generates JSON + Markdown summaries in `version-compatibility-tests/logs/<timestamp>/` and updates the stable aliases below.
   - Latest summary pointer: `version-compatibility-tests/MATRIX_LATEST.json`
   - Latest Markdown summary (stable alias): `version-compatibility-tests/MATRIX_SUMMARY.md`
-  - Additional runtimes: `pnpm run compat:matrix -- --runtime node20,node22` (use `--runtime all` for Node 20/22/24/25). Bun lanes are planned; requesting `bun-stable` currently warns and falls back to Node 20.
+  - Additional runtimes: `pnpm run compat:matrix -- --runtime node20,node22` (use `--runtime all` for Node 20/22/24). Bun lanes are planned; requesting `bun-stable` currently reports an unsupported-runtime warning.
 
 ### Runtime support snapshot
 
@@ -36,7 +36,7 @@ The current matrix runs on the host runtime (Node 18.x in CI) while we build out
 | Node 25.x    | Current “odd” stream (non-LTS)         | Short-lived cadence; include for “latest” smoke tests only. |
 | Bun (stable) | Continuous releases                    | (lane pending) No LTS program; track stable.                |
 
-Legacy Node 14/16/18 have exited vendor support, so they are intentionally omitted from the future matrix; we’ll focus on currently supported LTS/current streams going forward. When the runtime column lands, matrix flags such as `--runtime node20` or `--runtime node22` will select the appropriate toolchain, and the README will surface a runtime support badge. Until then, use the table above to decide which local environment to test against and consult Epic 5 for implementation progress. Bun support will land in a later iteration; for now the runner will warn and default to Node 20 if you request a bun runtime.
+Legacy Node 14/16/18 have exited vendor support, so they are intentionally omitted from the future matrix; we’ll focus on currently supported LTS/current streams going forward. When the runtime column lands, matrix flags such as `--runtime node20` or `--runtime node22` will select the appropriate toolchain, and the README will surface a runtime support badge. Until then, use the table above to decide which local environment to test against and consult Epic 5 for implementation progress. Bun support will land in a later iteration; until then the runner will treat bun requests as unsupported.
 
 ### Matrix Snapshot
 

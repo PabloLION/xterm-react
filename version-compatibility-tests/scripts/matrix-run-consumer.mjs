@@ -14,6 +14,12 @@ const appDir = path.join(suiteDir, 'consumer-app')
 const distDir = path.join(suiteDir, 'dist')
 const logsRoot = path.join(suiteDir, 'logs', new Date().toISOString().replace(/[:.]/g, '-'))
 fs.mkdirSync(logsRoot, { recursive: true })
+const RUNTIME_CATALOG = [
+  { id: 'node20', tool: 'node', versionSpec: '20', label: 'node20' },
+  { id: 'node22', tool: 'node', versionSpec: '22', label: 'node22' },
+  { id: 'node24', tool: 'node', versionSpec: '24', label: 'node24' }
+]
+const DEFAULT_RUNTIME_IDS = ['node20']
 const xfailPath = path.join(suiteDir, 'xfail.json')
 const XFAIL = (() => {
   if (!fs.existsSync(xfailPath)) return []
@@ -55,13 +61,6 @@ const DEFAULT_ESLINTS = [
   { eslint: '9.13.0', eslintJs: '9.13.0', tsParser: '8.45.0' }
 ]
 const DEFAULT_PRETTIERS = ['3.3.3', '3.6.2']
-const RUNTIME_CATALOG = [
-  { id: 'node20', tool: 'node', versionSpec: '20', label: 'node20' },
-  { id: 'node22', tool: 'node', versionSpec: '22', label: 'node22' },
-  { id: 'node24', tool: 'node', versionSpec: '24', label: 'node24' },
-  { id: 'bun-stable', tool: 'bun', versionSpec: 'stable', label: 'bun-stable' }
-]
-const DEFAULT_RUNTIME_IDS = ['node20']
 
 let REACTS = [...DEFAULT_REACTS]
 let TYPESCRIPT_VERSIONS = [...DEFAULT_TYPESCRIPT]
@@ -167,10 +166,6 @@ if (runtimeArg) {
         return null
       }
       const runtime = catalogMap.get(id)
-      if (runtime.tool === 'bun') {
-        console.warn(`${LOG_PREFIX} Bun runtime (${id}) is not yet implemented; skipping`)
-        return null
-      }
       return runtime
     })
     .filter(Boolean)
