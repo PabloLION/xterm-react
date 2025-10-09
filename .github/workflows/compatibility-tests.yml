@@ -7,7 +7,23 @@ on:
 
 jobs:
   version-matrix:
+    name: Compatibility smoke (${{ matrix.suite.label }})
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        suite:
+          - label: oldest-supported
+            runtime: node20
+            react: 18.3.1
+            typescript: 5.2.2
+            eslint: 8.57.0
+            prettier: 3.3.3
+          - label: latest-supported
+            runtime: node22
+            react: 19.1.1
+            typescript: 5.9.3
+            eslint: 9.13.0
+            prettier: 3.6.2
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -23,5 +39,12 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Run baseline compatibility smoke scenario (Node 20 / React 18 / TS 5.2 / ESLint 8 / Prettier 3.3)
-        run: pnpm run compat:matrix -- --runtime node20 --linter eslint-prettier --react 18.3.1 --typescript 5.2.2 --eslint 8.57.0 --prettier 3.3.3
+      - name: Run ${{ matrix.suite.label }} compatibility smoke (React ${{ matrix.suite.react }} / TS ${{ matrix.suite.typescript }} / ESLint ${{ matrix.suite.eslint }} / Prettier ${{ matrix.suite.prettier }} / ${{ matrix.suite.runtime }})
+        run: >
+          pnpm run compat:matrix
+          -- --runtime ${{ matrix.suite.runtime }}
+          --linter eslint-prettier
+          --react ${{ matrix.suite.react }}
+          --typescript ${{ matrix.suite.typescript }}
+          --eslint ${{ matrix.suite.eslint }}
+          --prettier ${{ matrix.suite.prettier }}

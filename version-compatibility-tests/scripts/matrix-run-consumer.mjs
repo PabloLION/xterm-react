@@ -75,6 +75,10 @@ let PRETTIER_VERSIONS = [...DEFAULT_PRETTIERS]
 let LINTER_FAMILIES = new Set(['biome', 'eslint-prettier'])
 let RUNTIMES = DEFAULT_RUNTIME_IDS.map(id => RUNTIME_CATALOG.find(runtime => runtime.id === id)).filter(Boolean)
 
+const originalNodeVersion = process.version.startsWith('v') ? process.version.slice(1) : process.version
+let restoreNodeVersion = null
+let runtimeMutated = false
+
 function parseArgValue(names) {
   const argv = process.argv.slice(2)
   for (let i = 0; i < argv.length; i++) {
@@ -413,7 +417,7 @@ const WORKER_SKIP = new Set(['node_modules', 'dist'])
 function symlinkOrCopy(source, target, isDirectory) {
   try {
     fs.symlinkSync(source, target, isDirectory ? 'dir' : 'file')
-  } catch (error) {
+  } catch {
     if (isDirectory) {
       fs.cpSync(source, target, { recursive: true })
     } else {
@@ -433,10 +437,48 @@ function prepareWorkerDir(workRoot, i) {
     if (WORKER_SKIP.has(name)) continue
     const sourcePath = path.join(appDir, name)
     const targetPath = path.join(workerDir, name)
-    if (WORKER_ALWAYS_COPY.has(name) || entry.isSymbolicLink()) {
+
+    if (entry.isSymbolicLink()) {
+      let resolvedTarget = null
+      let targetStat = null
+      try {
+        const linkTarget = fs.readlinkSync(sourcePath)
+        resolvedTarget = path.isAbsolute(linkTarget) ? linkTarget : path.resolve(path.dirname(sourcePath), linkTarget)
+        targetStat = fs.statSync(resolvedTarget)
+        symlinkOrCopy(resolvedTarget, targetPath, targetStat.isDirectory())
+      } catch (error) {
+        if (!resolvedTarget || !targetStat) {
+          try {
+            resolvedTarget = fs.realpathSync(sourcePath)
+            targetStat = fs.statSync(resolvedTarget)
+          } catch (innerError) {
+            console.warn(`${LOG_PREFIX} Failed to resolve symlink ${sourcePath}: ${innerError?.message || innerError}`)
+          }
+        }
+        console.warn(`${LOG_PREFIX} Failed to recreate symlink ${sourcePath}: ${error?.message || error}. Falling back to copy.`)
+        const fallbackSource = resolvedTarget || sourcePath
+        let fallbackStat = targetStat
+        if (!fallbackStat) {
+          try {
+            fallbackStat = fs.statSync(fallbackSource)
+          } catch (statError) {
+            console.warn(`${LOG_PREFIX} Failed to stat fallback source ${fallbackSource}: ${statError?.message || statError}`)
+          }
+        }
+        if (fallbackStat?.isDirectory()) {
+          fs.cpSync(fallbackSource, targetPath, { recursive: true, dereference: true })
+        } else {
+          fs.copyFileSync(fallbackSource, targetPath)
+        }
+      }
+      continue
+    }
+
+    if (WORKER_ALWAYS_COPY.has(name)) {
       fs.copyFileSync(sourcePath, targetPath)
       continue
     }
+
     if (entry.isDirectory()) {
       symlinkOrCopy(sourcePath, targetPath, true)
     } else if (entry.isFile()) {
@@ -454,6 +496,7 @@ function ensureRuntime(runtime) {
   if (runtime.tool === 'node') {
     const logFile = path.join(logsRoot, `runtime-${runtime.label}.log`)
     console.log(`${LOG_PREFIX} Activating runtime ${runtime.label}`)
+    if (!restoreNodeVersion) restoreNodeVersion = originalNodeVersion
     const res = sh(`pnpm env use --global ${runtime.versionSpec}`, root, logFile)
     if (!res.ok) {
       console.error(`${LOG_PREFIX} Failed to activate Node runtime ${runtime.label}`)
@@ -461,6 +504,7 @@ function ensureRuntime(runtime) {
       process.exit(1)
     }
     activeRuntimeKey = key
+    runtimeMutated = true
     return true
   }
 
@@ -469,115 +513,131 @@ function ensureRuntime(runtime) {
   return false
 }
 
+function restoreNodeRuntime() {
+  if (!runtimeMutated || !restoreNodeVersion) return
+  const logFile = path.join(logsRoot, 'runtime-restore.log')
+  const res = sh(`pnpm env use --global ${restoreNodeVersion}`, root, logFile)
+  if (!res.ok) {
+    console.warn(`${LOG_PREFIX} Failed to restore Node runtime ${restoreNodeVersion}: ${res.out}`)
+  } else {
+    activeRuntimeKey = `node:${restoreNodeVersion}`
+  }
+  runtimeMutated = false
+}
+
 async function main() {
-  fs.mkdirSync(distDir, { recursive: true })
-  sh('pnpm pack --pack-destination version-compatibility-tests/dist', root, path.join(logsRoot, 'pack.log'))
-  const tgz = fs
-    .readdirSync(distDir)
-    .filter(f => f.endsWith('.tgz'))
-    .map(f => ({ f, t: fs.statSync(path.join(distDir, f)).ctimeMs }))
-    .sort((a, b) => {
-      const timeDiff = b.t - a.t
-      if (timeDiff !== 0) return timeDiff
-      // When multiple packs land within the same millisecond, prefer the lexicographically
-      // greatest filename (pnpm appends incremental suffixes) so the newest tarball wins.
-      return b.f.localeCompare(a.f)
-    })[0]?.f
-  if (!tgz) {
-    console.error(`${LOG_PREFIX} Failed to find packed tarball under dist`)
-    process.exit(1)
-  }
-
-  const scenarios = listScenarios()
-  const scenariosByRuntime = new Map()
-  for (const scenario of scenarios) {
-    const list = scenariosByRuntime.get(scenario.runtime.id) || []
-    list.push(scenario)
-    scenariosByRuntime.set(scenario.runtime.id, list)
-  }
-
-  const requestedParallel = parseParallel()
-  const results = []
-
-  for (const runtime of RUNTIMES) {
-    const batch = scenariosByRuntime.get(runtime.id)
-    if (!batch || !batch.length) continue
-
-    if (!ensureRuntime(runtime)) {
-      console.warn(`${LOG_PREFIX} Skipping scenarios for runtime ${runtime.label}`)
-      continue
+  try {
+    fs.mkdirSync(distDir, { recursive: true })
+    sh('pnpm pack --pack-destination version-compatibility-tests/dist', root, path.join(logsRoot, 'pack.log'))
+    const tgz = fs
+      .readdirSync(distDir)
+      .filter(f => f.endsWith('.tgz'))
+      .map(f => ({ f, t: fs.statSync(path.join(distDir, f)).ctimeMs }))
+      .sort((a, b) => {
+        const timeDiff = b.t - a.t
+        if (timeDiff !== 0) return timeDiff
+        // When multiple packs land within the same millisecond, prefer the lexicographically
+        // greatest filename (pnpm appends incremental suffixes) so the newest tarball wins.
+        return b.f.localeCompare(a.f)
+      })[0]?.f
+    if (!tgz) {
+      console.error(`${LOG_PREFIX} Failed to find packed tarball under dist`)
+      process.exit(1)
     }
 
-    const parallel = Math.min(requestedParallel, batch.length)
-    console.log(`${LOG_PREFIX} Runtime ${runtime.label}: ${batch.length} scenarios (parallel ${parallel})`)
+    const scenarios = listScenarios()
+    const scenariosByRuntime = new Map()
+    for (const scenario of scenarios) {
+      const list = scenariosByRuntime.get(scenario.runtime.id) || []
+      list.push(scenario)
+      scenariosByRuntime.set(scenario.runtime.id, list)
+    }
 
-    const workRoot = path.join(suiteDir, '.work', `${path.basename(logsRoot)}-${runtime.id}`)
-    fs.mkdirSync(workRoot, { recursive: true })
-    const workerAppDirs = Array.from({ length: parallel }, (_, i) => prepareWorkerDir(workRoot, i))
+    const requestedParallel = parseParallel()
+    const results = []
 
-    let next = 0
-    const batchResults = []
+    for (const runtime of RUNTIMES) {
+      const batch = scenariosByRuntime.get(runtime.id)
+      if (!batch || !batch.length) continue
 
-    async function runWorker(workerIndex) {
-      const appDirForRun = workerAppDirs[workerIndex]
-      while (true) {
-        const currentIndex = next++
-        if (currentIndex >= batch.length) break
-        const scenario = batch[currentIndex]
-        try {
-          const res = await runScenario(scenario, tgz, appDirForRun)
-          batchResults.push(res)
-        } catch (error) {
-          const scenarioId = scenarioSlug(scenario)
-          console.error(`${LOG_PREFIX} ${scenarioId}: unexpected error`, error)
-          throw error
+      if (!ensureRuntime(runtime)) {
+        console.warn(`${LOG_PREFIX} Skipping scenarios for runtime ${runtime.label}`)
+        continue
+      }
+
+      const parallel = Math.min(requestedParallel, batch.length)
+      console.log(`${LOG_PREFIX} Runtime ${runtime.label}: ${batch.length} scenarios (parallel ${parallel})`)
+
+      const workRoot = path.join(suiteDir, '.work', `${path.basename(logsRoot)}-${runtime.id}`)
+      fs.mkdirSync(workRoot, { recursive: true })
+      const workerAppDirs = Array.from({ length: parallel }, (_, i) => prepareWorkerDir(workRoot, i))
+
+      let next = 0
+      const batchResults = []
+
+      async function runWorker(workerIndex) {
+        const appDirForRun = workerAppDirs[workerIndex]
+        while (true) {
+          const currentIndex = next++
+          if (currentIndex >= batch.length) break
+          const scenario = batch[currentIndex]
+          try {
+            const res = await runScenario(scenario, tgz, appDirForRun)
+            batchResults.push(res)
+          } catch (error) {
+            const scenarioId = scenarioSlug(scenario)
+            console.error(`${LOG_PREFIX} ${scenarioId}: unexpected error`, error)
+            throw error
+          }
         }
       }
+
+      const workers = Array.from({ length: parallel }, (_, i) => runWorker(i))
+      await Promise.all(workers)
+      results.push(...batchResults)
     }
 
-    const workers = Array.from({ length: parallel }, (_, i) => runWorker(i))
-    await Promise.all(workers)
-    results.push(...batchResults)
-  }
+    const summaryPath = path.join(logsRoot, 'MATRIX_SUMMARY.json')
+    fs.writeFileSync(summaryPath, JSON.stringify(results, null, 2))
 
-  const summaryPath = path.join(logsRoot, 'MATRIX_SUMMARY.json')
-  fs.writeFileSync(summaryPath, JSON.stringify(results, null, 2))
+    const counts = {
+      total: results.length,
+      pass: results.filter(s => s.outcome === 'PASS').length,
+      fail: results.filter(s => s.outcome === 'FAIL').length,
+      xfail: results.filter(s => s.outcome === 'XFAIL').length,
+      xpass: results.filter(s => s.outcome === 'XPASS').length
+    }
 
-  const counts = {
-    total: results.length,
-    pass: results.filter(s => s.outcome === 'PASS').length,
-    fail: results.filter(s => s.outcome === 'FAIL').length,
-    xfail: results.filter(s => s.outcome === 'XFAIL').length,
-    xpass: results.filter(s => s.outcome === 'XPASS').length
-  }
+    const latest = {
+      generatedAt: new Date().toISOString(),
+      summaryPath,
+      totals: counts
+    }
+    fs.writeFileSync(path.join(suiteDir, 'MATRIX_LATEST.json'), JSON.stringify(latest, null, 2))
+    console.log(`${LOG_PREFIX}\nMatrix results written to ${summaryPath}`)
+    console.log(`${LOG_PREFIX} Latest summary pointer written to version-compatibility-tests/MATRIX_LATEST.json`)
 
-  const latest = {
-    generatedAt: new Date().toISOString(),
-    summaryPath,
-    totals: counts
-  }
-  fs.writeFileSync(path.join(suiteDir, 'MATRIX_LATEST.json'), JSON.stringify(latest, null, 2))
-  console.log(`${LOG_PREFIX}\nMatrix results written to ${summaryPath}`)
-  console.log(`${LOG_PREFIX} Latest summary pointer written to version-compatibility-tests/MATRIX_LATEST.json`)
+    const summaryLog = path.join(logsRoot, 'summarize.log')
+    const summarizeCmd = `node version-compatibility-tests/scripts/summarize-matrix.mjs ${summaryPath}`
+    const summaryRes = sh(summarizeCmd, root, summaryLog)
+    if (!summaryRes.ok) {
+      console.error(`${LOG_PREFIX} Failed to generate Markdown summary. See ${summaryLog}`)
+      process.exit(1)
+    }
 
-  const summaryLog = path.join(logsRoot, 'summarize.log')
-  const summarizeCmd = `node version-compatibility-tests/scripts/summarize-matrix.mjs ${summaryPath}`
-  const summaryRes = sh(summarizeCmd, root, summaryLog)
-  if (!summaryRes.ok) {
-    console.error(`${LOG_PREFIX} Failed to generate Markdown summary. See ${summaryLog}`)
-    process.exit(1)
-  }
+    const hasBlockingOutcome = counts.fail > 0 || counts.xpass > 0
+    if (hasBlockingOutcome) {
+      console.error(
+        `${LOG_PREFIX} Blocking scenarios detected (FAIL=${counts.fail}, XPASS=${counts.xpass}). See logs under ${logsRoot}`
+      )
+      process.exit(1)
+    }
 
-  const hasBlockingOutcome = counts.fail > 0 || counts.xpass > 0
-  if (hasBlockingOutcome) {
-    console.error(
-      `${LOG_PREFIX} Blocking scenarios detected (FAIL=${counts.fail}, XPASS=${counts.xpass}). See logs under ${logsRoot}`
-    )
-    process.exit(1)
-  }
-
-  if (counts.xfail > 0) {
-    console.warn(`${LOG_PREFIX} ${counts.xfail} scenarios marked as expected failures.`)
+    if (counts.xfail > 0) {
+      console.warn(`${LOG_PREFIX} ${counts.xfail} scenarios marked as expected failures.`)
+    }
+  } finally {
+    restoreNodeRuntime()
   }
 }
 
