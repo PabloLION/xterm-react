@@ -1,3 +1,4 @@
+import React from "react";
 import { XTerm } from "@pablo-lion/xterm-react";
 import getBanner from "./logger.js";
 
