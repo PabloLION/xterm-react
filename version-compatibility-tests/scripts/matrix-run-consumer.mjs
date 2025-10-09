@@ -407,10 +407,42 @@ function parseParallel() {
   return value
 }
 
+const WORKER_ALWAYS_COPY = new Set(['package.json', 'pnpm-lock.yaml', 'yarn.lock', 'package-lock.json'])
+const WORKER_SKIP = new Set(['node_modules', 'dist'])
+
+function symlinkOrCopy(source, target, isDirectory) {
+  try {
+    fs.symlinkSync(source, target, isDirectory ? 'dir' : 'file')
+  } catch (error) {
+    if (isDirectory) {
+      fs.cpSync(source, target, { recursive: true })
+    } else {
+      fs.copyFileSync(source, target)
+    }
+  }
+}
+
 function prepareWorkerDir(workRoot, i) {
   const workerDir = path.join(workRoot, `w-${i}`, 'consumer-app')
-  fs.mkdirSync(path.dirname(workerDir), { recursive: true })
-  fs.cpSync(appDir, workerDir, { recursive: true, force: true })
+  fs.rmSync(path.dirname(workerDir), { recursive: true, force: true })
+  fs.mkdirSync(workerDir, { recursive: true })
+
+  const entries = fs.readdirSync(appDir, { withFileTypes: true })
+  for (const entry of entries) {
+    const name = entry.name
+    if (WORKER_SKIP.has(name)) continue
+    const sourcePath = path.join(appDir, name)
+    const targetPath = path.join(workerDir, name)
+    if (WORKER_ALWAYS_COPY.has(name) || entry.isSymbolicLink()) {
+      fs.copyFileSync(sourcePath, targetPath)
+      continue
+    }
+    if (entry.isDirectory()) {
+      symlinkOrCopy(sourcePath, targetPath, true)
+    } else if (entry.isFile()) {
+      symlinkOrCopy(sourcePath, targetPath, false)
+    }
+  }
   return workerDir
 }
 
