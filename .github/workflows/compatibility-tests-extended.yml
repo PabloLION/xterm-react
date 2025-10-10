@@ -4,11 +4,11 @@ on:
   workflow_dispatch:
     inputs:
       run_baseline:
-        description: 'Run baseline lane (Node 20 + oldest stack)'
+        description: "Run baseline lane (Node 20 + oldest stack)"
         type: boolean
         default: true
       run_latest:
-        description: 'Run latest lane (Node 24 + latest stack)'
+        description: "Run latest lane (Node 24 + latest stack)"
         type: boolean
         default: true
 
@@ -17,8 +17,7 @@ jobs:
     name: Extended runtime compatibility matrix
     runs-on: ubuntu-latest
     timeout-minutes: 120
-    environment:
-      name: runtime-extended
+    environment: runtime-extended
       url: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
     permissions:
       contents: read
@@ -30,7 +29,7 @@ jobs:
       - name: Set up pnpm
         uses: pnpm/action-setup@v3
         with:
-          version: '9'
+          version: "9"
 
       - name: Verify pnpm
         run: pnpm --version
@@ -47,37 +46,7 @@ jobs:
       - name: Capture baseline summary path
         id: baseline-summary
         if: ${{ always() && inputs.run_baseline }}
-        run: |
-          node <<'NODE'
-          import fs from 'node:fs'
-          import path from 'node:path'
-
-          const outputFile = process.env.GITHUB_OUTPUT
-          const suiteDir = path.join(process.cwd(), 'version-compatibility-tests')
-          const latestPtr = path.join(suiteDir, 'MATRIX_LATEST.json')
-          let summaryPath = ''
-          let summaryDir = ''
-          if (fs.existsSync(latestPtr)) {
-            try {
-              const data = JSON.parse(fs.readFileSync(latestPtr, 'utf8'))
-              summaryPath = data.summaryPath || ''
-              summaryDir = summaryPath ? path.dirname(summaryPath) : ''
-            } catch (error) {
-              console.warn('[baseline] Failed to read MATRIX_LATEST.json:', error.message)
-            }
-          }
-          if (!summaryPath) {
-            console.warn('[baseline] No summary path detected')
-          }
-          const lines = [
-            `summary-path=${summaryPath}`,
-            `summary-dir=${summaryDir}`
-          ]
-          console.log(lines.join('\n'))
-          if (outputFile) {
-            fs.appendFileSync(outputFile, lines.join('\n') + '\n')
-          }
-NODE
+        run: pnpm run ci:compat:export-summary -- --label baseline
 
       - name: Run latest compatibility smoke
         id: run-latest
@@ -88,37 +57,7 @@ NODE
       - name: Capture latest summary path
         id: latest-summary
         if: ${{ always() && inputs.run_latest }}
-        run: |
-          node <<'NODE'
-          import fs from 'node:fs'
-          import path from 'node:path'
-
-          const outputFile = process.env.GITHUB_OUTPUT
-          const suiteDir = path.join(process.cwd(), 'version-compatibility-tests')
-          const latestPtr = path.join(suiteDir, 'MATRIX_LATEST.json')
-          let summaryPath = ''
-          let summaryDir = ''
-          if (fs.existsSync(latestPtr)) {
-            try {
-              const data = JSON.parse(fs.readFileSync(latestPtr, 'utf8'))
-              summaryPath = data.summaryPath || ''
-              summaryDir = summaryPath ? path.dirname(summaryPath) : ''
-            } catch (error) {
-              console.warn('[latest] Failed to read MATRIX_LATEST.json:', error.message)
-            }
-          }
-          if (!summaryPath) {
-            console.warn('[latest] No summary path detected')
-          }
-          const lines = [
-            `summary-path=${summaryPath}`,
-            `summary-dir=${summaryDir}`
-          ]
-          console.log(lines.join('\n'))
-          if (outputFile) {
-            fs.appendFileSync(outputFile, lines.join('\n') + '\n')
-          }
-NODE
+        run: pnpm run ci:compat:export-summary -- --label latest
 
       - name: Merge lane summaries
         id: merge-summary
@@ -126,52 +65,10 @@ NODE
         env:
           BASE_SUMMARY: ${{ steps.baseline-summary.outputs.summary-path }}
           LATEST_SUMMARY: ${{ steps.latest-summary.outputs.summary-path }}
-          RUN_ID: ${{ github.run_id }}
-        run: |
-          node <<'NODE'
-          import fs from 'node:fs'
-          import path from 'node:path'
-
-          const outputFile = process.env.GITHUB_OUTPUT
-          const baseSummary = process.env.BASE_SUMMARY
-          const latestSummary = process.env.LATEST_SUMMARY
-          const sources = []
-          const aggregate = []
-
-          for (const summaryPath of [baseSummary, latestSummary]) {
-            if (!summaryPath) continue
-            try {
-              const data = JSON.parse(fs.readFileSync(summaryPath, 'utf8'))
-              if (Array.isArray(data)) {
-                aggregate.push(...data)
-                sources.push(summaryPath)
-              }
-            } catch (error) {
-              console.warn('[merge] Failed to read summary', summaryPath, error.message)
-            }
-          }
-
-          if (!aggregate.length) {
-            if (outputFile) {
-              fs.appendFileSync(outputFile, 'summary-path=\n')
-              fs.appendFileSync(outputFile, 'summary-dir=\n')
-            }
-            process.exit(0)
-          }
-
-          const suiteDir = path.join(process.cwd(), 'version-compatibility-tests')
-          const combinedDir = path.join(suiteDir, 'logs', `${process.env.RUN_ID}-combined`)
-          fs.mkdirSync(combinedDir, { recursive: true })
-          const combinedSummaryPath = path.join(combinedDir, 'MATRIX_SUMMARY.json')
-          fs.writeFileSync(combinedSummaryPath, JSON.stringify(aggregate, null, 2))
-          fs.writeFileSync(path.join(combinedDir, 'sources.json'), JSON.stringify(sources, null, 2))
-
-          const lines = [`summary-path=${combinedSummaryPath}`, `summary-dir=${combinedDir}`]
-          console.log(lines.join('\n'))
-          if (outputFile) {
-            fs.appendFileSync(outputFile, lines.join('\n') + '\n')
-          }
-NODE
+        run: >
+          pnpm run ci:compat:merge-summaries --
+          --summary "${{ env.BASE_SUMMARY }}"
+          --summary "${{ env.LATEST_SUMMARY }}"
 
       - name: Generate combined summary
         if: ${{ always() && steps.merge-summary.outputs.summary-path != '' }}
