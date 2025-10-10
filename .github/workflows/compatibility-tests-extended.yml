@@ -3,32 +3,56 @@ name: Compatibility Tests (Extended Runtimes)
 on:
   workflow_dispatch:
     inputs:
-      runtimes:
-        description: 'Comma-separated runtime ids (e.g. node20,node22); use "all" only if those lanes exist'
+      run_baseline:
+        description: 'Run baseline lane (Node 20 + curated oldest stack)'
         required: false
-        default: 'node20,node22'
-      react:
-        description: 'Comma-separated React versions (leave empty for defaults)'
+        default: 'true'
+      baseline_runtime:
+        description: 'Baseline runtime id'
         required: false
-        default: ''
-      typescript:
-        description: 'Comma-separated TypeScript versions (leave empty for defaults)'
+        default: 'node20'
+      baseline_react:
+        description: 'Baseline React version'
         required: false
-        default: ''
-      eslint:
-        description: 'Comma-separated ESLint versions (for eslint-prettier lane)'
+        default: '18.3.1'
+      baseline_typescript:
+        description: 'Baseline TypeScript version'
         required: false
-        default: ''
-      prettier:
-        description: 'Comma-separated Prettier versions (for eslint-prettier lane)'
+        default: '5.2.2'
+      baseline_eslint:
+        description: 'Baseline ESLint version'
         required: false
-        default: ''
-      linter:
-        description: 'Comma-separated linter families (biome,eslint-prettier)'
+        default: '8.57.0'
+      baseline_prettier:
+        description: 'Baseline Prettier version'
         required: false
-        default: ''
+        default: '3.3.3'
+      run_latest:
+        description: 'Run latest lane (Node 24 + latest stack)'
+        required: false
+        default: 'true'
+      latest_runtime:
+        description: 'Latest runtime id'
+        required: false
+        default: 'node24'
+      latest_react:
+        description: 'Latest React version'
+        required: false
+        default: '19.1.1'
+      latest_typescript:
+        description: 'Latest TypeScript version'
+        required: false
+        default: '5.9.3'
+      latest_eslint:
+        description: 'Latest ESLint version'
+        required: false
+        default: '9.13.0'
+      latest_prettier:
+        description: 'Latest Prettier version'
+        required: false
+        default: '3.6.2'
       quick:
-        description: 'Set to true to run only the latest versions in each dimension'
+        description: 'Set to true to add --quick to each run'
         required: false
         default: 'false'
 
@@ -58,51 +82,28 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Run compatibility matrix for selected runtimes
-        id: run-matrix
+      - name: Run baseline compatibility smoke
+        id: run-baseline
+        if: ${{ (github.event.inputs.run_baseline || 'true') == 'true' }}
         env:
-          INPUT_RUNTIMES: ${{ github.event.inputs.runtimes }}
-          INPUT_REACT: ${{ github.event.inputs.react }}
-          INPUT_TYPESCRIPT: ${{ github.event.inputs.typescript }}
-          INPUT_LINTER: ${{ github.event.inputs.linter }}
-          INPUT_ESLINT: ${{ github.event.inputs.eslint }}
-          INPUT_PRETTIER: ${{ github.event.inputs.prettier }}
-          INPUT_QUICK: ${{ github.event.inputs.quick }}
+          RUNTIME: ${{ github.event.inputs.baseline_runtime || 'node20' }}
+          REACT: ${{ github.event.inputs.baseline_react || '18.3.1' }}
+          TYPESCRIPT: ${{ github.event.inputs.baseline_typescript || '5.2.2' }}
+          ESLINT: ${{ github.event.inputs.baseline_eslint || '8.57.0' }}
+          PRETTIER: ${{ github.event.inputs.baseline_prettier || '3.3.3' }}
+          QUICK: ${{ github.event.inputs.quick || 'false' }}
         run: |
           set -eo pipefail
-          runtime_value="${INPUT_RUNTIMES:-all}"
-          runtime_value="${runtime_value//[[:space:]]/}"
-          if [ -z "${runtime_value}" ]; then
-            echo "[extended] Error: runtime input resolved to an empty value" >&2
-            exit 1
-          fi
-          args=("--runtime" "${runtime_value}")
-          if [ -n "${INPUT_REACT}" ]; then
-            args+=("--react" "${INPUT_REACT}")
-          fi
-          if [ -n "${INPUT_TYPESCRIPT}" ]; then
-            args+=("--typescript" "${INPUT_TYPESCRIPT}")
-          fi
-          if [ -n "${INPUT_LINTER}" ]; then
-            args+=("--linter" "${INPUT_LINTER}")
-          fi
-          if [ -n "${INPUT_ESLINT}" ]; then
-            args+=("--eslint" "${INPUT_ESLINT}")
-          fi
-          if [ -n "${INPUT_PRETTIER}" ]; then
-            args+=("--prettier" "${INPUT_PRETTIER}")
-          fi
-          if [ "${INPUT_QUICK}" = "true" ]; then
+          args=("--runtime" "$RUNTIME" "--linter" "eslint-prettier" "--react" "$REACT" "--typescript" "$TYPESCRIPT" "--eslint" "$ESLINT" "--prettier" "$PRETTIER")
+          if [ "$QUICK" = "true" ]; then
             args+=("--quick")
           fi
-          echo "[extended] pnpm compat:matrix -- ${args[*]}" >&2
+          echo "[baseline] pnpm compat:matrix -- ${args[*]}" >&2
           pnpm run compat:matrix -- "${args[@]}"
 
-      - name: Generate compatibility summary
-        run: pnpm run compat:matrix:summary
-
-      - name: Capture latest summary path
-        id: summary
+      - name: Capture baseline summary path
+        id: baseline-summary
+        if: ${{ (github.event.inputs.run_baseline || 'true') == 'true' }}
         run: |
           node <<'NODE'
           import fs from 'node:fs'
@@ -119,11 +120,11 @@ jobs:
               summaryPath = data.summaryPath || ''
               summaryDir = summaryPath ? path.dirname(summaryPath) : ''
             } catch (error) {
-              console.warn('[extended] Failed to read MATRIX_LATEST.json:', error.message)
+              console.warn('[baseline] Failed to read MATRIX_LATEST.json:', error.message)
             }
           }
           if (!summaryPath) {
-            console.warn('[extended] No summary path detected')
+            console.warn('[baseline] No summary path detected')
           }
           const lines = [
             `summary-path=${summaryPath}`,
@@ -135,21 +136,77 @@ jobs:
           }
 NODE
 
-      - name: Upload matrix artifacts
-        if: steps.summary.outputs.summary-path != ''
+      - name: Run latest compatibility smoke
+        id: run-latest
+        if: ${{ (github.event.inputs.run_latest || 'true') == 'true' }}
+        env:
+          RUNTIME: ${{ github.event.inputs.latest_runtime || 'node24' }}
+          REACT: ${{ github.event.inputs.latest_react || '19.1.1' }}
+          TYPESCRIPT: ${{ github.event.inputs.latest_typescript || '5.9.3' }}
+          ESLINT: ${{ github.event.inputs.latest_eslint || '9.13.0' }}
+          PRETTIER: ${{ github.event.inputs.latest_prettier || '3.6.2' }}
+          QUICK: ${{ github.event.inputs.quick || 'false' }}
+        run: |
+          set -eo pipefail
+          args=("--runtime" "$RUNTIME" "--linter" "eslint-prettier" "--react" "$REACT" "--typescript" "$TYPESCRIPT" "--eslint" "$ESLINT" "--prettier" "$PRETTIER")
+          if [ "$QUICK" = "true" ]; then
+            args+=("--quick")
+          fi
+          echo "[latest] pnpm compat:matrix -- ${args[*]}" >&2
+          pnpm run compat:matrix -- "${args[@]}"
+
+      - name: Capture latest summary path
+        id: latest-summary
+        if: ${{ (github.event.inputs.run_latest || 'true') == 'true' }}
+        run: |
+          node <<'NODE'
+          import fs from 'node:fs'
+          import path from 'node:path'
+
+          const outputFile = process.env.GITHUB_OUTPUT
+          const suiteDir = path.join(process.cwd(), 'version-compatibility-tests')
+          const latestPtr = path.join(suiteDir, 'MATRIX_LATEST.json')
+          let summaryPath = ''
+          let summaryDir = ''
+          if (fs.existsSync(latestPtr)) {
+            try {
+              const data = JSON.parse(fs.readFileSync(latestPtr, 'utf8'))
+              summaryPath = data.summaryPath || ''
+              summaryDir = summaryPath ? path.dirname(summaryPath) : ''
+            } catch (error) {
+              console.warn('[latest] Failed to read MATRIX_LATEST.json:', error.message)
+            }
+          }
+          if (!summaryPath) {
+            console.warn('[latest] No summary path detected')
+          }
+          const lines = [
+            `summary-path=${summaryPath}`,
+            `summary-dir=${summaryDir}`
+          ]
+          console.log(lines.join('\n'))
+          if (outputFile) {
+            fs.appendFileSync(outputFile, lines.join('\n') + '\n')
+          }
+NODE
+
+      - name: Generate compatibility summary
+        if: ${{ (github.event.inputs.run_baseline || 'true') == 'true' || (github.event.inputs.run_latest || 'true') == 'true' }}
+        run: pnpm run compat:matrix:summary
+
+      - name: Upload baseline artifacts
+        if: ${{ steps.baseline-summary.outputs.summary-dir != '' }}
         uses: actions/upload-artifact@v4
         with:
-          name: compatibility-matrix-logs
+          name: compatibility-baseline-logs
+          path: ${{ steps.baseline-summary.outputs.summary-dir }}
+
+      - name: Upload latest artifacts
+        if: ${{ steps.latest-summary.outputs.summary-dir != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: compatibility-latest-logs
           path: |
-            ${{ steps.summary.outputs.summary-dir }}
+            ${{ steps.latest-summary.outputs.summary-dir }}
             version-compatibility-tests/MATRIX_SUMMARY.md
             version-compatibility-tests/MATRIX_LATEST.json
-
-      - name: Upload latest summary when pointer missing
-        if: steps.summary.outputs.summary-path == ''
-        uses: actions/upload-artifact@v4
-        with:
-          name: compatibility-matrix-logs
-          path: |
-            version-compatibility-tests/logs
-            version-compatibility-tests/MATRIX_SUMMARY.md
