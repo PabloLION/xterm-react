@@ -58,8 +58,8 @@
 
 2. **ci(compat): add manual extended runtime workflow**
 
-   - Add `.github/workflows/compatibility-tests-extended.yml` with `workflow_dispatch` inputs: `runtime` (multi-select), `reactPreset`, `tsPreset`, `verbosity`.
-   - Iterate selected runtimes sequentially, reusing the existing matrix script and capturing logs as artifacts.
+   - Add `.github/workflows/compatibility-tests-extended.yml` with two curated lanes (baseline Node 20 + oldest stack, latest Node 24 + latest stack) executed sequentially.
+   - Expose simple toggles to skip either lane; rely on pnpm scripts (`ci:compat:baseline`, `ci:compat:latest`) so CI YAML stays declarative.
    - Require reviewer approval (environment protection or `workflow_dispatch` with `required_reviewers`) before execution.
 
 3. **docs(release): document runtime lane expectations**
@@ -86,7 +86,7 @@
 - Matrix spot-check: `pnpm run compat:matrix -- --runtime node22 --linter eslint-prettier --react 19.1.1 --typescript 5.9.3 --eslint 9.13.0 --prettier 3.6.2 --quick` (2025-10-10) – fails during Vite build with Rollup complaining about an emitted asset using an absolute path. Captured log for triage (`version-compatibility-tests/logs/2025-10-10T10-39-14-737Z/...`).
 - Workflow validation:
   - **Compatibility Tests** – release/tag guard logic reviewed; timeout added (60 minutes) for runaway protection.
-  - **Compatibility Tests (Extended Runtimes)** – exercised argument builder with empty/whitespace runtimes locally; workflow now trims inputs, fails fast on empty values, and enforces a 120-minute timeout.
+  - **Compatibility Tests (Extended Runtimes)** – validated sequential lane execution via the new pnpm helpers (`pnpm run ci:compat:baseline`, `pnpm run ci:compat:latest`); workflow enforces a 120-minute timeout and uploads artifacts per lane.
 - Manual workflow execution is pending environment approval (`runtime-extended`). After resolving the Vite asset emission issue, rerun the dispatched workflow (targeting `node20,node22`) and attach the artifact to this log.
 
 ## Documentation & Deliverables
