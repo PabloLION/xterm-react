@@ -59,6 +59,7 @@ To launch the manual workflow:
 - The scheduled/manual curated run (two suites) typically finishes in **12–18 minutes** on `ubuntu-latest`. Release invocations only execute the latest LTS lane and complete in ~8 minutes.
 - Extended manual runs vary with selected runtimes; expect **10–12 minutes per Node lane**. The workflow has a 120-minute time budget to guard against runaway jobs.
 - Keep an eye on GitHub Actions minutes. If extended runs become frequent, consider restricting inputs to `--quick` or a single runtime per invocation.
+- Known issue (tracked in `docs/backlog.md`): Vite 7.1.9 currently fails the consumer build with an absolute-path asset error when the latest-lane smoke is executed locally. Until resolved, expect the manual matrix command to exit with `pin-and-build` failing; collect the log path (shown in console output) to aid debugging.
 
 ### Runtime support snapshot
 
