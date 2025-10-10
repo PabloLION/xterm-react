@@ -4,57 +4,13 @@ on:
   workflow_dispatch:
     inputs:
       run_baseline:
-        description: 'Run baseline lane (Node 20 + curated oldest stack)'
-        required: false
-        default: 'true'
-      baseline_runtime:
-        description: 'Baseline runtime id'
-        required: false
-        default: 'node20'
-      baseline_react:
-        description: 'Baseline React version'
-        required: false
-        default: '18.3.1'
-      baseline_typescript:
-        description: 'Baseline TypeScript version'
-        required: false
-        default: '5.2.2'
-      baseline_eslint:
-        description: 'Baseline ESLint version'
-        required: false
-        default: '8.57.0'
-      baseline_prettier:
-        description: 'Baseline Prettier version'
-        required: false
-        default: '3.3.3'
+        description: 'Run baseline lane (Node 20 + oldest stack)'
+        type: boolean
+        default: true
       run_latest:
         description: 'Run latest lane (Node 24 + latest stack)'
-        required: false
-        default: 'true'
-      latest_runtime:
-        description: 'Latest runtime id'
-        required: false
-        default: 'node24'
-      latest_react:
-        description: 'Latest React version'
-        required: false
-        default: '19.1.1'
-      latest_typescript:
-        description: 'Latest TypeScript version'
-        required: false
-        default: '5.9.3'
-      latest_eslint:
-        description: 'Latest ESLint version'
-        required: false
-        default: '9.13.0'
-      latest_prettier:
-        description: 'Latest Prettier version'
-        required: false
-        default: '3.6.2'
-      quick:
-        description: 'Set to true to add --quick to each run'
-        required: false
-        default: 'false'
+        type: boolean
+        default: true
 
 jobs:
   extended-matrix:
@@ -84,26 +40,12 @@ jobs:
 
       - name: Run baseline compatibility smoke
         id: run-baseline
-        if: ${{ (github.event.inputs.run_baseline || 'true') == 'true' }}
-        env:
-          RUNTIME: ${{ github.event.inputs.baseline_runtime || 'node20' }}
-          REACT: ${{ github.event.inputs.baseline_react || '18.3.1' }}
-          TYPESCRIPT: ${{ github.event.inputs.baseline_typescript || '5.2.2' }}
-          ESLINT: ${{ github.event.inputs.baseline_eslint || '8.57.0' }}
-          PRETTIER: ${{ github.event.inputs.baseline_prettier || '3.3.3' }}
-          QUICK: ${{ github.event.inputs.quick || 'false' }}
-        run: |
-          set -eo pipefail
-          args=("--runtime" "$RUNTIME" "--linter" "eslint-prettier" "--react" "$REACT" "--typescript" "$TYPESCRIPT" "--eslint" "$ESLINT" "--prettier" "$PRETTIER")
-          if [ "$QUICK" = "true" ]; then
-            args+=("--quick")
-          fi
-          echo "[baseline] pnpm compat:matrix -- ${args[*]}" >&2
-          pnpm run compat:matrix -- "${args[@]}"
+        if: ${{ inputs.run_baseline }}
+        run: pnpm run ci:compat:baseline
 
       - name: Capture baseline summary path
         id: baseline-summary
-        if: ${{ (github.event.inputs.run_baseline || 'true') == 'true' }}
+        if: ${{ inputs.run_baseline }}
         run: |
           node <<'NODE'
           import fs from 'node:fs'
@@ -138,26 +80,12 @@ NODE
 
       - name: Run latest compatibility smoke
         id: run-latest
-        if: ${{ (github.event.inputs.run_latest || 'true') == 'true' }}
-        env:
-          RUNTIME: ${{ github.event.inputs.latest_runtime || 'node24' }}
-          REACT: ${{ github.event.inputs.latest_react || '19.1.1' }}
-          TYPESCRIPT: ${{ github.event.inputs.latest_typescript || '5.9.3' }}
-          ESLINT: ${{ github.event.inputs.latest_eslint || '9.13.0' }}
-          PRETTIER: ${{ github.event.inputs.latest_prettier || '3.6.2' }}
-          QUICK: ${{ github.event.inputs.quick || 'false' }}
-        run: |
-          set -eo pipefail
-          args=("--runtime" "$RUNTIME" "--linter" "eslint-prettier" "--react" "$REACT" "--typescript" "$TYPESCRIPT" "--eslint" "$ESLINT" "--prettier" "$PRETTIER")
-          if [ "$QUICK" = "true" ]; then
-            args+=("--quick")
-          fi
-          echo "[latest] pnpm compat:matrix -- ${args[*]}" >&2
-          pnpm run compat:matrix -- "${args[@]}"
+        if: ${{ inputs.run_latest }}
+        run: pnpm run ci:compat:latest
 
       - name: Capture latest summary path
         id: latest-summary
-        if: ${{ (github.event.inputs.run_latest || 'true') == 'true' }}
+        if: ${{ inputs.run_latest }}
         run: |
           node <<'NODE'
           import fs from 'node:fs'
@@ -191,7 +119,7 @@ NODE
 NODE
 
       - name: Generate compatibility summary
-        if: ${{ (github.event.inputs.run_baseline || 'true') == 'true' || (github.event.inputs.run_latest || 'true') == 'true' }}
+        if: ${{ inputs.run_baseline || inputs.run_latest }}
         run: pnpm run compat:matrix:summary
 
       - name: Upload baseline artifacts
