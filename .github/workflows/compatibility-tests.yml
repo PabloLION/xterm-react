@@ -14,7 +14,7 @@ on:
 
 jobs:
   version-matrix:
-    if: ${{ !(github.event_name == 'release' || github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')) || matrix.suite.label == 'latest-supported' }}
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event_name == 'schedule' || github.event_name == 'workflow_call' || matrix.suite.label == 'latest-supported' }}
     name: Compatibility smoke (${{ matrix.suite.label }})
     runs-on: ubuntu-latest
     strategy:
