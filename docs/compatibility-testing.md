@@ -22,7 +22,37 @@ This repo ships an in‑repo “consumer app” plus scripts to test the publish
   - Automatically generates JSON + Markdown summaries in `version-compatibility-tests/logs/<timestamp>/` and updates the stable aliases below.
   - Latest summary pointer: `version-compatibility-tests/MATRIX_LATEST.json`
   - Latest Markdown summary (stable alias): `version-compatibility-tests/MATRIX_SUMMARY.md`
-  - Additional runtimes: `pnpm run compat:matrix -- --runtime node20,node22` (use `--runtime all` for Node 20/22/24). Bun lanes are planned; requesting `bun-stable` currently reports an unsupported-runtime warning.
+- Additional runtimes: `pnpm run compat:matrix -- --runtime node20,node22` (use `--runtime all` for Node 20/22/24). Bun lanes are planned; requesting `bun-stable` currently reports an unsupported-runtime warning.
+
+## CI workflows & cadence
+
+- **Compatibility Tests** (`.github/workflows/compatibility-tests.yml`)
+  - Triggers: weekly schedule (Mondays 06:00 UTC), manual dispatch, tag pushes (`v*`), reusable `workflow_call`, and release publication.
+  - Matrix lanes:
+    - Scheduled/manual runs exercise both curated suites (`oldest-supported` and `latest-supported`).
+    - Release/tag triggers automatically run the latest Node LTS lane (`node22` combo) to block publishes on regressions.
+  - No auto-fix steps; the job surfaces failures from the curated matrix and leaves remediation to the developer.
+- **Compatibility Tests (Extended Runtimes)** (`.github/workflows/compatibility-tests-extended.yml`)
+  - Trigger: manual (`workflow_dispatch`) with required approval via the `runtime-extended` environment (gate ownership to repository administrators).
+  - Inputs: comma-separated runtimes (`node20,node22,node24,node25`), React/TypeScript/ESLint/Prettier filters, and a `quick` toggle for latest-only sweeps.
+  - Outputs: JSON + Markdown summaries in `version-compatibility-tests/logs/<timestamp>` and uploaded artifacts for audit trails.
+
+### When to run each lane
+
+| Lane                            | Trigger                         | Purpose                                                     |
+| ------------------------------- | ------------------------------- | ----------------------------------------------------------- |
+| Weekly scheduled (both suites)  | Mondays 06:00 UTC               | Ongoing signal for oldest/latest supported stacks.          |
+| Release/tag latest-LTS smoke    | Automatic on release publication or tag push | Guarantees publish pipelines see a fresh `node22` PASS. |
+| Manual extended runtimes        | On-demand with owner approval   | Validate additional Node streams (22+/24+/25) or targeted investigations prior to major releases. |
+
+**Release checklist:** Before publishing, confirm the latest run of “Compatibility Tests” (release trigger) is green. If support promises include additional runtimes, run “Compatibility Tests (Extended Runtimes)” and attach the artifact to the release notes or PR.
+
+To launch the manual workflow:
+
+1. Open **Actions → Compatibility Tests (Extended Runtimes)**.
+2. Click **Run workflow**, fill runtime filters (use `all` for Node 20/22/24/25), and optionally narrow React/TypeScript/ESLint/Prettier lists.
+3. Submit for approval; a repository owner must approve the environment prompt before jobs start.
+4. Once complete, download the `compatibility-matrix-logs` artifact and review the console summary.
 
 ### Runtime support snapshot
 
