@@ -146,4 +146,3 @@ NODE
           path: |
             version-compatibility-tests/logs
             version-compatibility-tests/MATRIX_SUMMARY.md
-*** End Patch
