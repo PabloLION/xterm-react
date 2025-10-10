@@ -41,11 +41,12 @@ jobs:
       - name: Run baseline compatibility smoke
         id: run-baseline
         if: ${{ inputs.run_baseline }}
+        continue-on-error: true
         run: pnpm run ci:compat:baseline
 
       - name: Capture baseline summary path
         id: baseline-summary
-        if: ${{ inputs.run_baseline }}
+        if: ${{ always() && inputs.run_baseline }}
         run: |
           node <<'NODE'
           import fs from 'node:fs'
@@ -81,11 +82,12 @@ NODE
       - name: Run latest compatibility smoke
         id: run-latest
         if: ${{ inputs.run_latest }}
+        continue-on-error: true
         run: pnpm run ci:compat:latest
 
       - name: Capture latest summary path
         id: latest-summary
-        if: ${{ inputs.run_latest }}
+        if: ${{ always() && inputs.run_latest }}
         run: |
           node <<'NODE'
           import fs from 'node:fs'
@@ -119,18 +121,18 @@ NODE
 NODE
 
       - name: Generate compatibility summary
-        if: ${{ inputs.run_baseline || inputs.run_latest }}
+        if: ${{ always() && (inputs.run_baseline || inputs.run_latest) }}
         run: pnpm run compat:matrix:summary
 
       - name: Upload baseline artifacts
-        if: ${{ steps.baseline-summary.outputs.summary-dir != '' }}
+        if: ${{ always() && steps.baseline-summary.outputs.summary-dir != '' }}
         uses: actions/upload-artifact@v4
         with:
           name: compatibility-baseline-logs
           path: ${{ steps.baseline-summary.outputs.summary-dir }}
 
       - name: Upload latest artifacts
-        if: ${{ steps.latest-summary.outputs.summary-dir != '' }}
+        if: ${{ always() && steps.latest-summary.outputs.summary-dir != '' }}
         uses: actions/upload-artifact@v4
         with:
           name: compatibility-latest-logs
@@ -138,3 +140,7 @@ NODE
             ${{ steps.latest-summary.outputs.summary-dir }}
             version-compatibility-tests/MATRIX_SUMMARY.md
             version-compatibility-tests/MATRIX_LATEST.json
+
+      - name: Fail job if any lane failed
+        if: ${{ failure() }}
+        run: exit 1
