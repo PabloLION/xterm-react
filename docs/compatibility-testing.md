@@ -34,8 +34,9 @@ This repo ships an in‑repo “consumer app” plus scripts to test the publish
   - No auto-fix steps; the job surfaces failures from the curated matrix and leaves remediation to the developer.
 - **Compatibility Tests (Extended Runtimes)** (`.github/workflows/compatibility-tests-extended.yml`)
   - Trigger: manual (`workflow_dispatch`) with required approval via the `runtime-extended` environment (gate ownership to repository administrators).
-  - Inputs: comma-separated runtimes (`node20,node22,node24` or `all`), React/TypeScript/ESLint/Prettier filters, and a `quick` toggle for latest-only sweeps.
+  - Inputs: two checkboxes (`Run baseline lane`, `Run latest lane`) controlling whether to execute the curated Node 20 and Node 24 smokes.
   - Outputs: JSON + Markdown summaries in `version-compatibility-tests/logs/<timestamp>` and uploaded artifacts for audit trails.
+- Local helpers: `pnpm run ci:compat:baseline` and `pnpm run ci:compat:latest` mirror the two lanes and are handy for local spot-checks.
 
 ### When to run each lane
 
@@ -50,17 +51,17 @@ This repo ships an in‑repo “consumer app” plus scripts to test the publish
 To launch the manual workflow:
 
 1. Open **Actions → Compatibility Tests (Extended Runtimes)**.
-2. Click **Run workflow**, fill runtime filters (use `all` for Node 20/22/24), and optionally narrow React/TypeScript/ESLint/Prettier lists.
+2. Click **Run workflow**, leave both lane checkboxes enabled for the default behavior, or uncheck the lane you want to skip.
 3. Submit for approval; a repository owner must approve the environment prompt before jobs start.
 4. Once complete, download the `compatibility-matrix-logs` artifact and review the console summary.
-   The job always runs the baseline lane first and the latest lane second; disable either by toggling the `run_baseline` / `run_latest` inputs when dispatching.
+   The job always runs the baseline lane first and the latest lane second; disable either lane by toggling the checkboxes in the dispatch form.
 
 ### Runtime expectations & monitoring
 
 - The scheduled/manual curated run (two suites) typically finishes in **12–18 minutes** on `ubuntu-latest`. Release invocations only execute the latest LTS lane and complete in ~8 minutes.
 - Extended manual runs vary with selected runtimes; expect **10–12 minutes per Node lane**. The workflow defaults to two sequential lanes — baseline `node20` (React 18.3.1 / TS 5.2.2 / ESLint 8.57.0 / Prettier 3.3.3) followed by latest `node24` (React 19.1.1 / TS 5.9.3 / ESLint 9.13.0 / Prettier 3.6.2) — and has a 120-minute time budget to guard against runaway jobs.
 - Keep an eye on GitHub Actions minutes. If extended runs become frequent, consider restricting inputs to `--quick` or a single runtime per invocation.
-  - If Node 24 tooling is temporarily unavailable on the runner, override `latest_runtime` to `node22` when dispatching the workflow.
+  - If Node 24 tooling is temporarily unavailable on the runner, uncheck `Run latest lane` in the dispatch form and run `pnpm run ci:compat:latest -- --runtime node22` locally until CI workers catch up.
 - Known issue (tracked in `docs/backlog.md`): Vite 7.1.9 currently fails the consumer build with an absolute-path asset error when the latest-lane smoke is executed locally. Until resolved, expect the manual matrix command to exit with `pin-and-build` failing; collect the log path (shown in console output) to aid debugging.
 
 ### Runtime support snapshot
