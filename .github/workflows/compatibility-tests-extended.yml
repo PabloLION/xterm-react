@@ -17,7 +17,8 @@ jobs:
     name: Extended runtime compatibility matrix
     runs-on: ubuntu-latest
     timeout-minutes: 120
-    environment: runtime-extended
+    environment:
+      name: runtime-extended
       url: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
     permissions:
       contents: read
