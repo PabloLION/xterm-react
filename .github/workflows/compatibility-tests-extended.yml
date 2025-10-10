@@ -69,7 +69,13 @@ jobs:
           INPUT_QUICK: ${{ github.event.inputs.quick }}
         run: |
           set -eo pipefail
-          args=("--runtime" "${INPUT_RUNTIMES:-all}")
+          runtime_value="${INPUT_RUNTIMES:-all}"
+          runtime_value="${runtime_value//[[:space:]]/}"
+          if [ -z "${runtime_value}" ]; then
+            echo "[extended] Error: runtime input resolved to an empty value" >&2
+            exit 1
+          fi
+          args=("--runtime" "${runtime_value}")
           if [ -n "${INPUT_REACT}" ]; then
             args+=("--react" "${INPUT_REACT}")
           fi
