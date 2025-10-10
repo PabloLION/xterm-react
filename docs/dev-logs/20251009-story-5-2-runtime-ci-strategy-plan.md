@@ -82,11 +82,12 @@
 
 ### Testing Record (updated)
 
-- Local verification: `pnpm check:no-fix`, `pnpm test`, and `pnpm markdownlint docs` (captured across commits).
+- Local verification: `pnpm check:no-fix`, `pnpm test`, and `pnpm markdownlint docs` (re-run after each workflow/doc change).
+- Matrix spot-check: `pnpm run compat:matrix -- --runtime node22 --linter eslint-prettier --react 19.1.1 --typescript 5.9.3 --eslint 9.13.0 --prettier 3.6.2 --quick` (2025-10-10) – fails during Vite build with Rollup complaining about an emitted asset using an absolute path. Captured log for triage (`version-compatibility-tests/logs/2025-10-10T10-39-14-737Z/...`).
 - Workflow validation:
   - **Compatibility Tests** – release/tag guard logic reviewed; timeout added (60 minutes) for runaway protection.
   - **Compatibility Tests (Extended Runtimes)** – exercised argument builder with empty/whitespace runtimes locally; workflow now trims inputs, fails fast on empty values, and enforces a 120-minute timeout.
-- Manual workflow execution is pending environment approval (`runtime-extended`). Once the environment is configured, trigger a dry run covering `node20,node22` and attach the artifact to this log.
+- Manual workflow execution is pending environment approval (`runtime-extended`). After resolving the Vite asset emission issue, rerun the dispatched workflow (targeting `node20,node22`) and attach the artifact to this log.
 
 ## Documentation & Deliverables
 
