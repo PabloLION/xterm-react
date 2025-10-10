@@ -54,6 +54,12 @@ To launch the manual workflow:
 3. Submit for approval; a repository owner must approve the environment prompt before jobs start.
 4. Once complete, download the `compatibility-matrix-logs` artifact and review the console summary.
 
+### Runtime expectations & monitoring
+
+- The scheduled/manual curated run (two suites) typically finishes in **12–18 minutes** on `ubuntu-latest`. Release invocations only execute the latest LTS lane and complete in ~8 minutes.
+- Extended manual runs vary with selected runtimes; expect **10–12 minutes per Node lane**. The workflow has a 120-minute time budget to guard against runaway jobs.
+- Keep an eye on GitHub Actions minutes. If extended runs become frequent, consider restricting inputs to `--quick` or a single runtime per invocation.
+
 ### Runtime support snapshot
 
 The current matrix runs on the host runtime (Node 18.x in CI) while we build out the runtime dimension described in Epic 5. We still track the lifecycle of the Node versions we intend to cover so we know where legacy support ends:

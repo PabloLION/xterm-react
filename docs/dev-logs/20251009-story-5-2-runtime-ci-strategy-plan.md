@@ -80,6 +80,14 @@
 - Trigger the updated workflows via `gh workflow run` or GitHub UI (dry-run) to confirm inputs, matrix execution, and summary output.
 - Inspect GitHub Actions logs to ensure runtime lanes honor sequential execution and correct script flags.
 
+### Testing Record (updated)
+
+- Local verification: `pnpm check:no-fix`, `pnpm test`, and `pnpm markdownlint docs` (captured across commits).
+- Workflow validation:
+  - **Compatibility Tests** – release/tag guard logic reviewed; timeout added (60 minutes) for runaway protection.
+  - **Compatibility Tests (Extended Runtimes)** – exercised argument builder with empty/whitespace runtimes locally; workflow now trims inputs, fails fast on empty values, and enforces a 120-minute timeout.
+- Manual workflow execution is pending environment approval (`runtime-extended`). Once the environment is configured, trigger a dry run covering `node20,node22` and attach the artifact to this log.
+
 ## Documentation & Deliverables
 
 - Updated `.github/workflows/compatibility-tests.yml` and new manual workflow file.
