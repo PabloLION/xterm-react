@@ -4,9 +4,9 @@ on:
   workflow_dispatch:
     inputs:
       runtimes:
-        description: 'Comma-separated runtime ids (e.g. node20,node22) or "all"'
+        description: 'Comma-separated runtime ids (e.g. node20,node22); use "all" only if those lanes exist'
         required: false
-        default: 'all'
+        default: 'node20,node22'
       react:
         description: 'Comma-separated React versions (leave empty for defaults)'
         required: false
