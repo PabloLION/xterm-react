@@ -5,7 +5,7 @@ This project provides a React component that integrates the [xterm.js](https://x
 ## Live Example
 
 - On Replit: <https://replit.com/@PabloLION/XTerm-React?v=1>
-- A example page with mb github pages. #TODO
+- An example page with maybe GitHub Pages. #TODO
 
 ## Usage
 
@@ -119,6 +119,7 @@ either a semantic version bump (`--bump major|minor|patch`) or an explicit `--ve
 Contributions are welcome! Please feel free to submit pull requests or open issues to discuss potential improvements or features.
 
 - For dev, `pnpm` is recommended.
+- Capture feature plans and retrospectives under `docs/dev-logs/` using the provided template. Start filenames with `YYYYMMDD-` so logs sort chronologically, and include an **Atomic Commit Breakdown** section before implementation begins.
 
 ### Credits
 

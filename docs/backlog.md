@@ -81,6 +81,7 @@
 ## Runtime Coverage
 
 - Covered by **Epic 5 – Runtime Coverage (Node & Bun)** in `docs/prd.md`. Use that epic/stories to track implementation details and move cards into execution when ready.
+- Add Dependabot automation (or equivalent) to notify maintainers when new Node LTS versions ship so runtime catalogs and workflows stay current.
 
 ## Component Lifecycle & Testing
 

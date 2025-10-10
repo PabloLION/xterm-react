@@ -2,11 +2,20 @@ name: Compatibility Tests
 
 on:
   workflow_dispatch: {}
+  workflow_call: {}
+  release:
+    types:
+      - published
+  push:
+    tags:
+      - 'v*'
   schedule:
     - cron: '0 6 * * 1' # Mondays at 06:00 UTC
 
 jobs:
   version-matrix:
+    timeout-minutes: 60
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event_name == 'schedule' || github.event_name == 'workflow_call' || matrix.suite.label == 'latest-supported' }}
     name: Compatibility smoke (${{ matrix.suite.label }})
     runs-on: ubuntu-latest
     strategy:

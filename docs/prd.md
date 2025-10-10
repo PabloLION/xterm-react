@@ -246,6 +246,12 @@ Acceptance Criteria:
 2. Provide manual/approval jobs (or local scripts) for the remaining Node runtime lanes (14, 16, 18, 24, 25) and Bun, rather than running everything on every PR.
 3. Release documentation spells out when to run each runtime lane (e.g., nightly, pre-release, manual verification) and how to request overrides.
 
+Implementation Notes:
+
+- The scheduled compatibility workflow now runs curated oldest/latest suites weekly and reuses the same job for releases, but release triggers only execute the latest Node LTS lane to keep turnarounds predictable.
+- The extended runtime workflow is a manual `workflow_dispatch` guarded by the `runtime-extended` environment so repository owners approve each run; operators pass comma-delimited runtime/tool lists instead of editing YAML.
+- `docs/compatibility-testing.md` describes cadence expectations, approval requirements, and the release checklist items tied to these workflows.
+
 #### Implementation Plan
 
 - Branch: `feat/story-5-2-runtime-ci-strategy`
