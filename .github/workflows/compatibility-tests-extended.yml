@@ -1,0 +1,149 @@
+name: Compatibility Tests (Extended Runtimes)
+
+on:
+  workflow_dispatch:
+    inputs:
+      runtimes:
+        description: 'Comma-separated runtime ids (e.g. node20,node22) or "all"'
+        required: false
+        default: 'all'
+      react:
+        description: 'Comma-separated React versions (leave empty for defaults)'
+        required: false
+        default: ''
+      typescript:
+        description: 'Comma-separated TypeScript versions (leave empty for defaults)'
+        required: false
+        default: ''
+      eslint:
+        description: 'Comma-separated ESLint versions (for eslint-prettier lane)'
+        required: false
+        default: ''
+      prettier:
+        description: 'Comma-separated Prettier versions (for eslint-prettier lane)'
+        required: false
+        default: ''
+      linter:
+        description: 'Comma-separated linter families (biome,eslint-prettier)'
+        required: false
+        default: ''
+      quick:
+        description: 'Set to true to run only the latest versions in each dimension'
+        required: false
+        default: 'false'
+
+jobs:
+  extended-matrix:
+    name: Extended runtime compatibility matrix
+    runs-on: ubuntu-latest
+    environment:
+      name: runtime-extended
+      url: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+    permissions:
+      contents: read
+      actions: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: '9'
+
+      - name: Verify pnpm
+        run: pnpm --version
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run compatibility matrix for selected runtimes
+        id: run-matrix
+        env:
+          INPUT_RUNTIMES: ${{ github.event.inputs.runtimes }}
+          INPUT_REACT: ${{ github.event.inputs.react }}
+          INPUT_TYPESCRIPT: ${{ github.event.inputs.typescript }}
+          INPUT_LINTER: ${{ github.event.inputs.linter }}
+          INPUT_ESLINT: ${{ github.event.inputs.eslint }}
+          INPUT_PRETTIER: ${{ github.event.inputs.prettier }}
+          INPUT_QUICK: ${{ github.event.inputs.quick }}
+        run: |
+          set -eo pipefail
+          args=("--runtime" "${INPUT_RUNTIMES:-all}")
+          if [ -n "${INPUT_REACT}" ]; then
+            args+=("--react" "${INPUT_REACT}")
+          fi
+          if [ -n "${INPUT_TYPESCRIPT}" ]; then
+            args+=("--typescript" "${INPUT_TYPESCRIPT}")
+          fi
+          if [ -n "${INPUT_LINTER}" ]; then
+            args+=("--linter" "${INPUT_LINTER}")
+          fi
+          if [ -n "${INPUT_ESLINT}" ]; then
+            args+=("--eslint" "${INPUT_ESLINT}")
+          fi
+          if [ -n "${INPUT_PRETTIER}" ]; then
+            args+=("--prettier" "${INPUT_PRETTIER}")
+          fi
+          if [ "${INPUT_QUICK}" = "true" ]; then
+            args+=("--quick")
+          fi
+          echo "[extended] pnpm compat:matrix -- ${args[*]}" >&2
+          pnpm run compat:matrix -- "${args[@]}"
+
+      - name: Generate compatibility summary
+        run: pnpm run compat:matrix:summary
+
+      - name: Capture latest summary path
+        id: summary
+        run: |
+          node <<'NODE'
+          import fs from 'node:fs'
+          import path from 'node:path'
+
+          const outputFile = process.env.GITHUB_OUTPUT
+          const suiteDir = path.join(process.cwd(), 'version-compatibility-tests')
+          const latestPtr = path.join(suiteDir, 'MATRIX_LATEST.json')
+          let summaryPath = ''
+          let summaryDir = ''
+          if (fs.existsSync(latestPtr)) {
+            try {
+              const data = JSON.parse(fs.readFileSync(latestPtr, 'utf8'))
+              summaryPath = data.summaryPath || ''
+              summaryDir = summaryPath ? path.dirname(summaryPath) : ''
+            } catch (error) {
+              console.warn('[extended] Failed to read MATRIX_LATEST.json:', error.message)
+            }
+          }
+          if (!summaryPath) {
+            console.warn('[extended] No summary path detected')
+          }
+          const lines = [
+            `summary-path=${summaryPath}`,
+            `summary-dir=${summaryDir}`
+          ]
+          console.log(lines.join('\n'))
+          if (outputFile) {
+            fs.appendFileSync(outputFile, lines.join('\n') + '\n')
+          }
+NODE
+
+      - name: Upload matrix artifacts
+        if: steps.summary.outputs.summary-path != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: compatibility-matrix-logs
+          path: |
+            ${{ steps.summary.outputs.summary-dir }}
+            version-compatibility-tests/MATRIX_SUMMARY.md
+            version-compatibility-tests/MATRIX_LATEST.json
+
+      - name: Upload latest summary when pointer missing
+        if: steps.summary.outputs.summary-path == ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: compatibility-matrix-logs
+          path: |
+            version-compatibility-tests/logs
+            version-compatibility-tests/MATRIX_SUMMARY.md
+*** End Patch
