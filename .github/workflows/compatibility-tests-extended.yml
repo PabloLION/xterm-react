@@ -120,9 +120,62 @@ NODE
           }
 NODE
 
-      - name: Generate compatibility summary
+      - name: Merge lane summaries
+        id: merge-summary
         if: ${{ always() && (inputs.run_baseline || inputs.run_latest) }}
-        run: pnpm run compat:matrix:summary
+        env:
+          BASE_SUMMARY: ${{ steps.baseline-summary.outputs.summary-path }}
+          LATEST_SUMMARY: ${{ steps.latest-summary.outputs.summary-path }}
+          RUN_ID: ${{ github.run_id }}
+        run: |
+          node <<'NODE'
+          import fs from 'node:fs'
+          import path from 'node:path'
+
+          const outputFile = process.env.GITHUB_OUTPUT
+          const baseSummary = process.env.BASE_SUMMARY
+          const latestSummary = process.env.LATEST_SUMMARY
+          const sources = []
+          const aggregate = []
+
+          for (const summaryPath of [baseSummary, latestSummary]) {
+            if (!summaryPath) continue
+            try {
+              const data = JSON.parse(fs.readFileSync(summaryPath, 'utf8'))
+              if (Array.isArray(data)) {
+                aggregate.push(...data)
+                sources.push(summaryPath)
+              }
+            } catch (error) {
+              console.warn('[merge] Failed to read summary', summaryPath, error.message)
+            }
+          }
+
+          if (!aggregate.length) {
+            if (outputFile) {
+              fs.appendFileSync(outputFile, 'summary-path=\n')
+              fs.appendFileSync(outputFile, 'summary-dir=\n')
+            }
+            process.exit(0)
+          }
+
+          const suiteDir = path.join(process.cwd(), 'version-compatibility-tests')
+          const combinedDir = path.join(suiteDir, 'logs', `${process.env.RUN_ID}-combined`)
+          fs.mkdirSync(combinedDir, { recursive: true })
+          const combinedSummaryPath = path.join(combinedDir, 'MATRIX_SUMMARY.json')
+          fs.writeFileSync(combinedSummaryPath, JSON.stringify(aggregate, null, 2))
+          fs.writeFileSync(path.join(combinedDir, 'sources.json'), JSON.stringify(sources, null, 2))
+
+          const lines = [`summary-path=${combinedSummaryPath}`, `summary-dir=${combinedDir}`]
+          console.log(lines.join('\n'))
+          if (outputFile) {
+            fs.appendFileSync(outputFile, lines.join('\n') + '\n')
+          }
+NODE
+
+      - name: Generate combined summary
+        if: ${{ always() && steps.merge-summary.outputs.summary-path != '' }}
+        run: pnpm run compat:matrix:summary -- ${{ steps.merge-summary.outputs.summary-path }}
 
       - name: Upload baseline artifacts
         if: ${{ always() && steps.baseline-summary.outputs.summary-dir != '' }}
@@ -141,6 +194,13 @@ NODE
             version-compatibility-tests/MATRIX_SUMMARY.md
             version-compatibility-tests/MATRIX_LATEST.json
 
+      - name: Upload combined summary
+        if: ${{ always() && steps.merge-summary.outputs.summary-dir != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: compatibility-combined-summary
+          path: ${{ steps.merge-summary.outputs.summary-dir }}
+
       - name: Fail job if any lane failed
-        if: ${{ failure() }}
+        if: ${{ always() && (steps.run-baseline.outcome == 'failure' || steps.run-latest.outcome == 'failure') }}
         run: exit 1
