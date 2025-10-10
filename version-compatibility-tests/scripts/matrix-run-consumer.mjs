@@ -499,9 +499,9 @@ function ensureRuntime(runtime) {
     if (!restoreNodeVersion) restoreNodeVersion = originalNodeVersion
     const res = sh(`pnpm env use --global ${runtime.versionSpec}`, root, logFile)
     if (!res.ok) {
-      console.error(`${LOG_PREFIX} Failed to activate Node runtime ${runtime.label}`)
-      console.error(res.out)
-      process.exit(1)
+      const error = new Error(`Failed to activate Node runtime ${runtime.label}`)
+      error.output = res.out
+      throw error
     }
     activeRuntimeKey = key
     runtimeMutated = true
@@ -541,8 +541,7 @@ async function main() {
         return b.f.localeCompare(a.f)
       })[0]?.f
     if (!tgz) {
-      console.error(`${LOG_PREFIX} Failed to find packed tarball under dist`)
-      process.exit(1)
+      throw new Error(`${LOG_PREFIX} Failed to find packed tarball under dist`)
     }
 
     const scenarios = listScenarios()
@@ -622,7 +621,9 @@ async function main() {
     const summaryRes = sh(summarizeCmd, root, summaryLog)
     if (!summaryRes.ok) {
       console.error(`${LOG_PREFIX} Failed to generate Markdown summary. See ${summaryLog}`)
-      process.exit(1)
+      const error = new Error('Markdown summary generation failed')
+      error.summaryLog = summaryLog
+      throw error
     }
 
     const hasBlockingOutcome = counts.fail > 0 || counts.xpass > 0
@@ -630,7 +631,10 @@ async function main() {
       console.error(
         `${LOG_PREFIX} Blocking scenarios detected (FAIL=${counts.fail}, XPASS=${counts.xpass}). See logs under ${logsRoot}`
       )
-      process.exit(1)
+      const error = new Error('Blocking scenarios detected')
+      error.summaryPath = summaryPath
+      error.counts = counts
+      throw error
     }
 
     if (counts.xfail > 0) {
