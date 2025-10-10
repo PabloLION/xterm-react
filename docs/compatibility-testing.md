@@ -34,7 +34,7 @@ This repo ships an in‑repo “consumer app” plus scripts to test the publish
   - No auto-fix steps; the job surfaces failures from the curated matrix and leaves remediation to the developer.
 - **Compatibility Tests (Extended Runtimes)** (`.github/workflows/compatibility-tests-extended.yml`)
   - Trigger: manual (`workflow_dispatch`) with required approval via the `runtime-extended` environment (gate ownership to repository administrators).
-  - Inputs: comma-separated runtimes (`node20,node22,node24,node25`), React/TypeScript/ESLint/Prettier filters, and a `quick` toggle for latest-only sweeps.
+  - Inputs: comma-separated runtimes (`node20,node22,node24` or `all`), React/TypeScript/ESLint/Prettier filters, and a `quick` toggle for latest-only sweeps.
   - Outputs: JSON + Markdown summaries in `version-compatibility-tests/logs/<timestamp>` and uploaded artifacts for audit trails.
 
 ### When to run each lane
@@ -43,14 +43,14 @@ This repo ships an in‑repo “consumer app” plus scripts to test the publish
 | ------------------------------- | ------------------------------- | ----------------------------------------------------------- |
 | Weekly scheduled (both suites)  | Mondays 06:00 UTC               | Ongoing signal for oldest/latest supported stacks.          |
 | Release/tag latest-LTS smoke    | Automatic on release publication or tag push | Guarantees publish pipelines see a fresh `node22` PASS. |
-| Manual extended runtimes        | On-demand with owner approval   | Validate additional Node streams (22+/24+/25) or targeted investigations prior to major releases. |
+| Manual extended runtimes        | On-demand with owner approval   | Validate additional Node streams (22+/24+) or targeted investigations prior to major releases. |
 
 **Release checklist:** Before publishing, confirm the latest run of “Compatibility Tests” (release trigger) is green. If support promises include additional runtimes, run “Compatibility Tests (Extended Runtimes)” and attach the artifact to the release notes or PR.
 
 To launch the manual workflow:
 
 1. Open **Actions → Compatibility Tests (Extended Runtimes)**.
-2. Click **Run workflow**, fill runtime filters (use `all` for Node 20/22/24/25), and optionally narrow React/TypeScript/ESLint/Prettier lists.
+2. Click **Run workflow**, fill runtime filters (use `all` for Node 20/22/24), and optionally narrow React/TypeScript/ESLint/Prettier lists.
 3. Submit for approval; a repository owner must approve the environment prompt before jobs start.
 4. Once complete, download the `compatibility-matrix-logs` artifact and review the console summary.
 
@@ -58,13 +58,14 @@ To launch the manual workflow:
 
 The current matrix runs on the host runtime (Node 18.x in CI) while we build out the runtime dimension described in Epic 5. We still track the lifecycle of the Node versions we intend to cover so we know where legacy support ends:
 
-| Runtime      | Lifecycle Status (Oct 2025)            | Notes                                                       |
+| Runtime      | Lifecycle Status (Oct 2024)            | Notes                                                       |
 | ------------ | -------------------------------------- | ----------------------------------------------------------- |
 | Node 20.x    | Active LTS                             | Supported through April 30, 2026; current default target.   |
 | Node 22.x    | Current release (enters LTS Oct 2024)  | Projected LTS support through April 30, 2027.               |
-| Node 24.x    | Upcoming release (enters LTS Oct 2025) | Align coverage once released (projected LTS through 2028).  |
-| Node 25.x    | Current “odd” stream (non-LTS)         | Short-lived cadence; include for “latest” smoke tests only. |
-| Bun (stable) | Continuous releases                    | (lane pending) No LTS program; track stable.                |
+| Node 24.x    | Planned release (enters LTS Oct 2025)  | Prep coverage once GA; keep an eye on nightly/beta builds.  |
+| Bun (stable) | Continuous releases                    | (lane pending) No LTS program; track stable channel.        |
+
+> We will add the next odd-numbered Node release (e.g., Node 25) after the Foundation announces the schedule and preview builds are available.
 
 Legacy Node 14/16/18 have exited vendor support, so they are intentionally omitted from the future matrix; we’ll focus on currently supported LTS/current streams going forward. When the runtime column lands, matrix flags such as `--runtime node20` or `--runtime node22` will select the appropriate toolchain, and the README will surface a runtime support badge. Until then, use the table above to decide which local environment to test against and consult Epic 5 for implementation progress. Bun support will land in a later iteration; until then the runner will treat bun requests as unsupported.
 
