@@ -36,6 +36,7 @@ jobs:
   extended-matrix:
     name: Extended runtime compatibility matrix
     runs-on: ubuntu-latest
+    timeout-minutes: 120
     environment:
       name: runtime-extended
       url: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
