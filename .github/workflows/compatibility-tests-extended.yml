@@ -1,4 +1,4 @@
-name: Compatibility Tests (Extended Runtimes)
+name: Compatibility Tests (Popular Runtimes)
 
 on:
   workflow_dispatch:
@@ -13,16 +13,12 @@ on:
         default: true
 
 jobs:
-  extended-matrix:
-    name: Extended runtime compatibility matrix
+  runtime-smokes:
+    name: Popular runtime compatibility matrix
     runs-on: ubuntu-latest
     timeout-minutes: 120
-    environment:
-      name: "runtime-extended"
-      url: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
     permissions:
       contents: read
-      actions: write
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -71,7 +67,7 @@ jobs:
           --summary "${{ env.BASE_SUMMARY }}"
           --summary "${{ env.LATEST_SUMMARY }}"
 
-      - name: Generate combined summary
+      - name: Render combined summary
         if: ${{ always() && steps.merge-summary.outputs.summary-path != '' }}
         run: pnpm run compat:matrix:summary -- ${{ steps.merge-summary.outputs.summary-path }}
 
