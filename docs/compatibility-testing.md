@@ -32,11 +32,10 @@ This repo ships an in‑repo “consumer app” plus scripts to test the publish
     - Scheduled/manual runs exercise both curated suites (`oldest-supported` and `latest-supported`).
     - Release/tag triggers automatically run the latest Node LTS lane (`node22` combo) to block publishes on regressions.
   - No auto-fix steps; the job surfaces failures from the curated matrix and leaves remediation to the developer.
-- **Compatibility Tests (Extended Runtimes)** (`.github/workflows/compatibility-tests-extended.yml`)
-  - Trigger: manual (`workflow_dispatch`) with required approval via the `runtime-extended` environment (gate ownership to repository administrators).
-  - Inputs: two checkboxes (`Run baseline lane`, `Run latest lane`) controlling whether to execute the curated Node 20 and Node 24 smokes.
-  - Outputs: JSON + Markdown summaries in `version-compatibility-tests/logs/<timestamp>` and uploaded artifacts for audit trails.
-- Local helpers: `pnpm run ci:compat:baseline` and `pnpm run ci:compat:latest` mirror the two lanes and are handy for local spot-checks.
+- **Compatibility Tests (Popular Runtimes)** (`.github/workflows/compatibility-tests-extended.yml`)
+  - Trigger: manual (`workflow_dispatch`) with two checkboxes (`Run baseline lane`, `Run latest lane`). Baseline is Node 20 + the oldest curated stack; latest is Node 24 + the newest stack.
+  - Outputs: per-lane logs plus a combined summary artifact, uploaded via GitHub Actions artifacts for each run.
+- Local helpers: `pnpm run ci:compat:baseline`, `pnpm run ci:compat:latest`, and `pnpm run ci:compat:merge-summaries` mirror the CI flow for local iteration.
 
 ### When to run each lane
 
@@ -46,15 +45,17 @@ This repo ships an in‑repo “consumer app” plus scripts to test the publish
 | Release/tag latest-LTS smoke    | Automatic on release publication or tag push | Guarantees publish pipelines see a fresh `node22` PASS. |
 | Manual extended runtimes        | On-demand with owner approval   | Validate additional Node streams (22+/24+) or targeted investigations prior to major releases. |
 
-**Release checklist:** Before publishing, confirm the latest run of “Compatibility Tests” (release trigger) is green. If support promises include additional runtimes, run “Compatibility Tests (Extended Runtimes)” and attach the artifact to the release notes or PR.
+**Release checklist:** Before publishing, confirm the latest run of “Compatibility Tests” (release trigger) is green. If support promises include additional runtimes, run “Compatibility Tests (Popular Runtimes)” and attach the merged summary artifact (see below) to the release notes or PR.
 
 To launch the manual workflow:
 
 1. Open **Actions → Compatibility Tests (Extended Runtimes)**.
 2. Click **Run workflow**, leave both lane checkboxes enabled for the default behavior, or uncheck the lane you want to skip.
-3. Submit for approval; a repository owner must approve the environment prompt before jobs start.
-4. Once complete, download the `compatibility-matrix-logs` artifact and review the console summary.
-   The job always runs the baseline lane first and the latest lane second; disable either lane by toggling the checkboxes in the dispatch form.
+3. The job runs the baseline lane first and the latest lane second; disable either lane by toggling the checkboxes in the dispatch form.
+4. When the run finishes, download the artifacts:
+   - `compatibility-baseline-logs`: raw install/build/lint logs and JSON summary for the Node 20 lane.
+   - `compatibility-latest-logs`: logs and summary for the Node 24 lane.
+   - `compatibility-combined-summary`: merged JSON + Markdown covering every lane that ran (use this for release notes).
 
 ### Runtime expectations & monitoring
 
