@@ -22,6 +22,24 @@ const prefix = label ? `[summary:${label}]` : '[summary]'
 
 const suiteDir = path.join(process.cwd(), 'version-compatibility-tests')
 const latestPtr = path.join(suiteDir, 'MATRIX_LATEST.json')
+const logsDir = path.join(suiteDir, 'logs')
+
+function newestLogsDir() {
+  if (!fs.existsSync(logsDir)) return null
+  const entries = fs
+    .readdirSync(logsDir)
+    .map(name => ({ name, full: path.join(logsDir, name) }))
+    .filter(entry => {
+      try {
+        return fs.statSync(entry.full).isDirectory()
+      } catch {
+        return false
+      }
+    })
+    .sort((a, b) => a.name.localeCompare(b.name))
+
+  return entries.length ? entries[entries.length - 1] : null
+}
 
 let summaryPath = ''
 let summaryDir = ''
@@ -38,8 +56,24 @@ if (fs.existsSync(latestPtr)) {
   console.warn(`${prefix} ${latestPtr} does not exist`)
 }
 
+const newestDir = newestLogsDir()
+
 if (!summaryPath) {
   console.warn(`${prefix} No summary path detected`)
+} else if (!newestDir) {
+  console.warn(`${prefix} Ignoring summary pointer (${summaryPath}); no logs directories detected`)
+  summaryPath = ''
+  summaryDir = ''
+} else {
+  const relativeToNewest = path.relative(newestDir.full, summaryPath)
+  const outsideNewest = relativeToNewest.startsWith('..') || path.isAbsolute(relativeToNewest)
+  if (outsideNewest) {
+    console.warn(
+      `${prefix} Ignoring stale summary pointer (${summaryPath}); latest logs directory is ${newestDir.full}`
+    )
+    summaryPath = ''
+    summaryDir = ''
+  }
 }
 
 const lines = [`summary-path=${summaryPath}`, `summary-dir=${summaryDir}`]

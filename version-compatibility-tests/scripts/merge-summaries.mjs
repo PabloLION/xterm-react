@@ -60,6 +60,26 @@ const combinedSummaryPath = path.join(combinedDir, 'MATRIX_SUMMARY.json')
 fs.writeFileSync(combinedSummaryPath, JSON.stringify(aggregate, null, 2))
 fs.writeFileSync(path.join(combinedDir, 'sources.json'), JSON.stringify(sources, null, 2))
 
+const totals = aggregate.reduce(
+  (acc, scenario) => {
+    const outcome = scenario?.outcome
+    acc.total += 1
+    if (outcome === 'PASS') acc.pass += 1
+    else if (outcome === 'FAIL') acc.fail += 1
+    else if (outcome === 'XFAIL') acc.xfail += 1
+    else if (outcome === 'XPASS') acc.xpass += 1
+    return acc
+  },
+  { total: 0, pass: 0, fail: 0, xfail: 0, xpass: 0 }
+)
+
+const pointer = {
+  generatedAt: new Date().toISOString(),
+  summaryPath: combinedSummaryPath,
+  totals
+}
+fs.writeFileSync(path.join(suiteDir, 'MATRIX_LATEST.json'), JSON.stringify(pointer, null, 2))
+
 const lines = [`summary-path=${combinedSummaryPath}`, `summary-dir=${combinedDir}`]
 console.log(lines.join('\n'))
 

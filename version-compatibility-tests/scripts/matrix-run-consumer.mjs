@@ -79,22 +79,19 @@ const originalNodeVersion = process.version.startsWith('v') ? process.version.sl
 let restoreNodeVersion = null
 let runtimeMutated = false
 
-function parseArgValue(names) {
-  const argv = process.argv.slice(2)
-  for (let i = 0; i < argv.length; i++) {
-    const a = argv[i]
-    if (names.includes(a)) {
-      const v = argv[i + 1]
-      if (v) return v
-    }
-  }
-  return null
-}
-
 function parseListArg(names) {
-  const raw = parseArgValue(names)
-  if (!raw) return null
-  return raw
+  const argv = process.argv.slice(2)
+  let lastMatch = null
+  for (let i = 0; i < argv.length; i++) {
+    const token = argv[i]
+    if (!names.includes(token)) continue
+    const value = argv[i + 1]
+    if (!value) continue
+    lastMatch = value
+    i += 1
+  }
+  if (!lastMatch) return null
+  return lastMatch
     .split(',')
     .map(part => part.trim())
     .filter(Boolean)
