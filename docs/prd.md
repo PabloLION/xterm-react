@@ -242,31 +242,33 @@ so that we balance signal quality with runtime duration.
 
 Acceptance Criteria:
 
-1. GitHub Actions (or equivalent) run the matrix on the latest Node LTS as part of release checks.
-2. Provide manual/approval jobs (or local scripts) for the remaining Node runtime lanes (14, 16, 18, 24, 25) and Bun, rather than running everything on every PR.
-3. Release documentation spells out when to run each runtime lane (e.g., nightly, pre-release, manual verification) and how to request overrides.
+1. GitHub Actions runs the curated matrix on the latest Node LTS (currently Node 24) as part of release/tag checks while keeping the weekly scheduled job intact.
+2. A manual workflow (triggered via GitHub’s `workflow_dispatch` action—i.e., the **Run workflow** button) executes two sequential lanes: baseline Node 20 plus latest Node 24. Operators can toggle either lane before starting the run.
+3. Release documentation clearly states when to run baseline vs. latest lanes and how to invoke the manual workflow for additional verification.
 
 Implementation Notes:
 
-- The scheduled compatibility workflow now runs curated oldest/latest suites weekly and reuses the same job for releases, but release triggers only execute the latest Node LTS lane to keep turnarounds predictable.
-- The extended runtime workflow is a manual `workflow_dispatch` guarded by the `runtime-extended` environment so repository owners approve each run; operators pass comma-delimited runtime/tool lists instead of editing YAML.
-- `docs/compatibility-testing.md` describes cadence expectations, approval requirements, and the release checklist items tied to these workflows.
+- The scheduled compatibility workflow keeps running both curated suites weekly; release triggers only execute the latest Node LTS lane to keep turnarounds predictable.
+- The manual workflow is exposed through GitHub’s `workflow_dispatch` trigger (no separate environment gate) and runs the baseline and latest lanes sequentially by default. Checkbox inputs let operators skip either lane when necessary.
+- `docs/compatibility-testing.md` documents how to launch the manual workflow, which lanes run by default, and when to lean on each lane ahead of a release.
 
 #### Implementation Plan
 
 - Branch: `feat/story-5-2-runtime-ci-strategy`
 - Commit outline:
+
   1. `ci(compat): run latest LTS smoke during release checks`
-     - Extend compatibility workflows so the latest Node LTS lane (currently `node22`) runs automatically on release/publish triggers in addition to the scheduled weekly job.
+     - Extend compatibility workflows so the latest Node LTS lane (currently `node24`) runs automatically on release/publish triggers in addition to the scheduled weekly job.
      - Share pnpm caches with the scheduled job and keep runtime batches sequential (no `--parallel` flag).
-  2. `ci(compat): add manual extended runtime workflow`
-     - Add a workflow-dispatch job (with approval gate) that iterates optional Node lanes (`node24`, `node25`, future current/LTS) plus the Bun placeholder once support lands.
-     - Expose inputs for selecting runtime/react/ts presets without editing YAML.
-  3. `docs(release): document runtime lane expectations`
+  1. `ci(compat): add manual extended runtime workflow`
+     - Add a workflow-dispatch job that runs the baseline (`node20`) and latest (`node24`) lanes sequentially, with inputs that let operators disable either lane and adjust presets when we expand coverage.
+     - Keep the helper scripts (`ci:compat:*`) aligned so the workflow and local runs share the same defaults.
+  1. `docs(release): document runtime lane expectations`
      - Update `docs/compatibility-testing.md` and related release docs with guidance on when to run each lane and the required approvals.
      - Add a release checklist note that the latest LTS smoke must pass and link to the manual workflow for additional lanes.
-  4. `docs(backlog): log future runtime enhancements`
+  1. `docs(backlog): log future runtime enhancements`
      - Capture follow-ups for Bun enablement and runtime rotation cadence so later stories (e.g., Story 5.3) have explicit entry points.
+
 - Validation: `pnpm check:no-fix`, `pnpm test`, run `pnpm markdownlint docs` after doc edits, and trigger affected workflows via GitHub UI (or `act`) when feasible.
 
 ### Story 5.3 Bun validation

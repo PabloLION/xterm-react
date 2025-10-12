@@ -20,9 +20,9 @@ This repo ships an in‑repo “consumer app” plus scripts to test the publish
   - `pnpm run compat:matrix`
   - Exits non-zero when any scenario reports `FAIL` or `XPASS` (so CI and local scripts stop on regressions).
   - Automatically generates JSON + Markdown summaries in `version-compatibility-tests/logs/<timestamp>/` and updates the stable aliases below.
-  - Latest summary pointer: `version-compatibility-tests/MATRIX_LATEST.json`
+  - Latest summary pointer: `version-compatibility-tests/MATRIX_LATEST.json` (tiny JSON file that records the path to the newest `MATRIX_SUMMARY.json`).
   - Latest Markdown summary (stable alias): `version-compatibility-tests/MATRIX_SUMMARY.md`
-- Additional runtimes: `pnpm run compat:matrix -- --runtime node20,node22` (use `--runtime all` for Node 20/22/24). Bun lanes are planned; requesting `bun-stable` currently reports an unsupported-runtime warning.
+- Additional runtimes: `pnpm run compat:matrix -- --runtime node20,node24` (use `--runtime all` for Node 20/22/24 if you need to include older presets). Bun lanes are planned; requesting `bun-stable` currently reports an unsupported-runtime warning.
 
 ## CI workflows & cadence
 
@@ -30,10 +30,10 @@ This repo ships an in‑repo “consumer app” plus scripts to test the publish
   - Triggers: weekly schedule (Mondays 06:00 UTC), manual dispatch, tag pushes (`v*`), reusable `workflow_call`, and release publication.
   - Matrix lanes:
     - Scheduled/manual runs exercise both curated suites (`oldest-supported` and `latest-supported`).
-    - Release/tag triggers automatically run the latest Node LTS lane (`node22` combo) to block publishes on regressions.
+    - Release/tag triggers automatically run the latest Node LTS lane (`node24` combo) to block publishes on regressions.
   - No auto-fix steps; the job surfaces failures from the curated matrix and leaves remediation to the developer.
 - **Compatibility Tests (Popular Runtimes)** (`.github/workflows/compatibility-tests-extended.yml`)
-  - Trigger: manual (`workflow_dispatch`) with two checkboxes (`Run baseline lane`, `Run latest lane`). Baseline is Node 20 + the oldest curated stack; latest is Node 24 + the newest stack.
+  - Trigger: manual (`workflow_dispatch` — the **Run workflow** button in GitHub Actions) with two checkboxes (`Run baseline lane`, `Run latest lane`). Baseline is Node 20 + the oldest curated stack; latest is Node 24 + the newest stack.
   - Outputs: per-lane logs plus a combined summary artifact, uploaded via GitHub Actions artifacts for each run.
 - Local helpers: `pnpm run ci:compat:baseline`, `pnpm run ci:compat:latest`, and `pnpm run ci:compat:merge-summaries` mirror the CI flow for local iteration.
 
@@ -42,8 +42,8 @@ This repo ships an in‑repo “consumer app” plus scripts to test the publish
 | Lane                            | Trigger                         | Purpose                                                     |
 | ------------------------------- | ------------------------------- | ----------------------------------------------------------- |
 | Weekly scheduled (both suites)  | Mondays 06:00 UTC               | Ongoing signal for oldest/latest supported stacks.          |
-| Release/tag latest-LTS smoke    | Automatic on release publication or tag push | Guarantees publish pipelines see a fresh `node22` PASS. |
-| Manual extended runtimes        | On-demand with owner approval   | Validate additional Node streams (22+/24+) or targeted investigations prior to major releases. |
+| Release/tag latest-LTS smoke    | Automatic on release publication or tag push | Guarantees publish pipelines see a fresh `node24` PASS. |
+| Manual extended runtimes        | On-demand manual trigger        | Validate the baseline (`node20`) and latest (`node24`) lanes or targeted investigations prior to major releases. |
 
 **Release checklist:** Before publishing, confirm the latest run of “Compatibility Tests” (release trigger) is green. If support promises include additional runtimes, run “Compatibility Tests (Popular Runtimes)” and attach the merged summary artifact (see below) to the release notes or PR.
 
@@ -62,7 +62,7 @@ To launch the manual workflow:
 - The scheduled/manual curated run (two suites) typically finishes in **12–18 minutes** on `ubuntu-latest`. Release invocations only execute the latest LTS lane and complete in ~8 minutes.
 - Extended manual runs vary with selected runtimes; expect **10–12 minutes per Node lane**. The workflow defaults to two sequential lanes — baseline `node20` (React 18.3.1 / TS 5.2.2 / ESLint 8.57.0 / Prettier 3.3.3) followed by latest `node24` (React 19.1.1 / TS 5.9.3 / ESLint 9.13.0 / Prettier 3.6.2) — and has a 120-minute time budget to guard against runaway jobs.
 - Keep an eye on GitHub Actions minutes. If extended runs become frequent, consider restricting inputs to `--quick` or a single runtime per invocation.
-  - If Node 24 tooling is temporarily unavailable on the runner, uncheck `Run latest lane` in the dispatch form and run `pnpm run ci:compat:latest -- --runtime node22` locally until CI workers catch up.
+  - If Node 24 tooling is temporarily unavailable on the runner, uncheck `Run latest lane` in the dispatch form and re-run it locally with `pnpm run ci:compat:latest -- --runtime node20` until your environment supports Node 24 again.
 - Known issue (tracked in `docs/backlog.md`): Vite 7.1.9 currently fails the consumer build with an absolute-path asset error when the latest-lane smoke is executed locally. Until resolved, expect the manual matrix command to exit with `pin-and-build` failing; collect the log path (shown in console output) to aid debugging.
 
 ### Runtime support snapshot
@@ -71,14 +71,14 @@ The current matrix runs on the host runtime (Node 18.x in CI) while we build out
 
 | Runtime      | Lifecycle Status (Oct 2024)            | Notes                                                       |
 | ------------ | -------------------------------------- | ----------------------------------------------------------- |
-| Node 20.x    | Active LTS                             | Supported through April 30, 2026; current default target.   |
-| Node 22.x    | Current release (enters LTS Oct 2024)  | Projected LTS support through April 30, 2027.               |
-| Node 24.x    | Planned release (enters LTS Oct 2025)  | Prep coverage once GA; keep an eye on nightly/beta builds.  |
+| Node 20.x    | Maintenance LTS                        | Supported through April 30, 2026; baseline compatibility lane. |
+| Node 22.x    | Current release                        | Optional lane (not currently in CI presets).                |
+| Node 24.x    | Active LTS                             | Latest compatibility lane and release gate.                 |
 | Bun (stable) | Continuous releases                    | (lane pending) No LTS program; track stable channel.        |
 
 > We will add the next odd-numbered Node release (e.g., Node 25) after the Foundation announces the schedule and preview builds are available.
 
-Legacy Node 14/16/18 have exited vendor support, so they are intentionally omitted from the future matrix; we’ll focus on currently supported LTS/current streams going forward. When the runtime column lands, matrix flags such as `--runtime node20` or `--runtime node22` will select the appropriate toolchain, and the README will surface a runtime support badge. Until then, use the table above to decide which local environment to test against and consult Epic 5 for implementation progress. Bun support will land in a later iteration; until then the runner will treat bun requests as unsupported.
+Legacy Node 14/16/18 have exited vendor support, so they are intentionally omitted from the future matrix; we’ll focus on currently supported LTS/current streams going forward. When the runtime column lands, matrix flags such as `--runtime node20` or `--runtime node24` will select the appropriate toolchain, and the README will surface a runtime support badge. Until then, use the table above to decide which local environment to test against and consult Epic 5 for implementation progress. Bun support will land in a later iteration; until then the runner will treat bun requests as unsupported.
 
 ### Matrix Snapshot
 

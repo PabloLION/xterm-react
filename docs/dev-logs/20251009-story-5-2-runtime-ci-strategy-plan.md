@@ -41,34 +41,35 @@
 
 ## Implementation Sequence
 
-1. Verify current workflow behavior and identify release triggers already defined in the repo.
-2. Implement latest-LTS job updates and dry-run via `gh workflow run` (or equivalent) to ensure triggers behave locally.
-3. Draft and test the manual workflow using `workflow_dispatch` locally (if possible) and document expected inputs.
-4. Update compatibility docs and release guidance, then run `pnpm markdownlint docs`.
-5. Append backlog items and ensure references align with PRD Story 5.3.
-6. Run `pnpm check:no-fix` and `pnpm test`; capture workflow screenshots or logs for the PR description.
+- Verify current workflow behavior and identify release triggers already defined in the repo.
+- Implement latest-LTS job updates and dry-run via `gh workflow run` (or equivalent) to ensure triggers behave locally.
+- Draft and test the manual workflow using `workflow_dispatch` locally (if possible) and document expected inputs.
+- Update compatibility docs and release guidance, then run `pnpm markdownlint docs`.
+- Append backlog items and ensure references align with PRD Story 5.3.
+- Run `pnpm check:no-fix` and `pnpm test`; capture workflow screenshots or logs for the PR description.
 
 ## Atomic Commit Breakdown
 
 1. **ci(compat): run latest LTS smoke during release checks**
 
    - Extend `.github/workflows/compatibility-tests.yml` with release triggers (`release`, `workflow_call`, or tag patterns) that execute the latest Node LTS lane.
-   - Confirm caching options (`actions/cache` or pnpm store) and ensure the job executes `pnpm compat:matrix -- --runtime node22 --sequential`.
-   - Update job names/descriptions to highlight \"Latest LTS smoke\".
+   - Confirm caching options (`actions/cache` or pnpm store) and ensure the job executes `pnpm compat:matrix -- --runtime node24 --sequential`.
+   - Update job names/descriptions to highlight "Latest LTS smoke".
 
-2. **ci(compat): add manual extended runtime workflow**
+1. **ci(compat): add manual extended runtime workflow**
 
    - Add `.github/workflows/compatibility-tests-extended.yml` with two curated lanes (baseline Node 20 + oldest stack, latest Node 24 + latest stack) executed sequentially.
    - Expose simple toggles to skip either lane; rely on pnpm scripts (`ci:compat:baseline`, `ci:compat:latest`) so CI YAML stays declarative.
-   - Require reviewer approval (environment protection or `workflow_dispatch` with `required_reviewers`) before execution.
+   - Document that the workflow is triggered manually via GitHub's **Run workflow** UI, with default lanes for Node 20 (baseline) and Node 24 (latest).
 
-3. **docs(release): document runtime lane expectations**
+1. **docs(release): document runtime lane expectations**
 
    - Update `docs/compatibility-testing.md` to document the automated latest-LTS lane and manual workflow usage, including cadence guidance.
    - Add a note to release docs (e.g., `docs/brief.md` or `docs/prd.md` release checklist) requiring a green latest-LTS job prior to tagging.
    - Mention where to find workflow logs and how to trigger the manual run.
 
-4. **docs(backlog): capture future runtime enhancements**
+1. **docs(backlog): capture future runtime enhancements**
+
    - Append backlog items for Bun enablement (consumer app + workflow integration) and Node LTS rotation automation under the runtime epic.
 
 - Reference Story 5.3 and planned follow-ups so future work has a clear entry point.
@@ -83,11 +84,11 @@
 ### Testing Record (updated)
 
 - Local verification: `pnpm check:no-fix`, `pnpm test`, and `pnpm markdownlint docs` (re-run after each workflow/doc change).
-- Matrix spot-check: `pnpm run compat:matrix -- --runtime node22 --linter eslint-prettier --react 19.1.1 --typescript 5.9.3 --eslint 9.13.0 --prettier 3.6.2 --quick` (2025-10-10) – fails during Vite build with Rollup complaining about an emitted asset using an absolute path. Captured log for triage (`version-compatibility-tests/logs/2025-10-10T10-39-14-737Z/...`).
+- Matrix spot-check: `pnpm run compat:matrix -- --runtime node24 --linter eslint-prettier --react 19.1.1 --typescript 5.9.3 --eslint 9.13.0 --prettier 3.6.2 --quick` (2025-10-10) – fails during Vite build with Rollup complaining about an emitted asset using an absolute path. Captured log for triage (`version-compatibility-tests/logs/2025-10-10T10-39-14-737Z/...`).
 - Workflow validation:
   - **Compatibility Tests** – release/tag guard logic reviewed; timeout added (60 minutes) for runaway protection.
   - **Compatibility Tests (Popular Runtimes)** – validated sequential lane execution via the new pnpm helpers (`pnpm run ci:compat:baseline`, `pnpm run ci:compat:latest`); workflow enforces a 120-minute timeout and uploads per-lane plus combined artifacts.
-- Manual workflow execution is pending environment approval (`runtime-extended`). After resolving the Vite asset emission issue, rerun the dispatched workflow (targeting `node20,node22`) and attach the artifact to this log.
+- Manual workflow execution uses GitHub's **Run workflow** button (`workflow_dispatch`). After resolving the Vite asset emission issue, rerun the dispatched workflow (default lanes: `node20` baseline, `node24` latest) and attach the combined summary artifact to this log.
 
 ## Documentation & Deliverables
 
@@ -104,5 +105,5 @@
 
 ## Decisions & Follow-ups
 
-- Manual runtime workflow will require repository owner approval before execution (use protected environment or required reviewers).
+- Manual runtime workflow relies on GitHub's **Run workflow** trigger (no additional approval gate); maintainers can pause it later if runtime costs spike.
 - Add a Dependabot-based alert/reminder to flag new Node LTS releases so the runtime catalog stays current (tracked in backlog).
