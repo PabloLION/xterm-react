@@ -144,7 +144,7 @@ so that release notes accurately reflect compatibility coverage.
 
 Acceptance Criteria:
 
-1. Script reads the latest matrix summary and updates HISTORY.md or equivalent.
+1. Script reads the latest matrix summary and updates `docs/compatibility-matrix.md`.
 2. Add instructions to the release checklist referencing the history update command.
 3. Document how to regenerate summaries in docs/compatibility-testing.md.
 

@@ -25,7 +25,7 @@
     "ci:compat:latest": "node version-compatibility-tests/scripts/matrix-run-consumer.mjs -- --runtime node24 --linter eslint-prettier --react 19.1.1 --typescript 5.9.3 --eslint 9.13.0 --prettier 3.6.2",
     "ci:compat:export-summary": "node version-compatibility-tests/scripts/export-latest-summary.mjs",
     "ci:compat:merge-summaries": "node version-compatibility-tests/scripts/merge-summaries.mjs",
-    "history:update": "tsx scripts/update-history.ts"
+    "compat:matrix:record": "tsx scripts/update-history.ts"
   },
   "peerDependencies": {
     "react": "^19.0.0",

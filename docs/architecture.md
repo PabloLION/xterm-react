@@ -87,7 +87,7 @@ None required; enhancements reuse existing stack, with potential small utilities
 
 ## Data Models and Schema Changes
 
-No persistent data models. Outputs remain generated JSON/Markdown summaries and history tables stored under `version-compatibility-tests/logs/` and `HISTORY.md`.
+No persistent data models. Outputs remain generated JSON/Markdown summaries and history tables stored under `version-compatibility-tests/logs/` and `docs/compatibility-matrix.md`.
 
 ## Component Architecture
 
@@ -124,7 +124,7 @@ No persistent data models. Outputs remain generated JSON/Markdown summaries and 
 #### Documentation System (`docs/*.md`)
 
 - **Purpose:** Single source of truth (brief, PRD, architecture, backlog, compatibility guide) for maintainers and contributors.
-- **Integration:** README links to docs; release process updates HISTORY.md via `scripts/update-history.ts` and compatibility summaries.
+- **Integration:** README links to docs; release process updates `docs/compatibility-matrix.md` via `scripts/update-history.ts` and compatibility summaries.
 - **Dependencies:** markdownlint CLI, BMAD templates.
 - **Technology Stack:** Markdown + automation scripts.
 
@@ -227,7 +227,7 @@ xterm-react/
 
 **Risk Mitigation:** Require maintainers to review matrix summary diff before publish; keep `xfail.json` curated to highlight unexpected passes.
 
-**Monitoring:** Inspect `version-compatibility-tests/logs/<timestamp>/` and HISTORY.md for anomalies; optionally wire future GitHub comment bot to summarize results.
+**Monitoring:** Inspect `version-compatibility-tests/logs/<timestamp>/` and `docs/compatibility-matrix.md` for anomalies; optionally wire future GitHub comment bot to summarize results.
 
 ## Coding Standards
 

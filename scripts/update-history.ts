@@ -34,8 +34,8 @@ const latestPtr = path.join(
   "version-compatibility-tests",
   "MATRIX_LATEST.json",
 );
-const historyPath = path.join(root, "HISTORY.md");
-const LOG_PREFIX = "[history]";
+const matrixDocPath = path.join(root, "docs", "compatibility-matrix.md");
+const LOG_PREFIX = "[matrix]";
 
 type LatestSummary = { generatedAt: string; summaryPath: string };
 
@@ -51,7 +51,7 @@ function parseFlags(argv: string[]): { force: boolean } {
     if (arg === "--force") {
       force = true;
     } else if (arg === "--help" || arg === "-h") {
-      console.log(`${LOG_PREFIX} Usage: pnpm history:update [--force]`);
+      console.log(`${LOG_PREFIX} Usage: pnpm compat:matrix:record [--force]`);
       process.exit(0);
     }
   }
@@ -160,25 +160,28 @@ export function buildRow(
 }
 
 export function insertRow(
-  table: string[],
+  lines: string[],
   row: string,
   dateIso: string,
   force = false,
 ): string[] {
-  const headerIndex = table.findIndex((line) => line.startsWith("| Date"));
+  const headerIndex = lines.findIndex((line) => line.startsWith("| Date"));
   if (headerIndex === -1) {
-    throw new Error("Unable to locate history table header in HISTORY.md");
+    throw new Error(
+      "Unable to locate history table header in docs/compatibility-matrix.md",
+    );
   }
 
-  const startOfRows = headerIndex + 2;
-  let insertIndex = startOfRows;
+  const firstDataIndex = headerIndex + 2;
+  let insertIndex = firstDataIndex;
 
-  while (
-    insertIndex < table.length &&
-    table[insertIndex].startsWith("| ") &&
-    table[insertIndex].trim() !== "|"
-  ) {
-    const existingDate = table[insertIndex].split("|")[1]?.trim();
+  for (let i = firstDataIndex; i < lines.length; i += 1) {
+    const current = lines[i];
+    if (!current.trim().startsWith("|")) {
+      insertIndex = i;
+      break;
+    }
+    const existingDate = current.split("|")[1]?.trim();
     if (existingDate === dateIso) {
       if (!force) {
         throw new Error(
@@ -188,31 +191,38 @@ export function insertRow(
       console.log(
         `${LOG_PREFIX} Replacing existing entry for ${dateIso} (--force enabled)`,
       );
-      table.splice(insertIndex, 1);
-      break;
+      lines.splice(i, 1, row);
+      return lines;
     }
-    insertIndex += 1;
+    insertIndex = i + 1;
   }
 
-  table.splice(insertIndex, 0, row);
-  return table;
+  // If the table currently has only the header and separator, append after them.
+  if (insertIndex < firstDataIndex) {
+    insertIndex = firstDataIndex;
+  }
+
+  lines.splice(insertIndex, 0, row);
+  return lines;
 }
 
 export function main(argv: string[] = process.argv): void {
   const { force } = parseFlags(argv.slice(2));
   const { generatedAt, summaryPath } = loadLatestSummary();
   const { pass, fail, versions } = aggregate(summaryPath);
-  const historyLines = fs.readFileSync(historyPath, "utf8").split("\n");
+  const docLines = fs.readFileSync(matrixDocPath, "utf8").split("\n");
 
   const dateIso = (generatedAt || new Date().toISOString()).replace(
     /\..*Z$/,
     "Z",
   );
   const newRow = buildRow(dateIso, pass, fail, versions);
-  const updated = insertRow(historyLines, newRow, dateIso, force).join("\n");
+  const updated = insertRow(docLines, newRow, dateIso, force).join("\n");
 
-  fs.writeFileSync(historyPath, updated);
-  console.log(`${LOG_PREFIX} HISTORY.md updated for run at ${dateIso}`);
+  fs.writeFileSync(matrixDocPath, updated);
+  console.log(
+    `${LOG_PREFIX} compatibility-matrix.md updated for run at ${dateIso}`,
+  );
 }
 
 const invokedAsScript = (() => {
