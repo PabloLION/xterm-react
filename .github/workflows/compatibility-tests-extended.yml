@@ -40,60 +40,11 @@ jobs:
         continue-on-error: true
         run: pnpm run ci:compat:baseline
 
-      - name: Capture baseline summary path
-        id: baseline-summary
-        if: ${{ always() && inputs.run_baseline }}
-        run: pnpm run ci:compat:export-summary -- --label baseline
-
       - name: Run latest compatibility smoke
         id: run-latest
         if: ${{ inputs.run_latest }}
         continue-on-error: true
         run: pnpm run ci:compat:latest
-
-      - name: Capture latest summary path
-        id: latest-summary
-        if: ${{ always() && inputs.run_latest }}
-        run: pnpm run ci:compat:export-summary -- --label latest
-
-      - name: Merge lane summaries
-        id: merge-summary
-        if: ${{ always() && (inputs.run_baseline || inputs.run_latest) }}
-        env:
-          BASE_SUMMARY: ${{ steps.baseline-summary.outputs.summary-path }}
-          LATEST_SUMMARY: ${{ steps.latest-summary.outputs.summary-path }}
-        run: >
-          pnpm run ci:compat:merge-summaries --
-          --summary "${{ env.BASE_SUMMARY }}"
-          --summary "${{ env.LATEST_SUMMARY }}"
-
-      - name: Render combined summary
-        if: ${{ always() && steps.merge-summary.outputs.summary-path != '' }}
-        run: pnpm run compat:matrix:summary -- ${{ steps.merge-summary.outputs.summary-path }}
-
-      - name: Upload baseline artifacts
-        if: ${{ always() && steps.baseline-summary.outputs.summary-dir != '' }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: compatibility-baseline-logs
-          path: ${{ steps.baseline-summary.outputs.summary-dir }}
-
-      - name: Upload latest artifacts
-        if: ${{ always() && steps.latest-summary.outputs.summary-dir != '' }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: compatibility-latest-logs
-          path: |
-            ${{ steps.latest-summary.outputs.summary-dir }}
-            version-compatibility-tests/MATRIX_SUMMARY.md
-            version-compatibility-tests/MATRIX_LATEST.json
-
-      - name: Upload combined summary
-        if: ${{ always() && steps.merge-summary.outputs.summary-dir != '' }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: compatibility-combined-summary
-          path: ${{ steps.merge-summary.outputs.summary-dir }}
 
       - name: Fail job if any lane failed
         if: ${{ always() && (steps.run-baseline.outcome == 'failure' || steps.run-latest.outcome == 'failure') }}

@@ -23,8 +23,6 @@
     "compat:matrix:summary": "node version-compatibility-tests/scripts/summarize-matrix.mjs",
     "ci:compat:baseline": "node version-compatibility-tests/scripts/matrix-run-consumer.mjs -- --runtime node20 --linter eslint-prettier --react 18.3.1 --typescript 5.2.2 --eslint 8.57.0 --prettier 3.3.3",
     "ci:compat:latest": "node version-compatibility-tests/scripts/matrix-run-consumer.mjs -- --runtime node24 --linter eslint-prettier --react 19.1.1 --typescript 5.9.3 --eslint 9.13.0 --prettier 3.6.2",
-    "ci:compat:export-summary": "node version-compatibility-tests/scripts/export-latest-summary.mjs",
-    "ci:compat:merge-summaries": "node version-compatibility-tests/scripts/merge-summaries.mjs",
     "compat:matrix:record": "tsx scripts/update-history.ts"
   },
   "peerDependencies": {
