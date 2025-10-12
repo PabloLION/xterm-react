@@ -47,7 +47,8 @@
 - Storage options (for discussion):
   - Commit an aggregated `version-compatibility-tests/HISTORY.json`/`.md` updated by summarizer (pros: in-repo visibility; cons: noisy diffs).
   - Emit artifacts only (CI uploads) and maintain history off-repo (pros: clean repo; cons: harder to browse offline).
-  - Hybrid: keep a compact `docs/compatibility-matrix.md` (totals and highlights) in repo; store full JSON summaries as CI artifacts.
+- Hybrid: keep a compact `docs/compatibility-matrix.md` (totals and highlights) in repo; store full JSON summaries as CI artifacts.
+- Sunset `version-compatibility-tests/MATRIX_LATEST.json` and `version-compatibility-tests/MATRIX_SUMMARY.md` once replacement tooling is in place (update `compat:matrix:record`, docs, and workflows).
 - Implementation sketch:
   - Extend summarizer to append a compact record `{ date, totals, byReact, summaryPath }`.
   - Add a `scripts/history-aggregate.mjs` to rebuild markdown from JSON snapshots under `logs/`.
