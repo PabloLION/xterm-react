@@ -26,19 +26,30 @@ const logsDir = path.join(suiteDir, 'logs')
 
 function newestLogsDir() {
   if (!fs.existsSync(logsDir)) return null
-  const entries = fs
-    .readdirSync(logsDir)
-    .map(name => ({ name, full: path.join(logsDir, name) }))
-    .filter(entry => {
-      try {
-        return fs.statSync(entry.full).isDirectory()
-      } catch {
-        return false
-      }
-    })
-    .sort((a, b) => a.name.localeCompare(b.name))
-
-  return entries.length ? entries[entries.length - 1] : null
+  let newest = null
+  for (const name of fs.readdirSync(logsDir)) {
+    const full = path.join(logsDir, name)
+    let stats
+    try {
+      stats = fs.statSync(full)
+    } catch {
+      continue
+    }
+    if (!stats.isDirectory()) continue
+    const entry = { name, full, mtimeMs: stats.mtimeMs }
+    if (!newest) {
+      newest = entry
+      continue
+    }
+    if (entry.mtimeMs > newest.mtimeMs) {
+      newest = entry
+      continue
+    }
+    if (entry.mtimeMs === newest.mtimeMs && entry.name.localeCompare(newest.name) > 0) {
+      newest = entry
+    }
+  }
+  return newest
 }
 
 let summaryPath = ''
