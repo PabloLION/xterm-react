@@ -35,17 +35,17 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Run baseline compatibility smoke
-        id: run-baseline
+        id: run_baseline
         if: ${{ inputs.run_baseline }}
         continue-on-error: true
         run: pnpm run ci:compat:baseline
 
       - name: Run latest compatibility smoke
-        id: run-latest
+        id: run_latest
         if: ${{ inputs.run_latest }}
         continue-on-error: true
         run: pnpm run ci:compat:latest
 
       - name: Fail job if any lane failed
-        if: ${{ always() && (steps.run-baseline.outcome == 'failure' || steps.run-latest.outcome == 'failure') }}
+        if: ${{ always() && (steps.run_baseline.outcome == 'failure' || steps.run_latest.outcome == 'failure') }}
         run: exit 1
