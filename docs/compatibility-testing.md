@@ -49,7 +49,7 @@ This repo ships an in‑repo “consumer app” plus scripts to test the publish
 
 To launch the manual workflow:
 
-1. Open **Actions → Compatibility Tests (Extended Runtimes)**.
+1. Open **Actions → Compatibility Tests (Popular Runtimes)**.
 2. Click **Run workflow**, leave both lane checkboxes enabled for the default behavior, or uncheck the lane you want to skip.
 3. The job runs the baseline lane first and the latest lane second; disable either lane by toggling the checkboxes in the dispatch form.
 4. When the run finishes, inspect the “Run baseline” and “Run latest” step logs for PASS/FAIL counts.
