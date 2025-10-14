@@ -24,7 +24,7 @@ This repo ships an in‑repo “consumer app” plus scripts to test the publish
   - Latest Markdown summary (stable alias): `version-compatibility-tests/MATRIX_SUMMARY.md`
 - Additional runtimes: `pnpm run compat:matrix -- --runtime node20,node24` (use `--runtime all` for Node 20/22/24 if you need to include older presets). Bun lanes are planned; requesting `bun-stable` currently reports an unsupported-runtime warning.
 
-## CI workflows & cadence
+## CI cadence & local helpers
 
 - **Compatibility Tests** (`.github/workflows/compatibility-tests.yml`)
   - Triggers: weekly schedule (Mondays 06:00 UTC), manual dispatch, tag pushes (`v*`), reusable `workflow_call`, and release publication.
@@ -32,10 +32,10 @@ This repo ships an in‑repo “consumer app” plus scripts to test the publish
     - Scheduled/manual runs exercise both curated suites (`oldest-supported` and `latest-supported`).
     - Release/tag triggers automatically run the latest Node LTS lane (`node24` combo) to block publishes on regressions.
   - No auto-fix steps; the job surfaces failures from the curated matrix and leaves remediation to the developer.
-- **Compatibility Tests (Popular Runtimes)** (`.github/workflows/compatibility-tests-extended.yml`)
-  - Trigger: manual (`workflow_dispatch` — the **Run workflow** button in GitHub Actions) with two checkboxes (`Run baseline lane`, `Run latest lane`). Baseline is Node 20 + the oldest curated stack; latest is Node 24 + the newest stack.
-  - Outputs: per-lane job logs (no artifacts are uploaded automatically).
-- Local helpers: `pnpm run ci:compat:baseline`, `pnpm run ci:compat:latest`, and `pnpm run compat:matrix:record` mirror the CI/manual cadence.
+- **Local scripts:** run the same curated suites outside CI when you need fresh logs:
+  - Baseline lane: `pnpm run ci:compat:baseline`
+  - Latest-LTS lane: `pnpm run ci:compat:latest`
+  - Record an entry for docs: `pnpm run compat:matrix:record`
 
 ### When to run each lane
 
@@ -43,24 +43,17 @@ This repo ships an in‑repo “consumer app” plus scripts to test the publish
 | ------------------------------- | ------------------------------- | ----------------------------------------------------------- |
 | Weekly scheduled (both suites)  | Mondays 06:00 UTC               | Ongoing signal for oldest/latest supported stacks.          |
 | Release/tag latest-LTS smoke    | Automatic on release publication or tag push | Guarantees publish pipelines see a fresh `node24` PASS. |
-| Manual extended runtimes        | On-demand manual trigger        | Validate the baseline (`node20`) and latest (`node24`) lanes or targeted investigations prior to major releases. |
+| Manual extended runtimes        | On-demand local run             | Execute the CLI helpers above before releases or deep dives. |
 
-**Release checklist:** Before publishing, confirm the latest run of “Compatibility Tests” (release trigger) is green. If support promises include additional runtimes, run “Compatibility Tests (Popular Runtimes)” and summarise findings (e.g., in the PR or release notes) based on the step logs.
-
-To launch the manual workflow:
-
-1. Open **Actions → Compatibility Tests (Popular Runtimes)**.
-2. Click **Run workflow**, leave both lane checkboxes enabled for the default behavior, or uncheck the lane you want to skip.
-3. The job runs the baseline lane first and the latest lane second; disable either lane by toggling the checkboxes in the dispatch form.
-4. When the run finishes, inspect the “Run baseline” and “Run latest” step logs for PASS/FAIL counts.
+**Release checklist:** Before publishing, confirm the latest run of “Compatibility Tests” (release trigger) is green. If support promises include additional runtimes, run `pnpm run ci:compat:baseline` and `pnpm run ci:compat:latest` locally, then summarise findings (e.g., in the PR or release notes) based on the log output.
 
 ### Runtime expectations & monitoring
 
-- The scheduled/manual curated run (two suites) typically finishes in **12–18 minutes** on `ubuntu-latest`. Release invocations only execute the latest LTS lane and complete in ~8 minutes.
-- Extended manual runs vary with selected runtimes; expect **10–12 minutes per Node lane**. The workflow defaults to two sequential lanes — baseline `node20` (React 18.3.1 / TS 5.2.2 / ESLint 8.57.0 / Prettier 3.3.3) followed by latest `node24` (React 19.1.1 / TS 5.9.3 / ESLint 9.13.0 / Prettier 3.6.2) — and has a 120-minute time budget to guard against runaway jobs.
-- Keep an eye on GitHub Actions minutes. If extended runs become frequent, consider restricting inputs to `--quick` or a single runtime per invocation.
-  - If Node 24 tooling is temporarily unavailable on the runner, uncheck `Run latest lane` in the dispatch form and re-run it locally with `pnpm run ci:compat:latest -- --runtime node20` until your environment supports Node 24 again.
-- Known issue (tracked in `docs/backlog.md`): Vite 7.1.9 currently fails the consumer build with an absolute-path asset error when the latest-lane smoke is executed locally. Until resolved, expect the manual matrix command to exit with `pin-and-build` failing; collect the log path (shown in console output) to aid debugging.
+- The scheduled curated run (two suites) typically finishes in **12–18 minutes** on `ubuntu-latest`. Release/tag invocations only execute the latest LTS lane and complete in ~8 minutes.
+- Running `pnpm run ci:compat:baseline` locally takes roughly **10 minutes**; `pnpm run ci:compat:latest` may take longer if Node 24 tooling needs to be installed on demand.
+- Keep an eye on GitHub Actions minutes. If additional investigations are frequent, rely on `--quick` or limit to a single runtime per invocation.
+  - If Node 24 tooling is temporarily unavailable (locally or in CI), rerun the latest lane with an override like `pnpm run ci:compat:latest -- --runtime node20` until your environment supports Node 24 again.
+- Known issue (tracked in `docs/backlog.md`): Vite 7.1.9 currently fails the consumer build with an absolute-path asset error when the latest-lane smoke is executed locally. Until resolved, expect the manual matrix command to exit with `pin-and-build` failing; capture the log path (shown in console output) to aid debugging.
 
 ### Runtime support snapshot
 
