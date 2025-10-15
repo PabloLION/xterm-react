@@ -5,6 +5,7 @@ import { execSync, exec } from 'node:child_process'
 import fs from 'node:fs'
 import path from 'node:path'
 import { pathToFileURL } from 'node:url'
+import os from 'node:os'
 
 const root = process.cwd()
 const LOG_PREFIX = '[matrix]'
@@ -16,8 +17,15 @@ const logsRoot = path.join(suiteDir, 'logs', new Date().toISOString().replace(/[
 fs.mkdirSync(logsRoot, { recursive: true })
 const originalPnpmHome = process.env.PNPM_HOME
 const originalPath = process.env.PATH || ''
-const runtimePnpmHome = path.join(suiteDir, '.pnpm-runtime')
-fs.mkdirSync(runtimePnpmHome, { recursive: true })
+let runtimePnpmHome = null
+try {
+  const tmpPrefix = path.join(os.tmpdir(), 'xterm-react-pnpm-')
+  runtimePnpmHome = fs.mkdtempSync(tmpPrefix)
+} catch (error) {
+  console.warn(`${LOG_PREFIX} Failed to allocate temp PNPM home: ${error?.message || error}. Falling back to local cache.`)
+  runtimePnpmHome = path.join(suiteDir, '.pnpm-runtime')
+  fs.mkdirSync(runtimePnpmHome, { recursive: true })
+}
 if (!originalPath.split(path.delimiter).includes(runtimePnpmHome)) {
   process.env.PATH = runtimePnpmHome + (originalPath ? `${path.delimiter}${originalPath}` : '')
 }
@@ -650,6 +658,18 @@ async function main() {
     if (originalPnpmHome !== undefined) process.env.PNPM_HOME = originalPnpmHome
     else delete process.env.PNPM_HOME
     process.env.PATH = originalPath
+    if (runtimePnpmHome) {
+      const tmpRoot = os.tmpdir()
+      const normalizedHome = path.resolve(runtimePnpmHome)
+      const normalizedTmp = path.resolve(tmpRoot)
+      if (normalizedHome.startsWith(normalizedTmp)) {
+        try {
+          fs.rmSync(runtimePnpmHome, { recursive: true, force: true })
+        } catch (error) {
+          console.warn(`${LOG_PREFIX} Failed to clean temporary PNPM home: ${error?.message || error}`)
+        }
+      }
+    }
   }
 }
 
