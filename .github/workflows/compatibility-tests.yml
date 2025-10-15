@@ -15,7 +15,10 @@ on:
 jobs:
   version-matrix:
     timeout-minutes: 60
-    if: ${{ github.event_name == 'workflow_dispatch' || github.event_name == 'schedule' || github.event_name == 'workflow_call' || matrix.suite.label == 'latest-supported' }}
+    if: ${{ github.event_name == 'workflow_dispatch'
+      || github.event_name == 'schedule'
+      || github.event_name == 'workflow_call'
+      || matrix.suite.label == 'latest-supported' }}
     name: Compatibility smoke (${{ matrix.suite.label }})
     runs-on: ubuntu-latest
     strategy:
