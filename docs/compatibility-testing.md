@@ -27,8 +27,9 @@ This repo ships an in‑repo “consumer app” plus scripts to test the publish
 ## CI cadence & local helpers
 
 - **Compatibility Tests** (`.github/workflows/compatibility-tests.yml`)
-  - Triggers: pull requests against `main`, manual dispatch (with flags), reusable `workflow_call`, and tag pushes (`v*`).
+  - Triggers: weekly schedule (Mondays 06:00 UTC), pull requests against `main`, manual dispatch (with flags), reusable `workflow_call`, and tag pushes (`v*`).
   - Matrix lanes:
+    - The weekly schedule executes both curated suites (`oldest-supported` and `latest-supported`) to catch regressions even during quiet periods.
     - Pull requests execute both curated suites (`oldest-supported` and `latest-supported`) so regressions surface before review.
     - Tag pushes automatically run the latest Node LTS lane (`node24` combo) to block publishes on regressions without delaying releases.
     - Manual runs let you opt into the curated suites via inputs (`run_latest`, `run_oldest`); attempting to run with neither lane selected fails fast.
@@ -42,16 +43,17 @@ This repo ships an in‑repo “consumer app” plus scripts to test the publish
 
 | Lane                          | Trigger                                               | Purpose                                                     |
 | ----------------------------- | ----------------------------------------------------- | ----------------------------------------------------------- |
+| Weekly scheduled matrix       | Mondays 06:00 UTC                                     | Exercises both curated suites for continuous signal.        |
 | Pull request matrix           | Automatic on PRs targeting `main`                     | Exercises both curated suites for every change.             |
 | Tag push latest-LTS smoke     | Automatic on annotated tag push (`v*`)                | Guarantees publish pipelines see a fresh `node24` PASS.     |
 | Manual dispatch (matrix)      | Actions UI (`run_latest` / `run_oldest` inputs)       | Selectively exercise curated suites in GitHub Actions.      |
 | Manual extended runtimes      | On-demand local run                                   | Execute the CLI helpers above before releases or deep dives. |
 
-**Release checklist:** Before publishing, confirm the latest tag-triggered run of “Compatibility Tests” is green. Pull requests already cover the curated suites; if support promises include additional runtimes, run `pnpm run ci:compat:baseline` and `pnpm run ci:compat:latest` locally, then summarise findings (e.g., in the PR or release notes) based on the log output.
+**Release checklist:** Before publishing, confirm the latest tag-triggered run of “Compatibility Tests” is green. The weekly schedule and pull-request automation cover the curated suites; if support promises include additional runtimes, run `pnpm run ci:compat:baseline` and `pnpm run ci:compat:latest` locally, then summarise findings (e.g., in the PR or release notes) based on the log output.
 
 ### Runtime expectations & monitoring
 
-- Pull-request runs execute both curated lanes and typically finish in **12–18 minutes** on `ubuntu-latest`.
+- Scheduled and pull-request runs execute both curated lanes and typically finish in **12–18 minutes** on `ubuntu-latest`.
 - Tag-triggered invocations only execute the latest LTS lane and complete in ~8 minutes.
 - Running `pnpm run ci:compat:baseline` locally takes roughly **10 minutes**; `pnpm run ci:compat:latest` may take longer if Node 24 tooling needs to be installed on demand.
 - Keep an eye on GitHub Actions minutes. If additional investigations are frequent, rely on `--quick` or limit to a single runtime per invocation.

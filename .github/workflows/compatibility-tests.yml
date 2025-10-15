@@ -24,6 +24,8 @@ on:
   release:
     types:
       - published
+  schedule:
+    - cron: "0 6 * * 1"
   pull_request:
     branches:
       - main
@@ -41,6 +43,7 @@ jobs:
         ${{
           (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/') && matrix.suite.label == 'latest-supported')
           || (github.event_name == 'release' && matrix.suite.label == 'latest-supported')
+          || (github.event_name == 'schedule')
           || (github.event_name == 'pull_request')
           || (github.event_name == 'workflow_dispatch' && (
             (matrix.suite.label == 'latest-supported' && github.event.inputs.run_latest == 'true')
