@@ -31,16 +31,18 @@ jobs:
     name: Compatibility smoke (${{ matrix.suite.label }})
     runs-on: ubuntu-latest
     env:
-      SHOULD_RUN_SUITE: ${{ (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/') && matrix.suite.label == 'latest-supported')
-        || (github.event_name == 'workflow_dispatch' && (
-          (matrix.suite.label == 'latest-supported' && github.event.inputs.run_latest == 'true') ||
-          (matrix.suite.label == 'oldest-supported' && github.event.inputs.run_oldest == 'true')
-        ))
-        || (github.event_name == 'workflow_call' && (
-          (matrix.suite.label == 'latest-supported' && inputs.run_latest != false) ||
-          (matrix.suite.label == 'oldest-supported' && inputs.run_oldest == true)
-        ))
-      }}
+      SHOULD_RUN_SUITE: >-
+        ${{
+          (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/') && matrix.suite.label == 'latest-supported')
+          || (github.event_name == 'workflow_dispatch' && (
+            (matrix.suite.label == 'latest-supported' && github.event.inputs.run_latest == 'true')
+            || (matrix.suite.label == 'oldest-supported' && github.event.inputs.run_oldest == 'true')
+          ))
+          || (github.event_name == 'workflow_call' && (
+            (matrix.suite.label == 'latest-supported' && inputs.run_latest != false)
+            || (matrix.suite.label == 'oldest-supported' && inputs.run_oldest == true)
+          ))
+        }}
     strategy:
       matrix:
         suite:
