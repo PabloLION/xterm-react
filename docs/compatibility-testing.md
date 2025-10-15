@@ -27,9 +27,8 @@ This repo ships an in‑repo “consumer app” plus scripts to test the publish
 ## CI cadence & local helpers
 
 - **Compatibility Tests** (`.github/workflows/compatibility-tests.yml`)
-  - Triggers: weekly schedule (Mondays 06:00 UTC), manual dispatch (with flags), reusable `workflow_call`, and tag pushes (`v*`).
+  - Triggers: manual dispatch (with flags), reusable `workflow_call`, and tag pushes (`v*`).
   - Matrix lanes:
-    - Scheduled runs execute both curated suites (`oldest-supported` and `latest-supported`) for baseline coverage.
     - Tag pushes automatically run the latest Node LTS lane (`node24` combo) to block publishes on regressions without delaying releases.
     - Manual runs let you opt into the curated suites via inputs (`run_latest`, `run_oldest`); attempting to run with neither lane selected fails fast.
   - No auto-fix steps; the job surfaces failures from the curated matrix and leaves remediation to the developer.
@@ -42,16 +41,14 @@ This repo ships an in‑repo “consumer app” plus scripts to test the publish
 
 | Lane                          | Trigger                                               | Purpose                                                     |
 | ----------------------------- | ----------------------------------------------------- | ----------------------------------------------------------- |
-| Weekly scheduled (both suites)| Mondays 06:00 UTC                                     | Ongoing signal for oldest/latest supported stacks.          |
 | Tag push latest-LTS smoke     | Automatic on annotated tag push (`v*`)                | Guarantees publish pipelines see a fresh `node24` PASS.     |
 | Manual dispatch (matrix)      | Actions UI (`run_latest` / `run_oldest` inputs)       | Selectively exercise curated suites in GitHub Actions.      |
 | Manual extended runtimes      | On-demand local run                                   | Execute the CLI helpers above before releases or deep dives. |
 
-**Release checklist:** Before publishing, confirm the latest tag-triggered run of “Compatibility Tests” is green. If support promises include additional runtimes, run `pnpm run ci:compat:baseline` and `pnpm run ci:compat:latest` locally, then summarise findings (e.g., in the PR or release notes) based on the log output.
+**Release checklist:** Before publishing, confirm the latest tag-triggered run of “Compatibility Tests” is green. If support promises include additional runtimes or baseline coverage, run `pnpm run ci:compat:baseline` and `pnpm run ci:compat:latest` locally, then summarise findings (e.g., in the PR or release notes) based on the log output.
 
 ### Runtime expectations & monitoring
 
-- The scheduled curated run (two suites) typically finishes in **12–18 minutes** on `ubuntu-latest`.
 - Tag-triggered invocations only execute the latest LTS lane and complete in ~8 minutes.
 - Running `pnpm run ci:compat:baseline` locally takes roughly **10 minutes**; `pnpm run ci:compat:latest` may take longer if Node 24 tooling needs to be installed on demand.
 - Keep an eye on GitHub Actions minutes. If additional investigations are frequent, rely on `--quick` or limit to a single runtime per invocation.
