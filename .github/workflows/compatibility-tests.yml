@@ -60,34 +60,52 @@ jobs:
             prettier: 3.6.2
     steps:
       - name: Validate manual lane selection
-        if: ${{ github.event_name == 'workflow_dispatch'
-          && matrix.suite.label == 'latest-supported'
-          && github.event.inputs.run_latest != 'true'
-          && github.event.inputs.run_oldest != 'true' }}
+        if: >-
+          ${{
+            github.event_name == 'workflow_dispatch'
+            && matrix.suite.label == 'latest-supported'
+            && github.event.inputs.run_latest != 'true'
+            && github.event.inputs.run_oldest != 'true'
+          }}
         run: |
           echo "::error::Select at least one lane via run_latest/run_oldest inputs."
           exit 1
 
       - name: Checkout repository
-        if: ${{ env.SHOULD_RUN_SUITE == 'true' }}
+        if: >-
+          ${{
+            env.SHOULD_RUN_SUITE == 'true'
+          }}
         uses: actions/checkout@v4
 
       - name: Set up pnpm
-        if: ${{ env.SHOULD_RUN_SUITE == 'true' }}
+        if: >-
+          ${{
+            env.SHOULD_RUN_SUITE == 'true'
+          }}
         uses: pnpm/action-setup@v3
         with:
           version: "9"
 
       - name: Verify pnpm
-        if: ${{ env.SHOULD_RUN_SUITE == 'true' }}
+        if: >-
+          ${{
+            env.SHOULD_RUN_SUITE == 'true'
+          }}
         run: pnpm --version
 
       - name: Install dependencies
-        if: ${{ env.SHOULD_RUN_SUITE == 'true' }}
+        if: >-
+          ${{
+            env.SHOULD_RUN_SUITE == 'true'
+          }}
         run: pnpm install --frozen-lockfile
 
       - name: Run ${{ matrix.suite.label }} compatibility smoke (React ${{ matrix.suite.react }} / TS ${{ matrix.suite.typescript }} / ESLint ${{ matrix.suite.eslint }} / Prettier ${{ matrix.suite.prettier }} / ${{ matrix.suite.runtime }})
-        if: ${{ env.SHOULD_RUN_SUITE == 'true' }}
+        if: >-
+          ${{
+            env.SHOULD_RUN_SUITE == 'true'
+          }}
         run: >
           pnpm run compat:matrix
           -- --runtime ${{ matrix.suite.runtime }}
