@@ -21,6 +21,9 @@ on:
         required: false
         type: boolean
         default: true
+  pull_request:
+    branches:
+      - main
   push:
     tags:
       - "v*"
@@ -34,6 +37,7 @@ jobs:
       SHOULD_RUN_SUITE: >-
         ${{
           (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/') && matrix.suite.label == 'latest-supported')
+          || (github.event_name == 'pull_request')
           || (github.event_name == 'workflow_dispatch' && (
             (matrix.suite.label == 'latest-supported' && github.event.inputs.run_latest == 'true')
             || (matrix.suite.label == 'oldest-supported' && github.event.inputs.run_oldest == 'true')
