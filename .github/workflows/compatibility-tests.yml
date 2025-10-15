@@ -8,17 +8,13 @@ on:
       - published
   push:
     tags:
-      - 'v*'
+      - "v*"
   schedule:
-    - cron: '0 6 * * 1' # Mondays at 06:00 UTC
+    - cron: "0 6 * * 1" # Mondays at 06:00 UTC
 
 jobs:
   version-matrix:
     timeout-minutes: 60
-    if: ${{ github.event_name == 'workflow_dispatch'
-      || github.event_name == 'schedule'
-      || github.event_name == 'workflow_call'
-      || matrix.suite.label == 'latest-supported' }}
     name: Compatibility smoke (${{ matrix.suite.label }})
     runs-on: ubuntu-latest
     strategy:
@@ -43,7 +39,7 @@ jobs:
       - name: Set up pnpm
         uses: pnpm/action-setup@v3
         with:
-          version: '9'
+          version: "9"
 
       - name: Verify pnpm
         run: pnpm --version
@@ -52,6 +48,7 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Run ${{ matrix.suite.label }} compatibility smoke (React ${{ matrix.suite.react }} / TS ${{ matrix.suite.typescript }} / ESLint ${{ matrix.suite.eslint }} / Prettier ${{ matrix.suite.prettier }} / ${{ matrix.suite.runtime }})
+        if: ${{ github.event_name == 'workflow_dispatch' || github.event_name == 'workflow_call' || github.event_name == 'schedule' || matrix.suite.label == 'latest-supported' }}
         run: >
           pnpm run compat:matrix
           -- --runtime ${{ matrix.suite.runtime }}
