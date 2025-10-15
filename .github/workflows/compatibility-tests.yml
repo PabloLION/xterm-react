@@ -66,16 +66,20 @@ jobs:
       - name: Run ${{ matrix.suite.label }} compatibility smoke (React ${{ matrix.suite.react }} / TS ${{ matrix.suite.typescript }} / ESLint ${{ matrix.suite.eslint }} / Prettier ${{ matrix.suite.prettier }} / ${{ matrix.suite.runtime }})
         if: >-
           ${{
-          (github.event_name == 'workflow_dispatch' &&
-            ((matrix.suite.label == 'latest-supported' && github.event.inputs.run_latest == 'true') ||
-             (matrix.suite.label == 'oldest-supported' && github.event.inputs.run_oldest == 'true'))
-          ) ||
-          (github.event_name == 'workflow_call' &&
-            ((matrix.suite.label == 'latest-supported' && inputs.run_latest != 'false') ||
-             (matrix.suite.label == 'oldest-supported' && inputs.run_oldest == 'true'))
-          ) ||
-          (github.event_name != 'workflow_dispatch' && github.event_name != 'workflow_call' &&
-            matrix.suite.label == 'latest-supported')
+            (github.event_name == 'workflow_dispatch' &&
+              (
+                (matrix.suite.label == 'latest-supported' && github.event.inputs.run_latest == 'true') ||
+                (matrix.suite.label == 'oldest-supported' && github.event.inputs.run_oldest == 'true')
+              )
+            ) ||
+            (github.event_name == 'workflow_call' &&
+              (
+                (matrix.suite.label == 'latest-supported' && inputs.run_latest) ||
+                (matrix.suite.label == 'oldest-supported' && inputs.run_oldest)
+              )
+            ) ||
+            ((github.event_name == 'release' || github.event_name == 'push') &&
+              matrix.suite.label == 'latest-supported')
           }}
         run: >
           pnpm run compat:matrix
