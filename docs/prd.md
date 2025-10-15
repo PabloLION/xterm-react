@@ -242,14 +242,14 @@ so that we balance signal quality with runtime duration.
 
 Acceptance Criteria:
 
-1. GitHub Actions runs the curated matrix on the latest Node LTS (currently Node 24) as part of release/tag checks while keeping the weekly scheduled job intact.
-2. A manual workflow (triggered via GitHub’s `workflow_dispatch` action—i.e., the **Run workflow** button) executes two sequential lanes: baseline Node 20 plus latest Node 24. Operators can toggle either lane before starting the run.
-3. Release documentation clearly states when to run baseline vs. latest lanes and how to invoke the manual workflow for additional verification.
+1. GitHub Actions runs the curated matrix on the latest Node LTS (currently Node 24) as part of release/tag checks without relying on a recurring schedule.
+2. The compatibility workflow’s manual dispatch exposes inputs that let operators toggle the baseline (`node20`) and latest (`node24`) lanes before starting the run.
+3. Release documentation clearly states when to run baseline vs. latest lanes and how to invoke either the manual workflow or CLI helpers for additional verification.
 
 Implementation Notes:
 
-- The scheduled compatibility workflow keeps running both curated suites weekly; release triggers only execute the latest Node LTS lane to keep turnarounds predictable.
-- The manual workflow is exposed through GitHub’s `workflow_dispatch` trigger (no separate environment gate) and runs the baseline and latest lanes sequentially by default. Checkbox inputs let operators skip either lane when necessary.
+- Release/tag triggers only execute the latest Node LTS lane to keep turnarounds predictable.
+- The manual workflow uses `workflow_dispatch` inputs (no separate environment gate) so operators can opt into the baseline lane as needed.
 - `docs/compatibility-testing.md` documents how to launch the manual workflow, which lanes run by default, and when to lean on each lane ahead of a release.
 
 #### Implementation Plan
