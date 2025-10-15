@@ -1,8 +1,26 @@
 name: Compatibility Tests
 
 on:
-  workflow_dispatch: {}
-  workflow_call: {}
+  workflow_dispatch:
+    inputs:
+      run_oldest:
+        description: "Run the oldest-supported compatibility suite"
+        type: boolean
+        default: false
+      run_latest:
+        description: "Run the latest-supported compatibility suite"
+        type: boolean
+        default: true
+  workflow_call:
+    inputs:
+      run_oldest:
+        required: false
+        type: boolean
+        default: false
+      run_latest:
+        required: false
+        type: boolean
+        default: true
   release:
     types:
       - published
@@ -46,7 +64,19 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Run ${{ matrix.suite.label }} compatibility smoke (React ${{ matrix.suite.react }} / TS ${{ matrix.suite.typescript }} / ESLint ${{ matrix.suite.eslint }} / Prettier ${{ matrix.suite.prettier }} / ${{ matrix.suite.runtime }})
-        if: ${{ github.event_name == 'workflow_dispatch' || github.event_name == 'workflow_call' || github.event_name == 'schedule' || matrix.suite.label == 'latest-supported' }}
+        if: >-
+          ${{
+          (github.event_name == 'workflow_dispatch' &&
+            ((matrix.suite.label == 'latest-supported' && github.event.inputs.run_latest == 'true') ||
+             (matrix.suite.label == 'oldest-supported' && github.event.inputs.run_oldest == 'true'))
+          ) ||
+          (github.event_name == 'workflow_call' &&
+            ((matrix.suite.label == 'latest-supported' && inputs.run_latest != 'false') ||
+             (matrix.suite.label == 'oldest-supported' && inputs.run_oldest == 'true'))
+          ) ||
+          (github.event_name != 'workflow_dispatch' && github.event_name != 'workflow_call' &&
+            matrix.suite.label == 'latest-supported')
+          }}
         run: >
           pnpm run compat:matrix
           -- --runtime ${{ matrix.suite.runtime }}
