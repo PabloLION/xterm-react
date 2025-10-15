@@ -14,6 +14,14 @@ const appDir = path.join(suiteDir, 'consumer-app')
 const distDir = path.join(suiteDir, 'dist')
 const logsRoot = path.join(suiteDir, 'logs', new Date().toISOString().replace(/[:.]/g, '-'))
 fs.mkdirSync(logsRoot, { recursive: true })
+const originalPnpmHome = process.env.PNPM_HOME
+const originalPath = process.env.PATH || ''
+const runtimePnpmHome = path.join(suiteDir, '.pnpm-runtime')
+fs.mkdirSync(runtimePnpmHome, { recursive: true })
+if (!originalPath.split(path.delimiter).includes(runtimePnpmHome)) {
+  process.env.PATH = runtimePnpmHome + (originalPath ? `${path.delimiter}${originalPath}` : '')
+}
+process.env.PNPM_HOME = runtimePnpmHome
 const RUNTIME_CATALOG = [
   { id: 'node20', tool: 'node', versionSpec: '20', label: 'node20' },
   { id: 'node22', tool: 'node', versionSpec: '22', label: 'node22' },
@@ -639,6 +647,9 @@ async function main() {
     }
   } finally {
     restoreNodeRuntime()
+    if (originalPnpmHome !== undefined) process.env.PNPM_HOME = originalPnpmHome
+    else delete process.env.PNPM_HOME
+    process.env.PATH = originalPath
   }
 }
 
