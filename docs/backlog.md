@@ -60,6 +60,7 @@
 - Matrix pre-validation: flag incompatible tool combos before execution.
 - Interactive selection: prompt to pick scenarios to run (useful locally).
 - Parallel execution tuning: dynamic concurrency cap and worker reuse between batches.
+- Refactor compatibility scripts (`matrix-run-consumer`, `consumer-pin-and-build`, summarizer) into smaller modules and add unit tests for exported helpers before expanding functionality.
 - CI integration: scheduled run that uploads logs + summary as artifacts (non-blocking).
 
 ## Consumer App Architecture
