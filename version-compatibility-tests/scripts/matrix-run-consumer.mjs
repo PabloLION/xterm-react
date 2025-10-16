@@ -540,22 +540,33 @@ function restoreNodeRuntime() {
 
 async function main() {
   try {
+    fs.rmSync(distDir, { recursive: true, force: true })
     fs.mkdirSync(distDir, { recursive: true })
-    sh('pnpm pack --pack-destination version-compatibility-tests/dist', root, path.join(logsRoot, 'pack.log'))
-    const tgz = fs
-      .readdirSync(distDir)
-      .filter(f => f.endsWith('.tgz'))
-      .map(f => ({ f, t: fs.statSync(path.join(distDir, f)).ctimeMs }))
-      .sort((a, b) => {
-        const timeDiff = b.t - a.t
-        if (timeDiff !== 0) return timeDiff
-        // When multiple packs land within the same millisecond, prefer the lexicographically
-        // greatest filename (pnpm appends incremental suffixes) so the newest tarball wins.
-        return b.f.localeCompare(a.f)
-      })[0]?.f
-    if (!tgz) {
-      throw new Error(`${LOG_PREFIX} Failed to find packed tarball under dist`)
+    const packLog = path.join(logsRoot, 'pack.log')
+    const packRes = sh('pnpm pack --pack-destination version-compatibility-tests/dist', root, packLog)
+    if (!packRes.ok) {
+      throw new Error(`${LOG_PREFIX} pnpm pack failed (see ${packLog})`)
     }
+    const packOutputLines = packRes.out.trim().split(/\r?\n/).filter(Boolean)
+    let tgzPath = packOutputLines.at(-1)
+    if (tgzPath && !tgzPath.endsWith('.tgz')) tgzPath = null
+    if (tgzPath && !path.isAbsolute(tgzPath)) {
+      tgzPath = path.resolve(root, tgzPath)
+    }
+    if (!tgzPath || !fs.existsSync(tgzPath)) {
+      const tarballs = fs.readdirSync(distDir).filter(f => f.endsWith('.tgz'))
+      if (tarballs.length === 1) {
+        tgzPath = path.join(distDir, tarballs[0])
+      } else {
+        const reason = tarballs.length
+          ? `multiple candidates: ${tarballs.join(', ')}`
+          : 'no tarballs were produced'
+        throw new Error(
+          `${LOG_PREFIX} Could not determine packed tarball path (${reason}). Clean version-compatibility-tests/dist and retry.`
+        )
+      }
+    }
+    const tgz = tgzPath
 
     const scenarios = listScenarios()
     const scenariosByRuntime = new Map()
