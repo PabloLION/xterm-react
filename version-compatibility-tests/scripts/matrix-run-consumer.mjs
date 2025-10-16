@@ -10,6 +10,7 @@ import os from 'node:os'
 const root = process.cwd()
 const LOG_PREFIX = '[matrix]'
 const MAX_EXEC_BUFFER = 10 * 1024 * 1024
+const MAX_INLINE_LOG_LINES = 1000
 const suiteDir = path.join(root, 'version-compatibility-tests')
 const appDir = path.join(suiteDir, 'consumer-app')
 const distDir = path.join(suiteDir, 'dist')
@@ -339,11 +340,15 @@ async function runScenario(scenario, tarballName, appDirForRun) {
   const dir = path.join(logsRoot, scenarioId)
   fs.mkdirSync(dir, { recursive: true })
 
+  const tarballArg = path.isAbsolute(tarballName)
+    ? tarballName
+    : path.join('version-compatibility-tests', 'dist', tarballName)
+
   const args = [
     `--react ${react}`,
     `--react-dom ${react}`,
     `--typescript ${typescript}`,
-    `--tarball version-compatibility-tests/dist/${tarballName}`,
+    `--tarball ${tarballArg}`,
     `--app-dir ${path.relative(root, appDirForRun)}`
   ]
 
@@ -539,6 +544,9 @@ function restoreNodeRuntime() {
 }
 
 async function main() {
+  let summaryPath = ''
+  let counts = null
+  let hasBlockingOutcome = false
   try {
     fs.rmSync(distDir, { recursive: true, force: true })
     fs.mkdirSync(distDir, { recursive: true })
@@ -620,10 +628,10 @@ async function main() {
       results.push(...batchResults)
     }
 
-    const summaryPath = path.join(logsRoot, 'MATRIX_SUMMARY.json')
+    summaryPath = path.join(logsRoot, 'MATRIX_SUMMARY.json')
     fs.writeFileSync(summaryPath, JSON.stringify(results, null, 2))
 
-    const counts = {
+    counts = {
       total: results.length,
       pass: results.filter(s => s.outcome === 'PASS').length,
       fail: results.filter(s => s.outcome === 'FAIL').length,
@@ -650,7 +658,7 @@ async function main() {
       throw error
     }
 
-    const hasBlockingOutcome = counts.fail > 0 || counts.xpass > 0
+    hasBlockingOutcome = counts.fail > 0 || counts.xpass > 0
     if (hasBlockingOutcome) {
       console.error(
         `${LOG_PREFIX} Blocking scenarios detected (FAIL=${counts.fail}, XPASS=${counts.xpass}). See logs under ${logsRoot}`
@@ -679,6 +687,47 @@ async function main() {
         } catch (error) {
           console.warn(`${LOG_PREFIX} Failed to clean temporary PNPM home: ${error?.message || error}`)
         }
+      }
+    }
+
+    if (hasBlockingOutcome && summaryPath && counts) {
+      console.error(
+        `${LOG_PREFIX} Blocking scenarios detected (FAIL=${counts.fail}, XPASS=${counts.xpass}). Summary: ${summaryPath}`
+      )
+      try {
+        const summaryRaw = fs.readFileSync(summaryPath, 'utf8')
+        const lines = summaryRaw.split(/\r?\n/)
+        if (lines.length <= MAX_INLINE_LOG_LINES) {
+          console.error(`${LOG_PREFIX} ===== MATRIX SUMMARY BEGIN =====`)
+          console.error(summaryRaw)
+          console.error(`${LOG_PREFIX} ===== MATRIX SUMMARY END =====`)
+        } else {
+          console.error(
+            `${LOG_PREFIX} Summary has ${lines.length} lines; showing first ${MAX_INLINE_LOG_LINES} lines:`
+          )
+          console.error(lines.slice(0, MAX_INLINE_LOG_LINES).join('\n'))
+          console.error(`${LOG_PREFIX} ===== TRUNCATED MATRIX SUMMARY =====`)
+        }
+
+        const logDir = path.dirname(summaryPath)
+        const scenarioLogs = fs
+          .readdirSync(logDir)
+          .filter(name => name.startsWith('runtime') || name.endsWith('.log') || name.endsWith('.txt'))
+        for (const logName of scenarioLogs) {
+          const logPath = path.join(logDir, logName)
+          if (!fs.existsSync(logPath) || !fs.statSync(logPath).isFile()) continue
+          const logContent = fs.readFileSync(logPath, 'utf8')
+          const logLines = logContent.split(/\r?\n/)
+          console.error(`${LOG_PREFIX} ===== ${logName} =====`)
+          if (logLines.length <= MAX_INLINE_LOG_LINES) {
+            console.error(logContent)
+          } else {
+            console.error(logLines.slice(0, MAX_INLINE_LOG_LINES).join('\n'))
+            console.error(`${LOG_PREFIX} ===== ${logName} (truncated) =====`)
+          }
+        }
+      } catch (logError) {
+        console.error(`${LOG_PREFIX} Failed to print matrix logs: ${logError?.message || logError}`)
       }
     }
   }
