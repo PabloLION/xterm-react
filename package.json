@@ -21,7 +21,9 @@
     "compat:consumer:build-latest": "node version-compatibility-tests/scripts/consumer-pin-and-build.mjs",
     "compat:matrix": "node version-compatibility-tests/scripts/matrix-run-consumer.mjs",
     "compat:matrix:summary": "node version-compatibility-tests/scripts/summarize-matrix.mjs",
-    "history:update": "tsx scripts/update-history.ts"
+    "ci:compat:baseline": "node version-compatibility-tests/scripts/matrix-run-consumer.mjs -- --runtime node20 --linter eslint-prettier --react 18.3.1 --typescript 5.2.2 --eslint 8.57.0 --prettier 3.3.3",
+    "ci:compat:latest": "node version-compatibility-tests/scripts/matrix-run-consumer.mjs -- --runtime node24 --linter eslint-prettier --react 19.1.1 --typescript 5.9.3 --eslint 9.13.0 --prettier 3.6.2",
+    "compat:matrix:record": "tsx scripts/update-history.ts"
   },
   "peerDependencies": {
     "react": "^19.0.0",

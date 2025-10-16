@@ -144,7 +144,7 @@ so that release notes accurately reflect compatibility coverage.
 
 Acceptance Criteria:
 
-1. Script reads the latest matrix summary and updates HISTORY.md or equivalent.
+1. Script reads the latest matrix summary and updates `docs/compatibility-matrix.md`.
 2. Add instructions to the release checklist referencing the history update command.
 3. Document how to regenerate summaries in docs/compatibility-testing.md.
 
@@ -242,25 +242,33 @@ so that we balance signal quality with runtime duration.
 
 Acceptance Criteria:
 
-1. GitHub Actions (or equivalent) run the matrix on the latest Node LTS as part of release checks.
-2. Provide manual/approval jobs (or local scripts) for the remaining Node runtime lanes (14, 16, 18, 24, 25) and Bun, rather than running everything on every PR.
-3. Release documentation spells out when to run each runtime lane (e.g., nightly, pre-release, manual verification) and how to request overrides.
+1. GitHub Actions runs both curated suites on every pull request targeting `main`, and runs the latest Node LTS lane (currently Node 24) on every tagged release.
+2. The compatibility workflow’s manual dispatch exposes inputs that let operators toggle the baseline (`node20`) and latest (`node24`) lanes before starting the run, failing fast if neither lane is selected.
+3. Release documentation clearly states when to rely on PR/tag automation vs. manual helpers, and how to invoke the CLI/manual workflow for additional verification.
+
+Implementation Notes:
+
+- Pull requests cover the full curated matrix; tag pushes execute only the latest Node LTS lane to keep release turnarounds predictable.
+- The manual workflow uses `workflow_dispatch` inputs (no separate environment gate) so operators can opt into the baseline lane as needed, and it errors when both toggles are disabled.
+- `docs/compatibility-testing.md` documents how to launch the manual workflow, which lanes run by default, and when to lean on each lane ahead of a release.
 
 #### Implementation Plan
 
 - Branch: `feat/story-5-2-runtime-ci-strategy`
 - Commit outline:
+
   1. `ci(compat): run latest LTS smoke during release checks`
-     - Extend compatibility workflows so the latest Node LTS lane (currently `node22`) runs automatically on release/publish triggers in addition to the scheduled weekly job.
+     - Extend compatibility workflows so the latest Node LTS lane (currently `node24`) runs automatically on release/publish triggers in addition to the scheduled weekly job.
      - Share pnpm caches with the scheduled job and keep runtime batches sequential (no `--parallel` flag).
-  2. `ci(compat): add manual extended runtime workflow`
-     - Add a workflow-dispatch job (with approval gate) that iterates optional Node lanes (`node24`, `node25`, future current/LTS) plus the Bun placeholder once support lands.
-     - Expose inputs for selecting runtime/react/ts presets without editing YAML.
-  3. `docs(release): document runtime lane expectations`
+  1. `ci(compat): add manual extended runtime workflow`
+     - Add a workflow-dispatch job that runs the baseline (`node20`) and latest (`node24`) lanes sequentially, with inputs that let operators disable either lane and adjust presets when we expand coverage.
+     - Keep the helper scripts (`ci:compat:*`) aligned so the workflow and local runs share the same defaults.
+  1. `docs(release): document runtime lane expectations`
      - Update `docs/compatibility-testing.md` and related release docs with guidance on when to run each lane and the required approvals.
      - Add a release checklist note that the latest LTS smoke must pass and link to the manual workflow for additional lanes.
-  4. `docs(backlog): log future runtime enhancements`
+  1. `docs(backlog): log future runtime enhancements`
      - Capture follow-ups for Bun enablement and runtime rotation cadence so later stories (e.g., Story 5.3) have explicit entry points.
+
 - Validation: `pnpm check:no-fix`, `pnpm test`, run `pnpm markdownlint docs` after doc edits, and trigger affected workflows via GitHub UI (or `act`) when feasible.
 
 ### Story 5.3 Bun validation

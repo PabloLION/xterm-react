@@ -13,6 +13,7 @@ version-compatibility-tests/consumer-app/pnpm-lock.yaml
 version-compatibility-tests/MATRIX_LATEST.json
 version-compatibility-tests/MATRIX_SUMMARY.md
 version-compatibility-tests/.work/
+version-compatibility-tests/.pnpm-runtime/
 package-lock.json
 
 # BMAD (local only)

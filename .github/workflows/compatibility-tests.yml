@@ -1,14 +1,56 @@
 name: Compatibility Tests
 
 on:
-  workflow_dispatch: {}
-  schedule:
-    - cron: '0 6 * * 1' # Mondays at 06:00 UTC
+  workflow_dispatch:
+    inputs:
+      run_oldest:
+        description: "Run the oldest-supported compatibility suite"
+        type: boolean
+        default: false
+      run_latest:
+        description: "Run the latest-supported compatibility suite"
+        type: boolean
+        default: true
+  workflow_call:
+    inputs:
+      run_oldest:
+        required: false
+        type: boolean
+        default: false
+      run_latest:
+        required: false
+        type: boolean
+        default: true
+  release:
+    types:
+      - published
+  pull_request:
+    branches:
+      - main
+  push:
+    tags:
+      - "v*"
 
 jobs:
   version-matrix:
+    timeout-minutes: 60
     name: Compatibility smoke (${{ matrix.suite.label }})
     runs-on: ubuntu-latest
+    env:
+      SHOULD_RUN_SUITE: >-
+        ${{
+          (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/') && matrix.suite.label == 'latest-supported')
+          || (github.event_name == 'release' && matrix.suite.label == 'latest-supported')
+          || (github.event_name == 'pull_request')
+          || (github.event_name == 'workflow_dispatch' && (
+            (matrix.suite.label == 'latest-supported' && github.event.inputs.run_latest == 'true')
+            || (matrix.suite.label == 'oldest-supported' && github.event.inputs.run_oldest == 'true')
+          ))
+          || (github.event_name == 'workflow_call' && (
+            (matrix.suite.label == 'latest-supported' && inputs.run_latest != false)
+            || (matrix.suite.label == 'oldest-supported' && inputs.run_oldest == true)
+          ))
+        }}
     strategy:
       matrix:
         suite:
@@ -19,27 +61,59 @@ jobs:
             eslint: 8.57.0
             prettier: 3.3.3
           - label: latest-supported
-            runtime: node22
+            runtime: node24
             react: 19.1.1
             typescript: 5.9.3
             eslint: 9.13.0
             prettier: 3.6.2
     steps:
+      - name: Validate manual lane selection
+        if: >-
+          ${{
+            github.event_name == 'workflow_dispatch'
+            && matrix.suite.label == 'latest-supported'
+            && github.event.inputs.run_latest != 'true'
+            && github.event.inputs.run_oldest != 'true'
+          }}
+        run: |
+          echo "::error::Select at least one lane via run_latest/run_oldest inputs."
+          exit 1
+
       - name: Checkout repository
+        if: >-
+          ${{
+            env.SHOULD_RUN_SUITE == 'true'
+          }}
         uses: actions/checkout@v4
 
       - name: Set up pnpm
+        if: >-
+          ${{
+            env.SHOULD_RUN_SUITE == 'true'
+          }}
         uses: pnpm/action-setup@v3
         with:
-          version: '9'
+          version: "9"
 
       - name: Verify pnpm
+        if: >-
+          ${{
+            env.SHOULD_RUN_SUITE == 'true'
+          }}
         run: pnpm --version
 
       - name: Install dependencies
+        if: >-
+          ${{
+            env.SHOULD_RUN_SUITE == 'true'
+          }}
         run: pnpm install --frozen-lockfile
 
       - name: Run ${{ matrix.suite.label }} compatibility smoke (React ${{ matrix.suite.react }} / TS ${{ matrix.suite.typescript }} / ESLint ${{ matrix.suite.eslint }} / Prettier ${{ matrix.suite.prettier }} / ${{ matrix.suite.runtime }})
+        if: >-
+          ${{
+            env.SHOULD_RUN_SUITE == 'true'
+          }}
         run: >
           pnpm run compat:matrix
           -- --runtime ${{ matrix.suite.runtime }}

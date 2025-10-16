@@ -47,7 +47,8 @@
 - Storage options (for discussion):
   - Commit an aggregated `version-compatibility-tests/HISTORY.json`/`.md` updated by summarizer (pros: in-repo visibility; cons: noisy diffs).
   - Emit artifacts only (CI uploads) and maintain history off-repo (pros: clean repo; cons: harder to browse offline).
-  - Hybrid: keep a compact `HISTORY.md` (totals and highlights) in repo; store full JSON summaries as CI artifacts.
+- Hybrid: keep a compact `docs/compatibility-matrix.md` (totals and highlights) in repo; store full JSON summaries as CI artifacts.
+- Sunset `version-compatibility-tests/MATRIX_LATEST.json` and `version-compatibility-tests/MATRIX_SUMMARY.md` once replacement tooling is in place (update `compat:matrix:record`, docs, and workflows).
 - Implementation sketch:
   - Extend summarizer to append a compact record `{ date, totals, byReact, summaryPath }`.
   - Add a `scripts/history-aggregate.mjs` to rebuild markdown from JSON snapshots under `logs/`.
@@ -59,6 +60,7 @@
 - Matrix pre-validation: flag incompatible tool combos before execution.
 - Interactive selection: prompt to pick scenarios to run (useful locally).
 - Parallel execution tuning: dynamic concurrency cap and worker reuse between batches.
+- Refactor compatibility scripts (`matrix-run-consumer`, `consumer-pin-and-build`, summarizer) into smaller modules and add unit tests for exported helpers before expanding functionality.
 - CI integration: scheduled run that uploads logs + summary as artifacts (non-blocking).
 
 ## Consumer App Architecture
@@ -81,6 +83,8 @@
 ## Runtime Coverage
 
 - Covered by **Epic 5 – Runtime Coverage (Node & Bun)** in `docs/prd.md`. Use that epic/stories to track implementation details and move cards into execution when ready.
+- Add Dependabot automation (or equivalent) to notify maintainers when new Node LTS versions ship so runtime catalogs and workflows stay current.
+- Investigate Vite asset emission regression observed during manual matrix smoke (`pnpm run compat:matrix -- --runtime node24 …` emitted Rollup error about absolute path for `index.html`). Track root cause and fix so the latest-lane smoke (and manual workflow) can complete locally.
 
 ## Component Lifecycle & Testing
 

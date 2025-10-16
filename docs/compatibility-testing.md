@@ -20,23 +20,58 @@ This repo ships an in‑repo “consumer app” plus scripts to test the publish
   - `pnpm run compat:matrix`
   - Exits non-zero when any scenario reports `FAIL` or `XPASS` (so CI and local scripts stop on regressions).
   - Automatically generates JSON + Markdown summaries in `version-compatibility-tests/logs/<timestamp>/` and updates the stable aliases below.
-  - Latest summary pointer: `version-compatibility-tests/MATRIX_LATEST.json`
+  - Latest summary pointer: `version-compatibility-tests/MATRIX_LATEST.json` (tiny JSON file that records the path to the newest `MATRIX_SUMMARY.json`).
   - Latest Markdown summary (stable alias): `version-compatibility-tests/MATRIX_SUMMARY.md`
-  - Additional runtimes: `pnpm run compat:matrix -- --runtime node20,node22` (use `--runtime all` for Node 20/22/24). Bun lanes are planned; requesting `bun-stable` currently reports an unsupported-runtime warning.
+- Additional runtimes: `pnpm run compat:matrix -- --runtime node20,node24` (use `--runtime all` for Node 20/22/24 if you need to include older presets). Bun lanes are planned; requesting `bun-stable` currently reports an unsupported-runtime warning.
+
+## CI cadence & local helpers
+
+- **Compatibility Tests** (`.github/workflows/compatibility-tests.yml`)
+  - Triggers: pull requests against `main`, manual dispatch (with flags), reusable `workflow_call`, tag pushes (`v*`), and release publication events.
+  - Matrix lanes:
+    - Pull requests execute both curated suites (`oldest-supported` and `latest-supported`) so regressions surface before review.
+    - Tag pushes automatically run the latest Node LTS lane (`node24` combo) to block publishes on regressions without delaying releases.
+    - Manual runs let you opt into the curated suites via inputs (`run_latest`, `run_oldest`); attempting to run with neither lane selected fails fast.
+  - No auto-fix steps; the job surfaces failures from the curated matrix and leaves remediation to the developer.
+- **Local scripts:** run the same curated suites outside CI when you need fresh logs:
+  - Baseline lane: `pnpm run ci:compat:baseline`
+  - Latest-LTS lane: `pnpm run ci:compat:latest`
+  - Record an entry for docs: `pnpm run compat:matrix:record`
+
+### When to run each lane
+
+| Lane                          | Trigger                                               | Purpose                                                     |
+| ----------------------------- | ----------------------------------------------------- | ----------------------------------------------------------- |
+| Pull request matrix           | Automatic on PRs targeting `main`                     | Exercises both curated suites for every change.             |
+| Tag push latest-LTS smoke     | Automatic on annotated tag push (`v*`)                | Guarantees publish pipelines see a fresh `node24` PASS.     |
+| Manual dispatch (matrix)      | Actions UI (`run_latest` / `run_oldest` inputs)       | Selectively exercise curated suites in GitHub Actions.      |
+| Manual extended runtimes      | On-demand local run                                   | Execute the CLI helpers above before releases or deep dives. |
+
+**Release checklist:** Before publishing, confirm the latest tag-triggered or release-triggered run of “Compatibility Tests” is green. Pull requests already cover the curated suites; if support promises include additional runtimes, run `pnpm run ci:compat:baseline` and `pnpm run ci:compat:latest` locally, then summarise findings (e.g., in the PR or release notes) based on the log output.
+
+### Runtime expectations & monitoring
+
+- Pull-request runs execute both curated lanes and typically finish in **12–18 minutes** on `ubuntu-latest`.
+- Tag-triggered invocations only execute the latest LTS lane and complete in ~8 minutes.
+- Running `pnpm run ci:compat:baseline` locally takes roughly **10 minutes**; `pnpm run ci:compat:latest` may take longer if Node 24 tooling needs to be installed on demand.
+- Keep an eye on GitHub Actions minutes. If additional investigations are frequent, rely on `--quick` or limit to a single runtime per invocation.
+  - If Node 24 tooling is temporarily unavailable (locally or in CI), rerun the latest lane with an override like `pnpm run ci:compat:latest -- --runtime node20` until your environment supports Node 24 again.
+- Known issue (tracked in `docs/backlog.md`): Vite 7.1.9 currently fails the consumer build with an absolute-path asset error when the latest-lane smoke is executed locally. Until resolved, expect the manual matrix command to exit with `pin-and-build` failing; capture the log path (shown in console output) to aid debugging.
 
 ### Runtime support snapshot
 
 The current matrix runs on the host runtime (Node 18.x in CI) while we build out the runtime dimension described in Epic 5. We still track the lifecycle of the Node versions we intend to cover so we know where legacy support ends:
 
-| Runtime      | Lifecycle Status (Oct 2025)            | Notes                                                       |
+| Runtime      | Lifecycle Status (Oct 2024)            | Notes                                                       |
 | ------------ | -------------------------------------- | ----------------------------------------------------------- |
-| Node 20.x    | Active LTS                             | Supported through April 30, 2026; current default target.   |
-| Node 22.x    | Current release (enters LTS Oct 2024)  | Projected LTS support through April 30, 2027.               |
-| Node 24.x    | Upcoming release (enters LTS Oct 2025) | Align coverage once released (projected LTS through 2028).  |
-| Node 25.x    | Current “odd” stream (non-LTS)         | Short-lived cadence; include for “latest” smoke tests only. |
-| Bun (stable) | Continuous releases                    | (lane pending) No LTS program; track stable.                |
+| Node 20.x    | Maintenance LTS                        | Supported through April 30, 2026; baseline compatibility lane. |
+| Node 22.x    | Current release                        | Optional lane (not currently in CI presets).                |
+| Node 24.x    | Active LTS                             | Latest compatibility lane and release gate.                 |
+| Bun (stable) | Continuous releases                    | (lane pending) No LTS program; track stable channel.        |
 
-Legacy Node 14/16/18 have exited vendor support, so they are intentionally omitted from the future matrix; we’ll focus on currently supported LTS/current streams going forward. When the runtime column lands, matrix flags such as `--runtime node20` or `--runtime node22` will select the appropriate toolchain, and the README will surface a runtime support badge. Until then, use the table above to decide which local environment to test against and consult Epic 5 for implementation progress. Bun support will land in a later iteration; until then the runner will treat bun requests as unsupported.
+> We will add the next odd-numbered Node release (e.g., Node 25) after the Foundation announces the schedule and preview builds are available.
+
+Legacy Node 14/16/18 have exited vendor support, so they are intentionally omitted from the future matrix; we’ll focus on currently supported LTS/current streams going forward. When the runtime column lands, matrix flags such as `--runtime node20` or `--runtime node24` will select the appropriate toolchain, and the README will surface a runtime support badge. Until then, use the table above to decide which local environment to test against and consult Epic 5 for implementation progress. Bun support will land in a later iteration; until then the runner will treat bun requests as unsupported.
 
 ### Matrix Snapshot
 

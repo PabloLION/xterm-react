@@ -5,6 +5,7 @@ import { execSync, exec } from 'node:child_process'
 import fs from 'node:fs'
 import path from 'node:path'
 import { pathToFileURL } from 'node:url'
+import os from 'node:os'
 
 const root = process.cwd()
 const LOG_PREFIX = '[matrix]'
@@ -14,6 +15,21 @@ const appDir = path.join(suiteDir, 'consumer-app')
 const distDir = path.join(suiteDir, 'dist')
 const logsRoot = path.join(suiteDir, 'logs', new Date().toISOString().replace(/[:.]/g, '-'))
 fs.mkdirSync(logsRoot, { recursive: true })
+const originalPnpmHome = process.env.PNPM_HOME
+const originalPath = process.env.PATH || ''
+let runtimePnpmHome = null
+try {
+  const tmpPrefix = path.join(os.tmpdir(), 'xterm-react-pnpm-')
+  runtimePnpmHome = fs.mkdtempSync(tmpPrefix)
+} catch (error) {
+  console.warn(`${LOG_PREFIX} Failed to allocate temp PNPM home: ${error?.message || error}. Falling back to local cache.`)
+  runtimePnpmHome = path.join(suiteDir, '.pnpm-runtime')
+  fs.mkdirSync(runtimePnpmHome, { recursive: true })
+}
+if (!originalPath.split(path.delimiter).includes(runtimePnpmHome)) {
+  process.env.PATH = runtimePnpmHome + (originalPath ? `${path.delimiter}${originalPath}` : '')
+}
+process.env.PNPM_HOME = runtimePnpmHome
 const RUNTIME_CATALOG = [
   { id: 'node20', tool: 'node', versionSpec: '20', label: 'node20' },
   { id: 'node22', tool: 'node', versionSpec: '22', label: 'node22' },
@@ -79,22 +95,19 @@ const originalNodeVersion = process.version.startsWith('v') ? process.version.sl
 let restoreNodeVersion = null
 let runtimeMutated = false
 
-function parseArgValue(names) {
-  const argv = process.argv.slice(2)
-  for (let i = 0; i < argv.length; i++) {
-    const a = argv[i]
-    if (names.includes(a)) {
-      const v = argv[i + 1]
-      if (v) return v
-    }
-  }
-  return null
-}
-
 function parseListArg(names) {
-  const raw = parseArgValue(names)
-  if (!raw) return null
-  return raw
+  const argv = process.argv.slice(2)
+  let lastMatch = null
+  for (let i = 0; i < argv.length; i++) {
+    const token = argv[i]
+    if (!names.includes(token)) continue
+    const value = argv[i + 1]
+    if (!value) continue
+    lastMatch = value
+    i += 1
+  }
+  if (!lastMatch) return null
+  return lastMatch
     .split(',')
     .map(part => part.trim())
     .filter(Boolean)
@@ -499,9 +512,9 @@ function ensureRuntime(runtime) {
     if (!restoreNodeVersion) restoreNodeVersion = originalNodeVersion
     const res = sh(`pnpm env use --global ${runtime.versionSpec}`, root, logFile)
     if (!res.ok) {
-      console.error(`${LOG_PREFIX} Failed to activate Node runtime ${runtime.label}`)
-      console.error(res.out)
-      process.exit(1)
+      const error = new Error(`Failed to activate Node runtime ${runtime.label}`)
+      error.output = res.out
+      throw error
     }
     activeRuntimeKey = key
     runtimeMutated = true
@@ -527,23 +540,33 @@ function restoreNodeRuntime() {
 
 async function main() {
   try {
+    fs.rmSync(distDir, { recursive: true, force: true })
     fs.mkdirSync(distDir, { recursive: true })
-    sh('pnpm pack --pack-destination version-compatibility-tests/dist', root, path.join(logsRoot, 'pack.log'))
-    const tgz = fs
-      .readdirSync(distDir)
-      .filter(f => f.endsWith('.tgz'))
-      .map(f => ({ f, t: fs.statSync(path.join(distDir, f)).ctimeMs }))
-      .sort((a, b) => {
-        const timeDiff = b.t - a.t
-        if (timeDiff !== 0) return timeDiff
-        // When multiple packs land within the same millisecond, prefer the lexicographically
-        // greatest filename (pnpm appends incremental suffixes) so the newest tarball wins.
-        return b.f.localeCompare(a.f)
-      })[0]?.f
-    if (!tgz) {
-      console.error(`${LOG_PREFIX} Failed to find packed tarball under dist`)
-      process.exit(1)
+    const packLog = path.join(logsRoot, 'pack.log')
+    const packRes = sh('pnpm pack --pack-destination version-compatibility-tests/dist', root, packLog)
+    if (!packRes.ok) {
+      throw new Error(`${LOG_PREFIX} pnpm pack failed (see ${packLog})`)
     }
+    const packOutputLines = packRes.out.trim().split(/\r?\n/).filter(Boolean)
+    let tgzPath = packOutputLines.at(-1)
+    if (tgzPath && !tgzPath.endsWith('.tgz')) tgzPath = null
+    if (tgzPath && !path.isAbsolute(tgzPath)) {
+      tgzPath = path.resolve(root, tgzPath)
+    }
+    if (!tgzPath || !fs.existsSync(tgzPath)) {
+      const tarballs = fs.readdirSync(distDir).filter(f => f.endsWith('.tgz'))
+      if (tarballs.length === 1) {
+        tgzPath = path.join(distDir, tarballs[0])
+      } else {
+        const reason = tarballs.length
+          ? `multiple candidates: ${tarballs.join(', ')}`
+          : 'no tarballs were produced'
+        throw new Error(
+          `${LOG_PREFIX} Could not determine packed tarball path (${reason}). Clean version-compatibility-tests/dist and retry.`
+        )
+      }
+    }
+    const tgz = tgzPath
 
     const scenarios = listScenarios()
     const scenariosByRuntime = new Map()
@@ -622,7 +645,9 @@ async function main() {
     const summaryRes = sh(summarizeCmd, root, summaryLog)
     if (!summaryRes.ok) {
       console.error(`${LOG_PREFIX} Failed to generate Markdown summary. See ${summaryLog}`)
-      process.exit(1)
+      const error = new Error('Markdown summary generation failed')
+      error.summaryLog = summaryLog
+      throw error
     }
 
     const hasBlockingOutcome = counts.fail > 0 || counts.xpass > 0
@@ -630,7 +655,10 @@ async function main() {
       console.error(
         `${LOG_PREFIX} Blocking scenarios detected (FAIL=${counts.fail}, XPASS=${counts.xpass}). See logs under ${logsRoot}`
       )
-      process.exit(1)
+      const error = new Error('Blocking scenarios detected')
+      error.summaryPath = summaryPath
+      error.counts = counts
+      throw error
     }
 
     if (counts.xfail > 0) {
@@ -638,6 +666,21 @@ async function main() {
     }
   } finally {
     restoreNodeRuntime()
+    if (originalPnpmHome !== undefined) process.env.PNPM_HOME = originalPnpmHome
+    else delete process.env.PNPM_HOME
+    process.env.PATH = originalPath
+    if (runtimePnpmHome) {
+      const tmpRoot = os.tmpdir()
+      const normalizedHome = path.resolve(runtimePnpmHome)
+      const normalizedTmp = path.resolve(tmpRoot)
+      if (normalizedHome.startsWith(normalizedTmp)) {
+        try {
+          fs.rmSync(runtimePnpmHome, { recursive: true, force: true })
+        } catch (error) {
+          console.warn(`${LOG_PREFIX} Failed to clean temporary PNPM home: ${error?.message || error}`)
+        }
+      }
+    }
   }
 }
 

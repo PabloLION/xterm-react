@@ -5,7 +5,7 @@ This project provides a React component that integrates the [xterm.js](https://x
 ## Live Example
 
 - On Replit: <https://replit.com/@PabloLION/XTerm-React?v=1>
-- A example page with mb github pages. #TODO
+- An example page with maybe GitHub Pages. #TODO
 
 ## Usage
 
@@ -87,7 +87,7 @@ This library officially supports and is continuously tested against the followin
   - Biome: 2.0.0, 2.1.1, 2.2.4
   - ESLint: 8.57.0, 9.13.0 (paired with `@eslint/js` + `@typescript-eslint/parser`)
   - Prettier: 3.3.3, 3.6.2
-- Runtime: Node 20 LTS by default; additional Node streams (`node22`, `node24`, `node25`) can be exercised with `--runtime` flags (see the compatibility guide).
+- Runtime: Node 20 LTS by default; additional Node streams (`node22`, `node24`) can be exercised with `--runtime` flags (see the compatibility guide).
 
 Latest matrix summary: `version-compatibility-tests/MATRIX_SUMMARY.md`
 
@@ -119,6 +119,7 @@ either a semantic version bump (`--bump major|minor|patch`) or an explicit `--ve
 Contributions are welcome! Please feel free to submit pull requests or open issues to discuss potential improvements or features.
 
 - For dev, `pnpm` is recommended.
+- Capture feature plans and retrospectives under `docs/dev-logs/` using the provided template. Start filenames with `YYYYMMDD-` so logs sort chronologically, and include an **Atomic Commit Breakdown** section before implementation begins.
 
 ### Credits
 
