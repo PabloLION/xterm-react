@@ -84,7 +84,8 @@
 
 - Covered by **Epic 5 – Runtime Coverage (Node & Bun)** in `docs/prd.md`. Use that epic/stories to track implementation details and move cards into execution when ready.
 - Add Dependabot automation (or equivalent) to notify maintainers when new Node LTS versions ship so runtime catalogs and workflows stay current.
-- Investigate Vite asset emission regression observed during manual matrix smoke (`pnpm run compat:matrix -- --runtime node24 …` emitted Rollup error about absolute path for `index.html`). Track root cause and fix so the latest-lane smoke (and manual workflow) can complete locally.
+- ~~Investigate Vite asset emission regression observed during manual matrix smoke (`pnpm run compat:matrix -- --runtime node24 …` emitted Rollup error about absolute path for `index.html`). Track root cause and fix so the latest-lane smoke (and manual workflow) can complete locally.~~
+- Resolved 2025-10-18 by copying key consumer-app files into worker directories (see `fix(compat-matrix): copy consumer files for workers`). Monitor for regressions when Vite config changes.
 
 ## Component Lifecycle & Testing
 
