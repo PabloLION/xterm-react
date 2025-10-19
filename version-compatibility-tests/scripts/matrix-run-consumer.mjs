@@ -429,7 +429,17 @@ function parseParallel() {
   return value
 }
 
-const WORKER_ALWAYS_COPY = new Set(['package.json', 'pnpm-lock.yaml', 'yarn.lock', 'package-lock.json'])
+const WORKER_ALWAYS_COPY = new Set([
+  'package.json',
+  'pnpm-lock.yaml',
+  'yarn.lock',
+  'package-lock.json',
+  'eslint.config.mjs',
+  'src',
+  'index.html',
+  'tsconfig.json',
+  'vite.config.ts'
+])
 const WORKER_SKIP = new Set(['node_modules', 'dist'])
 
 function symlinkOrCopy(source, target, isDirectory) {
@@ -493,7 +503,11 @@ function prepareWorkerDir(workRoot, i) {
     }
 
     if (WORKER_ALWAYS_COPY.has(name)) {
-      fs.copyFileSync(sourcePath, targetPath)
+      if (entry.isDirectory()) {
+        fs.cpSync(sourcePath, targetPath, { recursive: true })
+      } else {
+        fs.copyFileSync(sourcePath, targetPath)
+      }
       continue
     }
 
