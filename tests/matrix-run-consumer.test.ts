@@ -4,7 +4,7 @@ import test from "node:test";
 import {
   matchesXfail,
   validateXfailEntry,
-} from "../version-compatibility-tests/scripts/matrix-run-consumer.mjs";
+} from "../version-compatibility-tests/lib/matrix/xfail.ts";
 
 const runtime = {
   id: "node20",
@@ -108,12 +108,15 @@ test("validateXfailEntry accepts optional runtime", () => {
 
 test("validateXfailEntry rejects unknown runtime id", () => {
   assert.throws(() =>
-    validateXfailEntry({
-      runtime: "bun-stable",
-      react: "19.1.1",
-      typescript: "5.4.5",
-      linter: "biome",
-      biome: "2.2.4",
-    }),
+    validateXfailEntry(
+      {
+        runtime: "bun-stable",
+        react: "19.1.1",
+        typescript: "5.4.5",
+        linter: "biome",
+        biome: "2.2.4",
+      },
+      new Set([runtime.id])
+    ),
   );
 });

@@ -48,50 +48,50 @@ version-compatibility-tests/
 
 1. **Baseline & guardrails**
 
-   - Capture current behavior: run `pnpm compat:matrix -- --runtime node20 --linter eslint-prettier --react 18.3.1 --typescript 5.2.2 --eslint 8.57.0 --prettier 3.3.3` and stash the generated summary/log names for parity checks.
-   - Add TODO markers in existing scripts where functionality will move (e.g., runtime switching, worker preparation, summary writing).
+   - [x] Capture current behavior: run `pnpm compat:matrix -- --runtime node20 --linter eslint-prettier --react 18.3.1 --typescript 5.2.2 --eslint 8.57.0 --prettier 3.3.3` and stash the generated summary/log names for parity checks.
+   - [x] Add TODO markers in existing scripts where functionality will move (e.g., runtime switching, worker preparation, summary writing).
 
 2. **Extract shared utilities**
 
-   - Create `lib/cli/run-command.mjs` and move `execSync`/`exec` wrappers with buffer limits and logging.
-   - Create `lib/fs/paths.mjs` for `suiteDir`, `appDir`, `distDir`, log folder creation, pointer writers.
-   - Update scripts to import from these helpers; ensure no behavior change (commit: `refactor(shared): extract CLI+FS helpers`).
+   - [x] Create `lib/cli/run-command.mjs` and move `execSync`/`exec` wrappers with buffer limits and logging.
+   - [x] Create `lib/fs/paths.mjs` for `suiteDir`, `appDir`, `distDir`, log folder creation, pointer writers.
+   - [x] Update scripts to import from these helpers; ensure no behavior change (commit: `refactor(shared): extract CLI+FS helpers`).
 
 3. **Module-ise matrix runner**
 
-   - Move runtime catalogue + validation to `runtime/catalog.mjs`; implement process-scoped activation in `runtime/activation.mjs` (no more `pnpm env use --global`).
-   - Extract argument parsing + quick mode to `cli/args.mjs`; scenarios/cartesian logic to `matrix/scenarios.mjs`; executor loop (including xfail/xpass) to `matrix/executor.mjs`.
-   - Keep `matrix-run-consumer.mjs` as a 40–60 line file orchestrating the pieces. Commit in logical slices (`refactor(matrix): split args`, `refactor(matrix): split runtime`, etc.).
+   - [x] Move runtime catalogue + validation to `runtime/catalog.mjs`; implement process-scoped activation in `runtime/activation.mjs` (no more `pnpm env use --global`).
+   - [x] Extract argument parsing + quick mode to `cli/args.mjs`; scenarios/cartesian logic to `matrix/scenarios.mjs`; executor loop (including xfail/xpass) to `matrix/executor.mjs`.
+   - [ ] Keep `matrix-run-consumer.mjs` as a 40–60 line file orchestrating the pieces (follow-up: file still ~700 lines; future iterations should continue slicing worker and summary orchestration helpers).
 
 4. **Restructure consumer pin & build**
 
-   - Split parsing/validation, version resolution, package mutation, and build execution as per `consumer/` layout.
-   - Ensure tarball handling (quoted path) lives in shared helper if reused elsewhere.
-   - Maintain help text and CLI contract. Commit: `refactor(consumer): modularize pin-and-build`.
+   - [x] Split parsing/validation, version resolution, package mutation, and build execution as per `consumer/` layout.
+   - [x] Ensure tarball handling (quoted path) lives in shared helper if reused elsewhere.
+  - [x] Maintain help text and CLI contract. Commit: `refactor(consumer): modularize pin-and-build`.
 
 5. **Align summarizer with shared modules**
 
-   - Reuse `fs/paths.mjs` and `summary/render.mjs`; ensure markdown/json outputs unaffected.
-   - Prepare hooks so Story 5.2.2 can snapshot summary objects before file IO.
+   - [x] Reuse `fs/paths.mjs` and `summary/render.mjs`; ensure markdown/json outputs unaffected.
+   - [x] Prepare hooks so Story 5.2.2 can snapshot summary objects before file IO.
 
 6. **Stage 2 – migrate modules to TypeScript**
 
-   - Add a dedicated `tsconfig.compat.json` covering `version-compatibility-tests/lib/**/*.ts` and CLI entry points; wire `pnpm compat:*` scripts to invoke `tsx` (or `ts-node/tsup`) using that config.
-   - Create `version-compatibility-tests/types/` with exported interfaces for scenarios, runtimes, pin instructions, summaries, and CLI options; update Stage 1 helpers to consume these types.
-   - Rename Stage 1 `.mjs` helpers to `.ts` (no `.mts` – compiler emits ESM via `module: "NodeNext"`); fix relative import paths and ensure build output remains ESM.
-   - Convert the CLI shims in `scripts/` to `.ts` thin wrappers, adjusting shebang execution via `node --loader tsx` or compiled artifacts.
-   - Update linting (Biome/ESLint), formatting, and test configuration to include the new TypeScript sources and add a `pnpm compat:typecheck` command that runs `tsc --noEmit` against the compat tsconfig.
+   - [x] Add a dedicated `tsconfig.compat.json` covering `version-compatibility-tests/lib/**/*.ts` and CLI entry points; wire `pnpm compat:*` scripts to invoke `tsx` (or `ts-node/tsup`) using that config.
+   - [x] Create `version-compatibility-tests/types/` with exported interfaces for scenarios, runtimes, pin instructions, summaries, and CLI options; update Stage 1 helpers to consume these types.
+   - [x] Rename Stage 1 `.mjs` helpers to `.ts` (no `.mts` – compiler emits ESM via `module: "NodeNext"`); fix relative import paths and ensure build output remains ESM.
+   - [x] Convert the CLI shims in `scripts/` to `.ts` thin wrappers, adjusting shebang execution via `node --loader tsx` or compiled artifacts.
+   - [x] Update linting (Biome/ESLint), formatting, and test configuration to include the new TypeScript sources and add a `pnpm compat:typecheck` command that runs `tsc --noEmit` against the compat tsconfig.
 
 7. **Repository-wide follow-ups**
 
-   - Flag additional large files for future work:
+   - [ ] Flag additional large files for future work:
      - `src/XTerm.tsx` (~600 lines total / ~200 executable): predominantly inline documentation; keep whole-file type visibility, no split planned.
      - `scripts/update-history.ts` (~240 lines): consider `scripts/history/` folder with shared helpers.
-   - Update `docs/backlog.md` with these targets if not already present.
+   - [ ] Update `docs/backlog.md` with these targets if not already present.
 
 8. **Regression checks**
-   - Re-run representative matrix scenarios post-refactor (latest + oldest lanes) and compare summaries.
-   - Ensure CI scripts (`pnpm compat:*`) only require updated entrypoints (no path churn).
+   - [x] Re-run representative matrix scenarios post-refactor (latest + oldest lanes) and compare summaries.
+   - [x] Ensure CI scripts (`pnpm compat:*`) only require updated entrypoints (no path churn).
 
 ## Testing hooks for Story 5.2.2
 
