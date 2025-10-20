@@ -16,6 +16,8 @@ import {
   ensureWorkDir,
   writeLatestSummaryPointer
 } from '../lib/fs/paths.mjs'
+import { runtimeCatalog, runtimeIds, findRuntime, resolveRuntimes, DEFAULT_RUNTIME_IDS } from '../lib/runtime/catalog.mjs'
+import { createRuntimeController } from '../lib/runtime/activation.mjs'
 
 const LOG_PREFIX = '[matrix]'
 const MAX_INLINE_LOG_LINES = 1000
@@ -36,13 +38,8 @@ if (!originalPath.split(path.delimiter).includes(runtimePnpmHome)) {
   process.env.PATH = runtimePnpmHome + (originalPath ? `${path.delimiter}${originalPath}` : '')
 }
 process.env.PNPM_HOME = runtimePnpmHome
-const RUNTIME_CATALOG = [
-  { id: 'node20', tool: 'node', versionSpec: '20', label: 'node20' },
-  { id: 'node22', tool: 'node', versionSpec: '22', label: 'node22' },
-  { id: 'node24', tool: 'node', versionSpec: '24', label: 'node24' }
-]
-const RUNTIME_IDS = new Set(RUNTIME_CATALOG.map(runtime => runtime.id))
-const DEFAULT_RUNTIME_IDS = ['node20']
+const RUNTIME_CATALOG = runtimeCatalog()
+const RUNTIME_IDS = new Set(runtimeIds())
 const xfailPath = path.join(suiteDir, 'xfail.json')
 const XFAIL = (() => {
   if (!fs.existsSync(xfailPath)) return []
@@ -95,11 +92,13 @@ let BIOME_VERSIONS = [...DEFAULT_BIOMES]
 let ESLINT_VERSIONS = [...DEFAULT_ESLINTS]
 let PRETTIER_VERSIONS = [...DEFAULT_PRETTIERS]
 let LINTER_FAMILIES = new Set(['biome', 'eslint-prettier'])
-let RUNTIMES = DEFAULT_RUNTIME_IDS.map(id => RUNTIME_CATALOG.find(runtime => runtime.id === id)).filter(Boolean)
+let RUNTIMES = resolveRuntimes(DEFAULT_RUNTIME_IDS)
 
-const originalNodeVersion = process.version.startsWith('v') ? process.version.slice(1) : process.version
-let restoreNodeVersion = null
-let runtimeMutated = false
+const { ensureRuntime, restoreRuntime } = createRuntimeController({
+  rootDir: root,
+  logsRoot,
+  logPrefix: LOG_PREFIX
+})
 
 function parseListArg(names) {
   const argv = process.argv.slice(2)
@@ -182,26 +181,27 @@ if (linterFamilyArg) {
 }
 
 if (runtimeArg) {
-  const catalogMap = new Map(RUNTIME_CATALOG.map(runtime => [runtime.id, runtime]))
   let requested = runtimeArg
   if (runtimeArg.includes('all')) {
     requested = RUNTIME_CATALOG.map(runtime => runtime.id)
   }
-  const filtered = requested
-    .map(id => {
-      if (!catalogMap.has(id)) {
-        console.warn(`${LOG_PREFIX} Ignoring unsupported runtime: ${id}`)
-        return null
-      }
-      const runtime = catalogMap.get(id)
-      return runtime
-    })
-    .filter(Boolean)
+  const filtered = []
+  const seen = new Set()
+  for (const id of requested) {
+    if (id === 'all' || seen.has(id)) continue
+    const runtime = findRuntime(id)
+    if (!runtime) {
+      console.warn(`${LOG_PREFIX} Ignoring unsupported runtime: ${id}`)
+      continue
+    }
+    filtered.push(runtime)
+    seen.add(id)
+  }
   if (filtered.length) {
     RUNTIMES = filtered
   } else {
     console.warn(`${LOG_PREFIX} Falling back to default runtime set (${DEFAULT_RUNTIME_IDS.join(', ')})`)
-    RUNTIMES = DEFAULT_RUNTIME_IDS.map(id => RUNTIME_CATALOG.find(runtime => runtime.id === id)).filter(Boolean)
+    RUNTIMES = resolveRuntimes(DEFAULT_RUNTIME_IDS)
   }
 }
 
@@ -551,42 +551,6 @@ function prepareWorkerDir(workRoot, i) {
   return workerDir
 }
 
-let activeRuntimeKey = null
-
-function ensureRuntime(runtime) {
-  const key = `${runtime.tool}:${runtime.versionSpec}`
-  if (activeRuntimeKey === key) return true
-  if (runtime.tool === 'node') {
-    const logFile = path.join(logsRoot, `runtime-${runtime.label}.log`)
-    console.log(`${LOG_PREFIX} Activating runtime ${runtime.label}`)
-    if (!restoreNodeVersion) restoreNodeVersion = originalNodeVersion
-    const res = sh(`pnpm env use --global ${runtime.versionSpec}`, root, logFile)
-    if (!res.ok) {
-      const error = new Error(`Failed to activate Node runtime ${runtime.label}`)
-      error.output = res.out
-      throw error
-    }
-    activeRuntimeKey = key
-    runtimeMutated = true
-    return true
-  }
-
-  console.warn(`${LOG_PREFIX} Runtime ${runtime.label} (${runtime.tool}) is not implemented yet; skipping scenarios`)
-  activeRuntimeKey = key
-  return false
-}
-
-function restoreNodeRuntime() {
-  if (!runtimeMutated || !restoreNodeVersion) return
-  const logFile = path.join(logsRoot, 'runtime-restore.log')
-  const res = sh(`pnpm env use --global ${restoreNodeVersion}`, root, logFile)
-  if (!res.ok) {
-    console.warn(`${LOG_PREFIX} Failed to restore Node runtime ${restoreNodeVersion}: ${res.out}`)
-  } else {
-    activeRuntimeKey = `node:${restoreNodeVersion}`
-  }
-  runtimeMutated = false
-}
 
 async function main() {
   let summaryPath = ''
@@ -733,7 +697,7 @@ async function main() {
       console.warn(`${LOG_PREFIX} ${counts.xfail} scenarios marked as expected failures.`)
     }
   } finally {
-    restoreNodeRuntime()
+    restoreRuntime()
     if (originalPnpmHome !== undefined) process.env.PNPM_HOME = originalPnpmHome
     else delete process.env.PNPM_HOME
     process.env.PATH = originalPath
