@@ -1,10 +1,15 @@
-import fs from 'node:fs'
-import path from 'node:path'
+import * as fs from 'node:fs'
+import * as path from 'node:path'
 
-export function findLatestSummary({ suiteDir, logsDir, latestPointerPath }) {
+interface FindLatestOptions {
+  logsDir: string
+  latestPointerPath?: string
+}
+
+export function findLatestSummary({ logsDir, latestPointerPath }: FindLatestOptions): string {
   if (latestPointerPath && fs.existsSync(latestPointerPath)) {
     try {
-      const payload = JSON.parse(fs.readFileSync(latestPointerPath, 'utf8'))
+      const payload = JSON.parse(fs.readFileSync(latestPointerPath, 'utf8')) as { summaryPath?: string }
       const pointer = payload.summaryPath
       if (pointer && fs.existsSync(pointer)) return pointer
     } catch {
@@ -14,7 +19,7 @@ export function findLatestSummary({ suiteDir, logsDir, latestPointerPath }) {
 
   const entries = fs
     .readdirSync(logsDir, { withFileTypes: true })
-    .filter(entry => entry.isDirectory())
+    .filter((entry): entry is fs.Dirent => entry.isDirectory())
     .map(entry => {
       const full = path.join(logsDir, entry.name)
       const t = fs.statSync(full).mtimeMs

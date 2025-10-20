@@ -1,4 +1,4 @@
-export const ALLOWED_PACKAGES = new Set([
+export const ALLOWED_PACKAGES: Set<string> = new Set([
   'react',
   'react-dom',
   'typescript',
@@ -14,7 +14,7 @@ export const ALLOWED_PACKAGES = new Set([
   'prettier'
 ])
 
-export function assertAllowedPackage(name) {
+export function assertAllowedPackage(name: string): void {
   if (!ALLOWED_PACKAGES.has(name)) {
     throw new Error(`Package name not allowed: ${name}`)
   }

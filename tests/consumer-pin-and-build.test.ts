@@ -4,7 +4,7 @@ import test from "node:test";
 import {
   assertAllowedPackage,
   pickLatestForMajor,
-} from "../version-compatibility-tests/scripts/consumer-pin-and-build.mjs";
+} from "../version-compatibility-tests/scripts/consumer-pin-and-build.ts";
 
 test("assertAllowedPackage accepts whitelisted names", () => {
   assert.doesNotThrow(() => assertAllowedPackage("react"));

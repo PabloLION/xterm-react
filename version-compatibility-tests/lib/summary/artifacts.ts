@@ -1,7 +1,19 @@
-import fs from 'node:fs'
-import path from 'node:path'
+import * as fs from 'node:fs'
+import * as path from 'node:path'
+import type { AggregatedCounts } from '../../types/compat.js'
 
-export function writeSummaryMarkdown({ summaryPath, markdown, suiteDir }) {
+interface WriteSummaryOptions {
+  summaryPath: string
+  markdown: string
+  suiteDir: string
+}
+
+export interface SummaryWriteResult {
+  outPath: string
+  stable: string
+}
+
+export function writeSummaryMarkdown({ summaryPath, markdown, suiteDir }: WriteSummaryOptions): SummaryWriteResult {
   const dir = path.dirname(summaryPath)
   const outPath = path.join(dir, 'MATRIX_SUMMARY.md')
   fs.writeFileSync(outPath, markdown)
@@ -13,7 +25,12 @@ export function writeSummaryMarkdown({ summaryPath, markdown, suiteDir }) {
   return { outPath, stable }
 }
 
-export function updateReadmeBadge({ rootDir, counts }) {
+interface UpdateBadgeOptions {
+  rootDir: string
+  counts: AggregatedCounts
+}
+
+export function updateReadmeBadge({ rootDir, counts }: UpdateBadgeOptions): boolean {
   const readmePath = path.join(rootDir, 'README.md')
   if (!fs.existsSync(readmePath)) return false
 
@@ -28,7 +45,7 @@ export function updateReadmeBadge({ rootDir, counts }) {
     readme = readme.replace(new RegExp(`${begin}[\\n\\r\\s\\S]*?${end}`), replacement)
   } else {
     const lines = readme.split(/\r?\n/)
-    const idx = lines.findIndex(line => /^##\s+Compatibility\s*$/.test(line.trim()))
+    const idx = lines.findIndex((line: string) => /^##\s+Compatibility\s*$/.test(line.trim()))
     const insertAt = idx >= 0 ? idx + 1 : 0
     lines.splice(insertAt, 0, replacement, '')
     readme = lines.join('\n')

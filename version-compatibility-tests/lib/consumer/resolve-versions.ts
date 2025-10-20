@@ -1,37 +1,58 @@
 import { execSync } from 'node:child_process'
-import { assertAllowedPackage } from './pin-config.mjs'
+import { assertAllowedPackage } from './pin-config.js'
 
-function view(command) {
+export interface ResolveArgs {
+  react?: string
+  reactDom?: string
+  typescript?: string
+  vite?: string
+  pluginReact?: string
+  typesReact?: string
+  typesReactDom?: string
+  biome?: string
+  eslint?: string
+  eslintJs?: string
+  tsEslintParser?: string
+  eslintConfigPrettier?: string
+  prettier?: string
+}
+
+export interface ResolveVersionsResult {
+  versions: Record<string, string>
+  lintDevDeps: Record<string, string>
+}
+
+function view(command: string): string {
   return execSync(command, { stdio: 'pipe' }).toString().trim()
 }
 
-export function getLatest(name) {
+export function getLatest(name: string): string {
   assertAllowedPackage(name)
   return view(`pnpm view ${name} version`)
 }
 
-export function pickLatestForMajor(versions, major) {
+export function pickLatestForMajor(versions: string[], major: string): string | null {
   const filtered = versions.filter(v => String(v).startsWith(`${major}.`))
   return filtered[filtered.length - 1] || null
 }
 
-export function getLatestForMajor(name, major) {
+export function getLatestForMajor(name: string, major: string): string {
   assertAllowedPackage(name)
   try {
     const raw = view(`pnpm view ${name} versions --json`)
-    const versions = JSON.parse(raw)
+    const versions = JSON.parse(raw) as string[]
     return pickLatestForMajor(versions, major) || getLatest(name)
   } catch {
     return getLatest(name)
   }
 }
 
-export function resolveConsumerVersions(args) {
+export function resolveConsumerVersions(args: ResolveArgs): ResolveVersionsResult {
   const react = args.react || getLatest('react')
   const reactDom = args.reactDom || getLatest('react-dom')
   const reactMajor = String(react).split('.')[0]
 
-  const versions = {
+  const versions: Record<string, string> = {
     react,
     'react-dom': reactDom,
     typescript: args.typescript || getLatest('typescript'),
@@ -41,7 +62,7 @@ export function resolveConsumerVersions(args) {
     '@vitejs/plugin-react': args.pluginReact || getLatest('@vitejs/plugin-react')
   }
 
-  const lintDevDeps = {}
+  const lintDevDeps: Record<string, string> = {}
 
   if (args.biome) {
     assertAllowedPackage('@biomejs/biome')

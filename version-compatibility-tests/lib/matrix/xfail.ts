@@ -1,4 +1,16 @@
-export function validateXfailEntry(entry, runtimeIds) {
+import type { ScenarioDefinition, LinterFamily } from '../../types/compat.js'
+
+export interface XfailEntry {
+  runtime?: string
+  react: string
+  typescript: string
+  linter: LinterFamily
+  biome?: string
+  eslint?: string
+  prettier?: string
+}
+
+export function validateXfailEntry(entry: XfailEntry, runtimeIds?: Set<string>): void {
   if (!entry || typeof entry !== 'object') throw new Error('entry must be an object')
   if (!entry.react) throw new Error('missing "react" field')
   if (!entry.typescript) throw new Error('missing "typescript" field')
@@ -18,7 +30,7 @@ export function validateXfailEntry(entry, runtimeIds) {
   }
 }
 
-export function matchesXfail(entry, scenario) {
+export function matchesXfail(entry: XfailEntry, scenario: ScenarioDefinition): boolean {
   if (entry.runtime && entry.runtime !== scenario.runtime?.id) return false
   if (entry.react && entry.react !== scenario.react) return false
   if (entry.typescript && entry.typescript !== scenario.typescript) return false

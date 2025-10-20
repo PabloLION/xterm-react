@@ -1,8 +1,15 @@
-import fs from 'node:fs'
-import path from 'node:path'
-import { runCommandStreaming } from '../cli/run-command.mjs'
+import * as fs from 'node:fs'
+import * as path from 'node:path'
+import { runCommandStreaming } from '../cli/run-command.js'
 
-export function ensureTarball({ providedTarball, repoRoot, distDir, logPrefix }) {
+interface EnsureTarballOptions {
+  providedTarball?: string | null
+  repoRoot: string
+  distDir: string
+  logPrefix: string
+}
+
+export function ensureTarball({ providedTarball, repoRoot, distDir, logPrefix }: EnsureTarballOptions): string {
   fs.mkdirSync(distDir, { recursive: true })
 
   if (providedTarball) {
@@ -28,16 +35,14 @@ export function ensureTarball({ providedTarball, repoRoot, distDir, logPrefix })
   runCommandStreaming('pnpm pack --pack-destination version-compatibility-tests/dist', { cwd: repoRoot })
   const latest = fs
     .readdirSync(distDir)
-    .filter(f => f.endsWith('.tgz'))
-    .map(f => ({ f, t: fs.statSync(path.join(distDir, f)).ctimeMs }))
+    .filter((file): file is string => file.endsWith('.tgz'))
+    .map(file => ({ file, time: fs.statSync(path.join(distDir, file)).ctimeMs }))
     .sort((a, b) => {
-      const diff = b.t - a.t
-      return diff !== 0 ? diff : b.f.localeCompare(a.f)
+      const diff = b.time - a.time
+      return diff !== 0 ? diff : a.file.localeCompare(b.file)
     })[0]
-
   if (!latest) {
     throw new Error(`${logPrefix} No packed tarball found under version-compatibility-tests/dist`)
   }
-
-  return latest.f
+  return latest.file
 }

@@ -1,11 +1,14 @@
-function slug(parts) {
+import type { ScenarioDefinition, RuntimeDescriptor, LinterFamily } from '../../types/compat.js'
+import type { EslintProfile } from '../cli/args.js'
+
+function slug(parts: string[]): string {
   return parts
     .map(part => part.replace(/[^a-z0-9.\-]+/gi, '-'))
     .join('+')
     .toLowerCase()
 }
 
-export function scenarioSlug(details) {
+export function scenarioSlug(details: ScenarioDefinition): string {
   const base = [`runtime-${details.runtime.label}`, `react-${details.react}`, `ts-${details.typescript}`]
   if (details.linter.tool === 'biome') {
     base.push(`biome-${details.linter.version}`)
@@ -13,6 +16,16 @@ export function scenarioSlug(details) {
     base.push(`eslint-${details.linter.eslint}`, `prettier-${details.linter.prettier}`)
   }
   return slug(base)
+}
+
+interface BuildScenariosOptions {
+  runtimes: RuntimeDescriptor[]
+  reacts: string[]
+  typescriptVersions: string[]
+  linterFamilies: Set<LinterFamily>
+  biomeVersions: string[]
+  eslintProfiles: EslintProfile[]
+  prettierVersions: string[]
 }
 
 export function buildScenarios({
@@ -23,8 +36,8 @@ export function buildScenarios({
   biomeVersions,
   eslintProfiles,
   prettierVersions
-}) {
-  const scenarios = []
+}: BuildScenariosOptions): ScenarioDefinition[] {
+  const scenarios: ScenarioDefinition[] = []
   const families = Array.from(linterFamilies)
   for (const runtime of runtimes) {
     for (const react of reacts) {

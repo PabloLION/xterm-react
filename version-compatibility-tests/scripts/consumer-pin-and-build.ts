@@ -1,23 +1,28 @@
 #!/usr/bin/env node
-// NOTE: This script stays as ESM JavaScript so it can run directly via `node`
-// within CI without a separate build step. Type coverage is exercised in tests.
-import fs from 'node:fs'
-import path from 'node:path'
+// NOTE: Executed via `tsx` so we can leverage TypeScript directly in CI.
+import * as fs from 'node:fs'
+import * as path from 'node:path'
 import { pathToFileURL } from 'node:url'
-import { ensureTarball } from '../lib/consumer/tarball.mjs'
-import { resolveConsumerVersions } from '../lib/consumer/resolve-versions.mjs'
-import { applyPins, restorePackage } from '../lib/consumer/apply-pins.mjs'
-import { runConsumerBuild } from '../lib/consumer/build.mjs'
+import { ensureTarball } from '../lib/consumer/tarball.js'
+import { resolveConsumerVersions, type ResolveArgs } from '../lib/consumer/resolve-versions.js'
+import { applyPins, restorePackage } from '../lib/consumer/apply-pins.js'
+import { runConsumerBuild } from '../lib/consumer/build.js'
 
-export { assertAllowedPackage } from '../lib/consumer/pin-config.mjs'
-export { pickLatestForMajor } from '../lib/consumer/resolve-versions.mjs'
+export { assertAllowedPackage } from '../lib/consumer/pin-config.js'
+export { pickLatestForMajor } from '../lib/consumer/resolve-versions.js'
 
 const repoRoot = process.cwd()
 const distDir = path.join(repoRoot, 'version-compatibility-tests', 'dist')
 const LOG_PREFIX = '[pin-and-build]'
 
-function parseArgs(argv) {
-  const out = { keepPins: false, tarball: null }
+interface ParsedArgs extends ResolveArgs {
+  keepPins: boolean
+  tarball: string | null
+  appDir?: string
+}
+
+function parseArgs(argv: string[]): ParsedArgs {
+  const out: ParsedArgs = { keepPins: false, tarball: null }
   for (let i = 2; i < argv.length; i++) {
     const a = argv[i]
     const v = argv[i + 1]
@@ -39,7 +44,9 @@ function parseArgs(argv) {
       case '--eslint-config-prettier': out.eslintConfigPrettier = v; i++; break
       case '--keep-pins': out.keepPins = true; break
       case '--help':
-        console.log(`${LOG_PREFIX} Usage: node consumer-pin-and-build.mjs [--react <ver>] [--react-dom <ver>] [--typescript <ver>] [--vite <ver>] [--plugin-react <ver>] [--types-react <ver>] [--types-react-dom <ver>] [--biome <ver>] [--eslint <ver>] [--eslint-js <ver>] [--ts-eslint-parser <ver>] [--prettier <ver>] [--eslint-config-prettier <ver>] [--tarball <path>] [--app-dir <dir>] [--keep-pins]`)
+        console.log(
+          `${LOG_PREFIX} Usage: tsx consumer-pin-and-build.ts [--react <ver>] [--react-dom <ver>] [--typescript <ver>] [--vite <ver>] [--plugin-react <ver>] [--types-react <ver>] [--types-react-dom <ver>] [--biome <ver>] [--eslint <ver>] [--eslint-js <ver>] [--ts-eslint-parser <ver>] [--prettier <ver>] [--eslint-config-prettier <ver>] [--tarball <path>] [--app-dir <dir>] [--keep-pins]`
+        )
         process.exit(0)
       default:
         break
@@ -48,7 +55,7 @@ function parseArgs(argv) {
   return out
 }
 
-function main() {
+function main(): void {
   try {
     const args = parseArgs(process.argv)
     const appDir = (() => {

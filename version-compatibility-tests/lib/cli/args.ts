@@ -1,5 +1,5 @@
-export function parseListArg(argv, names) {
-  let lastMatch = null
+export function parseListArg(argv: string[], names: string[]): string[] | null {
+  let lastMatch: string | null = null
   for (let i = 0; i < argv.length; i++) {
     const token = argv[i]
     if (!names.includes(token)) continue
@@ -15,16 +15,21 @@ export function parseListArg(argv, names) {
     .filter(Boolean)
 }
 
-export function warnDeprecated(argv, logPrefix, oldName, newName) {
+export function warnDeprecated(argv: string[], logPrefix: string, oldName: string, newName: string): void {
   if (argv.includes(`--${oldName}`)) {
     console.warn(`${logPrefix} --${oldName} is deprecated; use --${newName}`)
   }
 }
 
-export function filterAllowed(logPrefix, label, current, requested) {
+export function filterAllowed(
+  logPrefix: string,
+  label: string,
+  current: string[],
+  requested: string[]
+): string[] {
   const set = new Set(current)
-  const out = []
-  const bad = []
+  const out: string[] = []
+  const bad: string[] = []
   for (const value of requested) {
     if (set.has(value)) out.push(value)
     else bad.push(value)
@@ -35,9 +40,19 @@ export function filterAllowed(logPrefix, label, current, requested) {
   return out.length ? out : current
 }
 
-export function filterEslintProfiles(logPrefix, requested, available) {
-  const map = new Map(available.map(profile => [profile.eslint, profile]))
-  const out = requested.map(ver => map.get(ver)).filter(Boolean)
+export interface EslintProfile {
+  eslint: string
+  eslintJs: string
+  tsParser: string
+}
+
+export function filterEslintProfiles(
+  logPrefix: string,
+  requested: string[],
+  available: EslintProfile[]
+): EslintProfile[] {
+  const map = new Map<string, EslintProfile>(available.map(profile => [profile.eslint, profile]))
+  const out = requested.map(ver => map.get(ver)).filter((profile): profile is EslintProfile => Boolean(profile))
   if (out.length !== requested.length) {
     const bad = requested.filter(ver => !map.has(ver))
     console.warn(`${logPrefix} Ignoring unsupported eslint values: ${bad.join(', ')}`)

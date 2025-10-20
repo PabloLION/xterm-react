@@ -1,26 +1,47 @@
-function ensureCounter(map, key) {
+import type { ScenarioResult, ScenarioResultOutcome, AggregatedCounts } from '../../types/compat.js'
+
+type OutcomeBreakdown = Omit<AggregatedCounts, 'total'>
+
+interface AggregatedSummary {
+  counts: AggregatedCounts
+  byRuntime: Map<string, OutcomeBreakdown>
+  byReact: Map<string, OutcomeBreakdown>
+  byLinter: Map<string, OutcomeBreakdown>
+  lintSets: {
+    biome: Set<string>
+    eslint: Set<string>
+    prettier: Set<string>
+  }
+  fails: ScenarioResult[]
+  xfails: ScenarioResult[]
+  xpasses: ScenarioResult[]
+}
+
+function ensureCounter(map: Map<string, OutcomeBreakdown>, key: string): OutcomeBreakdown {
   if (!map.has(key)) {
     map.set(key, { PASS: 0, FAIL: 0, XFAIL: 0, XPASS: 0 })
   }
-  return map.get(key)
+  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+  return map.get(key)!
 }
 
-export function aggregateResults(results) {
-  const counts = { PASS: 0, FAIL: 0, XFAIL: 0, XPASS: 0 }
-  const byRuntime = new Map()
-  const byReact = new Map()
-  const byLinter = new Map()
+export function aggregateResults(results: ScenarioResult[]): AggregatedSummary {
+  const counts: AggregatedCounts = { PASS: 0, FAIL: 0, XFAIL: 0, XPASS: 0, total: results.length }
+  const byRuntime = new Map<string, OutcomeBreakdown>()
+  const byReact = new Map<string, OutcomeBreakdown>()
+  const byLinter = new Map<string, OutcomeBreakdown>()
   const lintSets = {
-    biome: new Set(),
-    eslint: new Set(),
-    prettier: new Set()
+    biome: new Set<string>(),
+    eslint: new Set<string>(),
+    prettier: new Set<string>()
   }
-  const fails = []
-  const xfails = []
-  const xpasses = []
+  const fails: ScenarioResult[] = []
+  const xfails: ScenarioResult[] = []
+  const xpasses: ScenarioResult[] = []
 
   for (const scenario of results) {
-    const outcome = scenario.outcome || (scenario.steps?.build && scenario.steps?.pin_and_build ? 'PASS' : 'FAIL')
+    const outcome: ScenarioResultOutcome =
+      scenario.outcome || (scenario.steps?.build && scenario.steps?.pin_and_build ? 'PASS' : 'FAIL')
     counts[outcome] = (counts[outcome] ?? 0) + 1
 
     const runtimeInfo = scenario.versions?.runtime
@@ -48,7 +69,7 @@ export function aggregateResults(results) {
   }
 
   return {
-    counts: { ...counts, total: results.length },
+    counts,
     byRuntime,
     byReact,
     byLinter,
@@ -59,7 +80,7 @@ export function aggregateResults(results) {
   }
 }
 
-export function renderMarkdown(summaryPath, aggregates) {
+export function renderMarkdown(summaryPath: string, aggregates: AggregatedSummary): string {
   const { counts, byRuntime, byReact, byLinter, lintSets, fails, xfails, xpasses } = aggregates
   let md = ''
   md += `# Compatibility Matrix Summary\n\n`

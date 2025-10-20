@@ -1,10 +1,32 @@
-import fs from 'node:fs'
-import path from 'node:path'
+import * as fs from 'node:fs'
+import * as path from 'node:path'
 
-export function applyPins({ appDir, distDir, tarballName, versions, lintDevDeps }) {
+interface ApplyPinsOptions {
+  appDir: string
+  distDir: string
+  tarballName: string
+  versions: Record<string, string>
+  lintDevDeps: Record<string, string>
+}
+
+export interface ApplyPinsResult {
+  pkgPath: string
+  originalPkg: string
+}
+
+export function applyPins({
+  appDir,
+  distDir,
+  tarballName,
+  versions,
+  lintDevDeps
+}: ApplyPinsOptions): ApplyPinsResult {
   const pkgPath = path.join(appDir, 'package.json')
   const originalPkg = fs.readFileSync(pkgPath, 'utf8')
-  const pkg = JSON.parse(originalPkg)
+  const pkg = JSON.parse(originalPkg) as {
+    dependencies?: Record<string, string>
+    devDependencies?: Record<string, string>
+  }
 
   const tarballAbsolute = path.join(distDir, tarballName)
   const tarballRelative = path.relative(appDir, tarballAbsolute).split(path.sep).join('/')
@@ -31,6 +53,6 @@ export function applyPins({ appDir, distDir, tarballName, versions, lintDevDeps 
   return { pkgPath, originalPkg }
 }
 
-export function restorePackage(pkgPath, contents) {
+export function restorePackage(pkgPath: string, contents: string): void {
   fs.writeFileSync(pkgPath, contents)
 }
