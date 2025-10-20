@@ -71,7 +71,6 @@ jobs:
         if: >-
           ${{
             github.event_name == 'workflow_dispatch'
-            && matrix.suite.label == 'latest-supported'
             && github.event.inputs.run_latest != 'true'
             && github.event.inputs.run_oldest != 'true'
           }}
