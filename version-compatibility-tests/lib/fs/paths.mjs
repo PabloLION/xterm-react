@@ -7,6 +7,7 @@ export const appDir = path.join(suiteDir, 'consumer-app')
 export const distDir = path.join(suiteDir, 'dist')
 export const workRootDir = path.join(suiteDir, '.work')
 export const latestPointerPath = path.join(suiteDir, 'MATRIX_LATEST.json')
+export const logsDir = path.join(suiteDir, 'logs')
 
 export function createLogsRoot(timestamp = new Date()) {
   const dirName = timestamp.toISOString().replace(/[:.]/g, '-')
