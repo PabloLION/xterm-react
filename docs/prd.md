@@ -230,7 +230,7 @@ so that we can validate the library across the environments we claim to support.
 
 Acceptance Criteria:
 
-1. Extend matrix configuration to add a “runtime” dimension covering Node 14.x (legacy support), Node 16.x (maintenance), Node 18 LTS, Node 20 LTS, Node 24.x (current), Node 25+ (“current” branch), plus Bun stable releases.
+1. Extend matrix configuration to add a “runtime” dimension covering Node 14.x (legacy support), Node 16.x (maintenance), Node 18 LTS, Node 20 LTS, Node 24.x (current), the next odd-numbered Node release once it ships, plus Bun stable releases.
 2. Provide CLI flags to select runtime(s) for local runs (e.g., `--runtime node20`, `--runtime bun-stable`), with a sensible default (latest Node LTS).
 3. Document how runtimes combine with consumer type (JS/TS) so the matrix doesn’t explode; support curated subsets and guard against unsupported combinations.
 

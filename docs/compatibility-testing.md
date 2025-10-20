@@ -69,7 +69,7 @@ The current matrix runs on the host runtime (Node 18.x in CI) while we build out
 | Node 24.x    | Active LTS                             | Latest compatibility lane and release gate.                 |
 | Bun (stable) | Continuous releases                    | (lane pending) No LTS program; track stable channel.        |
 
-> We will add the next odd-numbered Node release (e.g., Node 25) after the Foundation announces the schedule and preview builds are available.
+> We will add the next odd-numbered Node release once the Node.js Foundation publishes an official schedule and preview builds; until then the table only lists versions that exist today.
 
 Legacy Node 14/16/18 have exited vendor support, so they are intentionally omitted from the future matrix; we’ll focus on currently supported LTS/current streams going forward. When the runtime column lands, matrix flags such as `--runtime node20` or `--runtime node24` will select the appropriate toolchain, and the README will surface a runtime support badge. Until then, use the table above to decide which local environment to test against and consult Epic 5 for implementation progress. Bun support will land in a later iteration; until then the runner will treat bun requests as unsupported.
 
