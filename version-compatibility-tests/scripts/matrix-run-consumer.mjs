@@ -19,6 +19,8 @@ import {
 import { parseListArg, warnDeprecated, filterAllowed, filterEslintProfiles } from '../lib/cli/args.mjs'
 import { runtimeCatalog, runtimeIds, findRuntime, resolveRuntimes, DEFAULT_RUNTIME_IDS } from '../lib/runtime/catalog.mjs'
 import { createRuntimeController } from '../lib/runtime/activation.mjs'
+import { buildScenarios, scenarioSlug } from '../lib/matrix/scenarios.mjs'
+import { validateXfailEntry, matchesXfail } from '../lib/matrix/xfail.mjs'
 
 const LOG_PREFIX = '[matrix]'
 const MAX_INLINE_LOG_LINES = 1000
@@ -51,33 +53,13 @@ const XFAIL = (() => {
   }
   return raw.map((entry, index) => {
     try {
-      validateXfailEntry(entry)
+      validateXfailEntry(entry, RUNTIME_IDS)
     } catch (error) {
       throw new Error(`${LOG_PREFIX} Invalid xfail entry at index ${index}: ${error.message}`)
     }
     return entry
   })
 })()
-
-export function validateXfailEntry(entry) {
-  if (!entry || typeof entry !== 'object') throw new Error('entry must be an object')
-  if (!entry.react) throw new Error('missing "react" field')
-  if (!entry.typescript) throw new Error('missing "typescript" field')
-  if (!entry.linter) throw new Error('missing "linter" field')
-  if (entry.runtime) {
-    if (typeof entry.runtime !== 'string') throw new Error('"runtime" must be a string when provided')
-    if (!RUNTIME_IDS.has(entry.runtime)) throw new Error(`runtime "${entry.runtime}" is not recognised`)
-  }
-
-  if (entry.linter === 'biome') {
-    if (!entry.biome) throw new Error('biome entries must include "biome" version')
-  } else if (entry.linter === 'eslint-prettier') {
-    if (!entry.eslint) throw new Error('eslint-prettier entries must include "eslint" version')
-    if (!entry.prettier) throw new Error('eslint-prettier entries must include "prettier" version')
-  } else {
-    throw new Error(`unsupported linter "${entry.linter}"`)
-  }
-}
 
 const DEFAULT_REACTS = ['18.3.1', '19.1.1']
 const DEFAULT_TYPESCRIPT = ['5.2.2', '5.4.5', '5.9.3']
@@ -162,13 +144,6 @@ if (runtimeArg) {
 warnDeprecated(argv, LOG_PREFIX, 'reacts', 'react')
 warnDeprecated(argv, LOG_PREFIX, 'types', 'typescript')
 
-function slug(parts) {
-  return parts
-    .map(part => part.replace(/[^a-z0-9.\-]+/gi, '-'))
-    .join('+')
-    .toLowerCase()
-}
-
 function shellQuote(value) {
   if (!value || /^[A-Za-z0-9_.\-\/]+$/.test(value)) return value
   return `"${value.replace(/(["\\$`])/g, '\\$1')}"`
@@ -204,98 +179,6 @@ function shAsync(cmd, cwd, logFile, label) {
     }
   })
     .then(result => ({ ok: result.ok, out: result.out }))
-}
-
-/**
- * Generate a slug identifier for a scenario
- * @param {Object} details - Scenario details
- * @param {string} details.react - React version
- * @param {string} details.typescript - TypeScript version
- * @param {Object} details.linter - Linter configuration
- * @returns {string} Slug string
- */
-function scenarioSlug(details) {
-  const base = [`runtime-${details.runtime.label}`, `react-${details.react}`, `ts-${details.typescript}`]
-  if (details.linter.tool === 'biome') {
-    base.push(`biome-${details.linter.version}`)
-  } else {
-    base.push(`eslint-${details.linter.eslint}`, `prettier-${details.linter.prettier}`)
-  }
-  return slug(base)
-}
-
-/**
- * Generate list of all test scenarios from configured version matrices
- * @returns {Array<Object>} Array of scenario objects
- */
-function listScenarios() {
-  const scenarios = []
-  const lintFamilies = Array.from(LINTER_FAMILIES)
-  for (const runtime of RUNTIMES) {
-    for (const react of REACTS) {
-      for (const typescript of TYPESCRIPT_VERSIONS) {
-        for (const family of lintFamilies) {
-          if (family === 'biome') {
-            for (const version of BIOME_VERSIONS) {
-              scenarios.push({
-                runtime,
-                react,
-                typescript,
-                linter: { tool: 'biome', version }
-              })
-            }
-          } else if (family === 'eslint-prettier') {
-            for (const eslintProfile of ESLINT_VERSIONS) {
-              for (const prettier of PRETTIER_VERSIONS) {
-                scenarios.push({
-                  runtime,
-                  react,
-                  typescript,
-                  linter: {
-                    tool: 'eslint-prettier',
-                    eslint: eslintProfile.eslint,
-                    eslintJs: eslintProfile.eslintJs,
-                    tsParser: eslintProfile.tsParser,
-                    prettier
-                  }
-                })
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-  return scenarios
-}
-
-/**
- * Check if an XFAIL entry matches a scenario
- * @param {Object} entry - XFAIL entry from xfail.json
- * @param {Object} scenario - Test scenario
- * @param {Object} scenario.runtime - Runtime descriptor
- * @param {string} scenario.react - React version
- * @param {string} scenario.typescript - TypeScript version
- * @param {Object} scenario.linter - Linter configuration
- * @param {string} scenario.linter.tool - Linter tool name ('biome' or 'eslint-prettier')
- * @returns {boolean}
- */
-export function matchesXfail(entry, scenario) {
-  if (entry.runtime && entry.runtime !== scenario.runtime?.id) return false
-  if (entry.react && entry.react !== scenario.react) return false
-  if (entry.typescript && entry.typescript !== scenario.typescript) return false
-  const tool = scenario.linter.tool
-  if (tool === 'biome') {
-    if (entry.linter && entry.linter !== 'biome') return false
-    if (entry.biome && entry.biome !== scenario.linter.version) return false
-    if (entry.eslint || entry.prettier) return false
-  } else {
-    if (entry.linter && entry.linter !== 'eslint-prettier') return false
-    if (entry.eslint && entry.eslint !== scenario.linter.eslint) return false
-    if (entry.prettier && entry.prettier !== scenario.linter.prettier) return false
-    if (entry.biome) return false
-  }
-  return true
 }
 
 /**
@@ -556,7 +439,15 @@ async function main() {
     }
     const tgz = tgzPath
 
-    const scenarios = listScenarios()
+    const scenarios = buildScenarios({
+      runtimes: RUNTIMES,
+      reacts: REACTS,
+      typescriptVersions: TYPESCRIPT_VERSIONS,
+      linterFamilies: LINTER_FAMILIES,
+      biomeVersions: BIOME_VERSIONS,
+      eslintProfiles: ESLINT_VERSIONS,
+      prettierVersions: PRETTIER_VERSIONS
+    })
     const scenariosByRuntime = new Map()
     for (const scenario of scenarios) {
       const list = scenariosByRuntime.get(scenario.runtime.id) || []
