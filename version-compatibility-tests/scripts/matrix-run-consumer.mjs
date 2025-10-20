@@ -451,9 +451,11 @@ function parseParallel() {
   const idx = process.argv.indexOf('--parallel')
   let value = idx !== -1 ? parseInt(process.argv[idx + 1], 10) : parseInt(process.env.PARALLEL || '1', 10)
   if (!Number.isFinite(value) || value < 1) value = 1
-  value = Math.min(value, 8)
+  value = Math.min(value, MAX_PARALLEL_WORKERS)
   return value
 }
+
+const MAX_PARALLEL_WORKERS = 8
 
 const WORKER_ALWAYS_COPY = new Set([
   'package.json',
