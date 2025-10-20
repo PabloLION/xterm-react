@@ -210,6 +210,20 @@ function slug(parts) {
     .toLowerCase()
 }
 
+function readLogTail(logFile, label, maxLines = 400) {
+  if (!logFile) return
+  try {
+    const content = fs.readFileSync(logFile, 'utf8')
+    const lines = content.split(/\r?\n/)
+    const tail = lines.slice(-maxLines).join('\n')
+    console.log(`${LOG_PREFIX} ----- ${label} (tail) -----`)
+    console.log(tail)
+    console.log(`${LOG_PREFIX} ----- end ${label} -----`)
+  } catch (error) {
+    console.warn(`${LOG_PREFIX} Failed to read ${label} log: ${error?.message || error}`)
+  }
+}
+
 function sh(cmd, cwd, logFile) {
   try {
     const out = execSync(cmd, { cwd, stdio: 'pipe' }).toString()
@@ -222,12 +236,16 @@ function sh(cmd, cwd, logFile) {
   }
 }
 
-function shAsync(cmd, cwd, logFile) {
+function shAsync(cmd, cwd, logFile, label) {
   return new Promise(resolve => {
     exec(cmd, { cwd, maxBuffer: MAX_EXEC_BUFFER }, (error, stdout, stderr) => {
       const out = `${stdout || ''}${stderr ? '\n' + stderr : ''}`
       if (logFile) fs.writeFileSync(logFile, out)
-      resolve({ ok: !error, out })
+      const ok = !error
+      if (!ok && logFile && label) {
+        readLogTail(logFile, label)
+      }
+      resolve({ ok, out })
     })
   })
 }
@@ -362,19 +380,27 @@ async function runScenario(scenario, tarballName, appDirForRun) {
   }
 
   const pinCmd = `node version-compatibility-tests/scripts/consumer-pin-and-build.mjs ${args.join(' ')}`
-  const pinRes = await shAsync(pinCmd, root, path.join(dir, 'pin-and-build.log'))
+  const pinLog = path.join(dir, 'pin-and-build.log')
+  const pinRes = await shAsync(pinCmd, root, pinLog, `${scenarioId} pin-and-build`)
 
-  const buildRes = await shAsync('pnpm exec vite build', appDirForRun, path.join(dir, 'build.log'))
+  const buildLog = path.join(dir, 'build.log')
+  const buildRes = await shAsync('pnpm exec vite build', appDirForRun, buildLog, `${scenarioId} vite-build`)
 
   const lintSteps = {}
   if (linter.tool === 'biome') {
-    lintSteps.biome = await shAsync('pnpm exec biome check src', appDirForRun, path.join(dir, 'biome.log'))
+    lintSteps.biome = await shAsync('pnpm exec biome check src', appDirForRun, path.join(dir, 'biome.log'), `${scenarioId} biome`)
   } else {
-    lintSteps.eslint = await shAsync('pnpm exec eslint --config eslint.config.mjs "src/**/*.{ts,tsx,js,jsx}"', appDirForRun, path.join(dir, 'eslint.log'))
+    lintSteps.eslint = await shAsync(
+      'pnpm exec eslint --config eslint.config.mjs "src/**/*.{ts,tsx,js,jsx}"',
+      appDirForRun,
+      path.join(dir, 'eslint.log'),
+      `${scenarioId} eslint`
+    )
     lintSteps.prettier = await shAsync(
       'pnpm exec prettier --config .prettierrc.json --check "src/**/*.{ts,tsx,js,jsx}"',
       appDirForRun,
-      path.join(dir, 'prettier.log')
+      path.join(dir, 'prettier.log'),
+      `${scenarioId} prettier`
     )
   }
 
