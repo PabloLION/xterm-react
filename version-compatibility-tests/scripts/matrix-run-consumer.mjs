@@ -210,7 +210,21 @@ function slug(parts) {
     .toLowerCase()
 }
 
+<<<<<<< Updated upstream
+function shellQuote(value) {
+  if (!value || /^[A-Za-z0-9_.\-\/]+$/.test(value)) return value
+  return `"${value.replace(/(["\\$`])/g, '\\$1')}"`
+}
+
 function readLogTail(logFile, label, maxLines = MAX_INLINE_LOG_LINES) {
+=======
+function shellQuote(value) {
+  if (!value || /^[A-Za-z0-9_.\-\/]+$/.test(value)) return value
+  return `"${value.replace(/(["\\$`])/g, '\\$1')}"`
+}
+
+function readLogTail(logFile, label, maxLines = 400) {
+>>>>>>> Stashed changes
   if (!logFile) return
   try {
     const content = fs.readFileSync(logFile, 'utf8')
@@ -358,9 +372,10 @@ async function runScenario(scenario, tarballName, appDirForRun) {
   const dir = path.join(logsRoot, scenarioId)
   fs.mkdirSync(dir, { recursive: true })
 
-  const tarballArg = path.isAbsolute(tarballName)
+  const tarballPath = path.isAbsolute(tarballName)
     ? tarballName
     : path.join('version-compatibility-tests', 'dist', tarballName)
+  const tarballArg = shellQuote(tarballPath)
 
   const args = [
     `--react ${react}`,
