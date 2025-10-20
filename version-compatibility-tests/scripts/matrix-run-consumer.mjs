@@ -16,6 +16,7 @@ import {
   ensureWorkDir,
   writeLatestSummaryPointer
 } from '../lib/fs/paths.mjs'
+import { parseListArg, warnDeprecated, filterAllowed, filterEslintProfiles } from '../lib/cli/args.mjs'
 import { runtimeCatalog, runtimeIds, findRuntime, resolveRuntimes, DEFAULT_RUNTIME_IDS } from '../lib/runtime/catalog.mjs'
 import { createRuntimeController } from '../lib/runtime/activation.mjs'
 
@@ -23,6 +24,7 @@ const LOG_PREFIX = '[matrix]'
 const MAX_INLINE_LOG_LINES = 1000
 const root = rootDir
 const logsRoot = createLogsRoot()
+const argv = process.argv.slice(2)
 const originalPnpmHome = process.env.PNPM_HOME
 const originalPath = process.env.PATH || ''
 let runtimePnpmHome = null
@@ -100,54 +102,6 @@ const { ensureRuntime, restoreRuntime } = createRuntimeController({
   logPrefix: LOG_PREFIX
 })
 
-function parseListArg(names) {
-  const argv = process.argv.slice(2)
-  let lastMatch = null
-  for (let i = 0; i < argv.length; i++) {
-    const token = argv[i]
-    if (!names.includes(token)) continue
-    const value = argv[i + 1]
-    if (!value) continue
-    lastMatch = value
-    i += 1
-  }
-  if (!lastMatch) return null
-  return lastMatch
-    .split(',')
-    .map(part => part.trim())
-    .filter(Boolean)
-}
-
-function warnDeprecated(oldName, newName) {
-  if (process.argv.includes(`--${oldName}`)) {
-    console.warn(`${LOG_PREFIX} --${oldName} is deprecated; use --${newName}`)
-  }
-}
-
-function filterAllowed(name, current, requested) {
-  const set = new Set(current)
-  const out = []
-  const bad = []
-  for (const value of requested) {
-    if (set.has(value)) out.push(value)
-    else bad.push(value)
-  }
-  if (bad.length) {
-    console.warn(`${LOG_PREFIX} Ignoring unsupported ${name} values: ${bad.join(', ')}`)
-  }
-  return out.length ? out : current
-}
-
-function filterEslintProfiles(requested) {
-  const map = new Map(ESLINT_VERSIONS.map(profile => [profile.eslint, profile]))
-  const out = requested.map(ver => map.get(ver)).filter(Boolean)
-  if (out.length !== requested.length) {
-    const bad = requested.filter(ver => !map.has(ver))
-    console.warn(`${LOG_PREFIX} Ignoring unsupported eslint values: ${bad.join(', ')}`)
-  }
-  return out.length ? out : ESLINT_VERSIONS
-}
-
 const quick = process.env.QUICK === '1' || process.argv.includes('--quick')
 if (quick) {
   REACTS = [REACTS[REACTS.length - 1]]
@@ -157,19 +111,19 @@ if (quick) {
   PRETTIER_VERSIONS = [PRETTIER_VERSIONS[PRETTIER_VERSIONS.length - 1]]
 }
 
-const reactArg = parseListArg(['--react', '-r'])
-const tsArg = parseListArg(['--typescript', '-t'])
-const biomeArg = parseListArg(['--biome', '-b'])
-const eslintArg = parseListArg(['--eslint'])
-const prettierArg = parseListArg(['--prettier'])
-const linterFamilyArg = parseListArg(['--linter', '-l'])
-const runtimeArg = parseListArg(['--runtime'])
+const reactArg = parseListArg(argv, ['--react', '-r'])
+const tsArg = parseListArg(argv, ['--typescript', '-t'])
+const biomeArg = parseListArg(argv, ['--biome', '-b'])
+const eslintArg = parseListArg(argv, ['--eslint'])
+const prettierArg = parseListArg(argv, ['--prettier'])
+const linterFamilyArg = parseListArg(argv, ['--linter', '-l'])
+const runtimeArg = parseListArg(argv, ['--runtime'])
 
-if (reactArg) REACTS = filterAllowed('react', REACTS, reactArg)
-if (tsArg) TYPESCRIPT_VERSIONS = filterAllowed('typescript', TYPESCRIPT_VERSIONS, tsArg)
-if (biomeArg) BIOME_VERSIONS = filterAllowed('biome', BIOME_VERSIONS, biomeArg)
-if (eslintArg) ESLINT_VERSIONS = filterEslintProfiles(eslintArg)
-if (prettierArg) PRETTIER_VERSIONS = filterAllowed('prettier', PRETTIER_VERSIONS, prettierArg)
+if (reactArg) REACTS = filterAllowed(LOG_PREFIX, 'react', REACTS, reactArg)
+if (tsArg) TYPESCRIPT_VERSIONS = filterAllowed(LOG_PREFIX, 'typescript', TYPESCRIPT_VERSIONS, tsArg)
+if (biomeArg) BIOME_VERSIONS = filterAllowed(LOG_PREFIX, 'biome', BIOME_VERSIONS, biomeArg)
+if (eslintArg) ESLINT_VERSIONS = filterEslintProfiles(LOG_PREFIX, eslintArg, ESLINT_VERSIONS)
+if (prettierArg) PRETTIER_VERSIONS = filterAllowed(LOG_PREFIX, 'prettier', PRETTIER_VERSIONS, prettierArg)
 if (linterFamilyArg) {
   const allowed = new Set(['biome', 'eslint-prettier'])
   const next = new Set()
@@ -205,8 +159,8 @@ if (runtimeArg) {
   }
 }
 
-warnDeprecated('reacts', 'react')
-warnDeprecated('types', 'typescript')
+warnDeprecated(argv, LOG_PREFIX, 'reacts', 'react')
+warnDeprecated(argv, LOG_PREFIX, 'types', 'typescript')
 
 function slug(parts) {
   return parts
