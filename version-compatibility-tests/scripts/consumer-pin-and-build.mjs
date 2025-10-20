@@ -1,62 +1,20 @@
 #!/usr/bin/env node
 // NOTE: This script stays as ESM JavaScript so it can run directly via `node`
 // within CI without a separate build step. Type coverage is exercised in tests.
-import { execSync } from 'node:child_process'
 import fs from 'node:fs'
 import path from 'node:path'
 import { pathToFileURL } from 'node:url'
+import { ensureTarball } from '../lib/consumer/tarball.mjs'
+import { resolveConsumerVersions } from '../lib/consumer/resolve-versions.mjs'
+import { applyPins, restorePackage } from '../lib/consumer/apply-pins.mjs'
+import { runConsumerBuild } from '../lib/consumer/build.mjs'
+
+export { assertAllowedPackage } from '../lib/consumer/pin-config.mjs'
+export { pickLatestForMajor } from '../lib/consumer/resolve-versions.mjs'
 
 const repoRoot = process.cwd()
 const distDir = path.join(repoRoot, 'version-compatibility-tests', 'dist')
 const LOG_PREFIX = '[pin-and-build]'
-const MAX_EXEC_BUFFER = 10 * 1024 * 1024
-
-const ALLOWED_PACKAGES = new Set([
-  'react',
-  'react-dom',
-  'typescript',
-  '@types/react',
-  '@types/react-dom',
-  'vite',
-  '@vitejs/plugin-react',
-  '@biomejs/biome',
-  'eslint',
-  '@eslint/js',
-  '@typescript-eslint/parser',
-  'eslint-config-prettier',
-  'prettier'
-])
-
-export function assertAllowedPackage(name) {
-  if (!ALLOWED_PACKAGES.has(name)) {
-    throw new Error(`Package name not allowed: ${name}`)
-  }
-}
-
-function sh(cmd, opts = {}) {
-  return execSync(cmd, { stdio: 'inherit', ...opts })
-}
-
-function getLatest(name) {
-  assertAllowedPackage(name)
-  return execSync(`pnpm view ${name} version`, { stdio: 'pipe' }).toString().trim()
-}
-
-export function pickLatestForMajor(versions, major) {
-  const filtered = versions.filter(v => String(v).startsWith(`${major}.`))
-  return filtered[filtered.length - 1] || null
-}
-
-function getLatestForMajor(name, major) {
-  assertAllowedPackage(name)
-  try {
-    const raw = execSync(`pnpm view ${name} versions --json`, { stdio: 'pipe' }).toString()
-    const versions = JSON.parse(raw)
-    return pickLatestForMajor(versions, major) || getLatest(name)
-  } catch {
-    return getLatest(name)
-  }
-}
 
 function parseArgs(argv) {
   const out = { keepPins: false, tarball: null }
@@ -104,117 +62,27 @@ function main() {
       return real
     })()
 
-    const react = args.react || getLatest('react')
-    const reactDom = args.reactDom || getLatest('react-dom')
-    const reactMajor = String(react).split('.')[0]
-    const versions = {
-      react,
-      'react-dom': reactDom,
-      typescript: args.typescript || getLatest('typescript'),
-      '@types/react': args.typesReact || getLatestForMajor('@types/react', reactMajor),
-      '@types/react-dom': args.typesReactDom || getLatestForMajor('@types/react-dom', reactMajor),
-      vite: args.vite || getLatest('vite'),
-      '@vitejs/plugin-react': args.pluginReact || getLatest('@vitejs/plugin-react')
-    }
+    const { versions, lintDevDeps } = resolveConsumerVersions(args)
+    const tgz = ensureTarball({
+      providedTarball: args.tarball,
+      repoRoot,
+      distDir,
+      logPrefix: LOG_PREFIX
+    })
 
-    const lintDevDeps = {}
-    if (args.biome) {
-      assertAllowedPackage('@biomejs/biome')
-      lintDevDeps['@biomejs/biome'] = args.biome
-    }
-    if (args.eslint) {
-      assertAllowedPackage('eslint')
-      const eslintVersion = args.eslint
-      lintDevDeps.eslint = eslintVersion
-      const eslintJsVersion = args.eslintJs || eslintVersion
-      assertAllowedPackage('@eslint/js')
-      lintDevDeps['@eslint/js'] = eslintJsVersion
-      const parserVersion = args.tsEslintParser || getLatest('@typescript-eslint/parser')
-      assertAllowedPackage('@typescript-eslint/parser')
-      lintDevDeps['@typescript-eslint/parser'] = parserVersion
-      const configPrettier = args.eslintConfigPrettier || getLatest('eslint-config-prettier')
-      assertAllowedPackage('eslint-config-prettier')
-      lintDevDeps['eslint-config-prettier'] = configPrettier
-    }
-    if (args.prettier) {
-      assertAllowedPackage('prettier')
-      lintDevDeps.prettier = args.prettier
-    }
-
-    fs.mkdirSync(distDir, { recursive: true })
-    let tgz = null
-    if (args.tarball) {
-      const abs = path.isAbsolute(args.tarball) ? args.tarball : path.join(repoRoot, args.tarball)
-      if (!fs.existsSync(abs)) {
-        console.error(`${LOG_PREFIX} Provided tarball not found:`, abs)
-        process.exit(1)
-      }
-      if (!abs.endsWith('.tgz')) {
-        console.error(`${LOG_PREFIX} Provided tarball must be a .tgz file:`, abs)
-        process.exit(1)
-      }
-      const resolved = fs.realpathSync(abs)
-      const relToRepo = path.relative(repoRoot, resolved)
-      if (relToRepo.startsWith('..') || path.isAbsolute(relToRepo)) {
-        console.error(`${LOG_PREFIX} Provided tarball must be within the repository tree:`, abs)
-        process.exit(1)
-      }
-      tgz = path.basename(abs)
-      if (path.dirname(resolved) !== distDir) {
-        fs.copyFileSync(resolved, path.join(distDir, tgz))
-      }
-    } else {
-      sh('pnpm pack --pack-destination version-compatibility-tests/dist', { cwd: repoRoot })
-      tgz = fs
-        .readdirSync(distDir)
-        .filter(f => f.endsWith('.tgz'))
-        .map(f => ({ f, t: fs.statSync(path.join(distDir, f)).ctimeMs }))
-        .sort((a, b) => {
-          const diff = b.t - a.t
-          return diff !== 0 ? diff : b.f.localeCompare(a.f)
-        })[0]?.f
-      if (!tgz) {
-        console.error(`${LOG_PREFIX} No packed tarball found under version-compatibility-tests/dist`)
-        process.exit(1)
-      }
-    }
-
-    const pkgPath = path.join(appDir, 'package.json')
-    const originalPkg = fs.readFileSync(pkgPath, 'utf8')
-    const pkg = JSON.parse(originalPkg)
-    const tarballAbsolute = path.join(distDir, tgz)
-    const tarballRelative = path.relative(appDir, tarballAbsolute).split(path.sep).join('/')
-    const tarballSpecifier = tarballRelative.startsWith('.') ? `file:${tarballRelative}` : `file:./${tarballRelative}`
-    pkg.dependencies = {
-      ...(pkg.dependencies || {}),
-      react: versions.react,
-      'react-dom': versions['react-dom'],
-      '@pablo-lion/xterm-react': tarballSpecifier
-    }
-    pkg.devDependencies = {
-      ...(pkg.devDependencies || {}),
-      typescript: versions.typescript,
-      '@types/react': versions['@types/react'],
-      '@types/react-dom': versions['@types/react-dom'],
-      vite: versions.vite,
-      '@vitejs/plugin-react': versions['@vitejs/plugin-react'],
-      ...lintDevDeps
-    }
-    fs.writeFileSync(pkgPath, JSON.stringify(pkg, null, 2))
+    const { pkgPath, originalPkg } = applyPins({
+      appDir,
+      distDir,
+      tarballName: tgz,
+      versions,
+      lintDevDeps
+    })
 
     try {
-      sh('pnpm install', { cwd: appDir })
-      sh('pnpm exec vite build', { cwd: appDir })
-      if (args.biome) {
-        try {
-          sh('pnpm exec biome check --config-path biome.json .', { cwd: appDir })
-        } catch (error) {
-          console.warn(`${LOG_PREFIX} Biome check failed (non-blocking):`, error?.message || String(error))
-        }
-      }
+      runConsumerBuild({ appDir, logPrefix: LOG_PREFIX, hasBiome: Boolean(args.biome) })
     } finally {
       if (!args.keepPins) {
-        fs.writeFileSync(pkgPath, originalPkg)
+        restorePackage(pkgPath, originalPkg)
       }
     }
 
@@ -227,7 +95,8 @@ function main() {
     console.log(`${LOG_PREFIX} Consumer app built. Run \`pnpm exec vite preview\` in consumer app to view.`)
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error)
-    console.error(`${LOG_PREFIX} ${message}`)
+    const formatted = message.startsWith(LOG_PREFIX) ? message : `${LOG_PREFIX} ${message}`
+    console.error(formatted)
     process.exit(1)
   }
 }

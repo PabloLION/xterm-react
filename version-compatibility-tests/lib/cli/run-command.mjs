@@ -28,3 +28,7 @@ export function runCommandAsync(cmd, { cwd, logFile, onFailure } = {}) {
     })
   })
 }
+
+export function runCommandStreaming(cmd, { cwd } = {}) {
+  return execSync(cmd, { cwd, stdio: 'inherit' })
+}
