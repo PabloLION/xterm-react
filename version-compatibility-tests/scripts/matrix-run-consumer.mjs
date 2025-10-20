@@ -590,6 +590,16 @@ async function main() {
   let counts = null
   let hasBlockingOutcome = false
   try {
+    // Safety check: ensure distDir is exactly the expected directory
+    const expectedDistDir = path.join(suiteDir, 'dist')
+    const resolvedDistDir = path.resolve(distDir)
+    const resolvedExpectedDistDir = path.resolve(expectedDistDir)
+    if (resolvedDistDir !== resolvedExpectedDistDir) {
+      throw new Error(`${LOG_PREFIX} Refusing to delete unexpected distDir: ${distDir}`)
+    }
+    if (resolvedDistDir === root || resolvedDistDir === suiteDir) {
+      throw new Error(`${LOG_PREFIX} Refusing to delete root or suiteDir: ${distDir}`)
+    }
     fs.rmSync(distDir, { recursive: true, force: true })
     fs.mkdirSync(distDir, { recursive: true })
 
