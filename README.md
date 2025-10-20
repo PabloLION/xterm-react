@@ -5,7 +5,7 @@ This project provides a React component that integrates the [xterm.js](https://x
 ## Live Example
 
 - On Replit: <https://replit.com/@PabloLION/XTerm-React?v=1>
-- An example page with maybe GitHub Pages. #TODO
+- An example page, possibly with GitHub Pages. #TODO
 
 ## Usage
 
