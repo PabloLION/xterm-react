@@ -5,15 +5,32 @@ import { execSync, exec } from 'node:child_process'
 import fs from 'node:fs'
 import path from 'node:path'
 import { pathToFileURL } from 'node:url'
+import os from 'node:os'
 
 const root = process.cwd()
 const LOG_PREFIX = '[matrix]'
 const MAX_EXEC_BUFFER = 10 * 1024 * 1024
+const MAX_INLINE_LOG_LINES = 1000
 const suiteDir = path.join(root, 'version-compatibility-tests')
 const appDir = path.join(suiteDir, 'consumer-app')
 const distDir = path.join(suiteDir, 'dist')
 const logsRoot = path.join(suiteDir, 'logs', new Date().toISOString().replace(/[:.]/g, '-'))
 fs.mkdirSync(logsRoot, { recursive: true })
+const originalPnpmHome = process.env.PNPM_HOME
+const originalPath = process.env.PATH || ''
+let runtimePnpmHome = null
+try {
+  const tmpPrefix = path.join(os.tmpdir(), 'xterm-react-pnpm-')
+  runtimePnpmHome = fs.mkdtempSync(tmpPrefix)
+} catch (error) {
+  console.warn(`${LOG_PREFIX} Failed to allocate temp PNPM home: ${error?.message || error}. Falling back to local cache.`)
+  runtimePnpmHome = path.join(suiteDir, '.pnpm-runtime')
+  fs.mkdirSync(runtimePnpmHome, { recursive: true })
+}
+if (!originalPath.split(path.delimiter).includes(runtimePnpmHome)) {
+  process.env.PATH = runtimePnpmHome + (originalPath ? `${path.delimiter}${originalPath}` : '')
+}
+process.env.PNPM_HOME = runtimePnpmHome
 const RUNTIME_CATALOG = [
   { id: 'node20', tool: 'node', versionSpec: '20', label: 'node20' },
   { id: 'node22', tool: 'node', versionSpec: '22', label: 'node22' },
@@ -79,22 +96,19 @@ const originalNodeVersion = process.version.startsWith('v') ? process.version.sl
 let restoreNodeVersion = null
 let runtimeMutated = false
 
-function parseArgValue(names) {
-  const argv = process.argv.slice(2)
-  for (let i = 0; i < argv.length; i++) {
-    const a = argv[i]
-    if (names.includes(a)) {
-      const v = argv[i + 1]
-      if (v) return v
-    }
-  }
-  return null
-}
-
 function parseListArg(names) {
-  const raw = parseArgValue(names)
-  if (!raw) return null
-  return raw
+  const argv = process.argv.slice(2)
+  let lastMatch = null
+  for (let i = 0; i < argv.length; i++) {
+    const token = argv[i]
+    if (!names.includes(token)) continue
+    const value = argv[i + 1]
+    if (!value) continue
+    lastMatch = value
+    i += 1
+  }
+  if (!lastMatch) return null
+  return lastMatch
     .split(',')
     .map(part => part.trim())
     .filter(Boolean)
@@ -196,6 +210,20 @@ function slug(parts) {
     .toLowerCase()
 }
 
+function readLogTail(logFile, label, maxLines = MAX_INLINE_LOG_LINES) {
+  if (!logFile) return
+  try {
+    const content = fs.readFileSync(logFile, 'utf8')
+    const lines = content.split(/\r?\n/)
+    const tail = lines.slice(-maxLines).join('\n')
+    console.log(`${LOG_PREFIX} ----- ${label} (tail) -----`)
+    console.log(tail)
+    console.log(`${LOG_PREFIX} ----- end ${label} -----`)
+  } catch (error) {
+    console.warn(`${LOG_PREFIX} Failed to read ${label} log: ${error?.message || error}`)
+  }
+}
+
 function sh(cmd, cwd, logFile) {
   try {
     const out = execSync(cmd, { cwd, stdio: 'pipe' }).toString()
@@ -208,12 +236,16 @@ function sh(cmd, cwd, logFile) {
   }
 }
 
-function shAsync(cmd, cwd, logFile) {
+function shAsync(cmd, cwd, logFile, label) {
   return new Promise(resolve => {
     exec(cmd, { cwd, maxBuffer: MAX_EXEC_BUFFER }, (error, stdout, stderr) => {
       const out = `${stdout || ''}${stderr ? '\n' + stderr : ''}`
       if (logFile) fs.writeFileSync(logFile, out)
-      resolve({ ok: !error, out })
+      const ok = !error
+      if (!ok && logFile && label) {
+        readLogTail(logFile, label)
+      }
+      resolve({ ok, out })
     })
   })
 }
@@ -326,11 +358,15 @@ async function runScenario(scenario, tarballName, appDirForRun) {
   const dir = path.join(logsRoot, scenarioId)
   fs.mkdirSync(dir, { recursive: true })
 
+  const tarballArg = path.isAbsolute(tarballName)
+    ? tarballName
+    : path.join('version-compatibility-tests', 'dist', tarballName)
+
   const args = [
     `--react ${react}`,
     `--react-dom ${react}`,
     `--typescript ${typescript}`,
-    `--tarball version-compatibility-tests/dist/${tarballName}`,
+    `--tarball ${tarballArg}`,
     `--app-dir ${path.relative(root, appDirForRun)}`
   ]
 
@@ -344,19 +380,27 @@ async function runScenario(scenario, tarballName, appDirForRun) {
   }
 
   const pinCmd = `node version-compatibility-tests/scripts/consumer-pin-and-build.mjs ${args.join(' ')}`
-  const pinRes = await shAsync(pinCmd, root, path.join(dir, 'pin-and-build.log'))
+  const pinLog = path.join(dir, 'pin-and-build.log')
+  const pinRes = await shAsync(pinCmd, root, pinLog, `${scenarioId} pin-and-build`)
 
-  const buildRes = await shAsync('pnpm exec vite build', appDirForRun, path.join(dir, 'build.log'))
+  const buildLog = path.join(dir, 'build.log')
+  const buildRes = await shAsync('pnpm exec vite build', appDirForRun, buildLog, `${scenarioId} vite-build`)
 
   const lintSteps = {}
   if (linter.tool === 'biome') {
-    lintSteps.biome = await shAsync('pnpm exec biome check src', appDirForRun, path.join(dir, 'biome.log'))
+    lintSteps.biome = await shAsync('pnpm exec biome check src', appDirForRun, path.join(dir, 'biome.log'), `${scenarioId} biome`)
   } else {
-    lintSteps.eslint = await shAsync('pnpm exec eslint --config eslint.config.mjs "src/**/*.{ts,tsx,js,jsx}"', appDirForRun, path.join(dir, 'eslint.log'))
+    lintSteps.eslint = await shAsync(
+      'pnpm exec eslint --config eslint.config.mjs "src/**/*.{ts,tsx,js,jsx}"',
+      appDirForRun,
+      path.join(dir, 'eslint.log'),
+      `${scenarioId} eslint`
+    )
     lintSteps.prettier = await shAsync(
       'pnpm exec prettier --config .prettierrc.json --check "src/**/*.{ts,tsx,js,jsx}"',
       appDirForRun,
-      path.join(dir, 'prettier.log')
+      path.join(dir, 'prettier.log'),
+      `${scenarioId} prettier`
     )
   }
 
@@ -407,11 +451,23 @@ function parseParallel() {
   const idx = process.argv.indexOf('--parallel')
   let value = idx !== -1 ? parseInt(process.argv[idx + 1], 10) : parseInt(process.env.PARALLEL || '1', 10)
   if (!Number.isFinite(value) || value < 1) value = 1
-  value = Math.min(value, 8)
+  value = Math.min(value, MAX_PARALLEL_WORKERS)
   return value
 }
 
-const WORKER_ALWAYS_COPY = new Set(['package.json', 'pnpm-lock.yaml', 'yarn.lock', 'package-lock.json'])
+const MAX_PARALLEL_WORKERS = 8
+
+const WORKER_ALWAYS_COPY = new Set([
+  'package.json',
+  'pnpm-lock.yaml',
+  'yarn.lock',
+  'package-lock.json',
+  'eslint.config.mjs',
+  'src',
+  'index.html',
+  'tsconfig.json',
+  'vite.config.ts'
+])
 const WORKER_SKIP = new Set(['node_modules', 'dist'])
 
 function symlinkOrCopy(source, target, isDirectory) {
@@ -475,7 +531,11 @@ function prepareWorkerDir(workRoot, i) {
     }
 
     if (WORKER_ALWAYS_COPY.has(name)) {
-      fs.copyFileSync(sourcePath, targetPath)
+      if (entry.isDirectory()) {
+        fs.cpSync(sourcePath, targetPath, { recursive: true })
+      } else {
+        fs.copyFileSync(sourcePath, targetPath)
+      }
       continue
     }
 
@@ -499,9 +559,9 @@ function ensureRuntime(runtime) {
     if (!restoreNodeVersion) restoreNodeVersion = originalNodeVersion
     const res = sh(`pnpm env use --global ${runtime.versionSpec}`, root, logFile)
     if (!res.ok) {
-      console.error(`${LOG_PREFIX} Failed to activate Node runtime ${runtime.label}`)
-      console.error(res.out)
-      process.exit(1)
+      const error = new Error(`Failed to activate Node runtime ${runtime.label}`)
+      error.output = res.out
+      throw error
     }
     activeRuntimeKey = key
     runtimeMutated = true
@@ -526,24 +586,54 @@ function restoreNodeRuntime() {
 }
 
 async function main() {
+  let summaryPath = ''
+  let counts = null
+  let hasBlockingOutcome = false
   try {
-    fs.mkdirSync(distDir, { recursive: true })
-    sh('pnpm pack --pack-destination version-compatibility-tests/dist', root, path.join(logsRoot, 'pack.log'))
-    const tgz = fs
-      .readdirSync(distDir)
-      .filter(f => f.endsWith('.tgz'))
-      .map(f => ({ f, t: fs.statSync(path.join(distDir, f)).ctimeMs }))
-      .sort((a, b) => {
-        const timeDiff = b.t - a.t
-        if (timeDiff !== 0) return timeDiff
-        // When multiple packs land within the same millisecond, prefer the lexicographically
-        // greatest filename (pnpm appends incremental suffixes) so the newest tarball wins.
-        return b.f.localeCompare(a.f)
-      })[0]?.f
-    if (!tgz) {
-      console.error(`${LOG_PREFIX} Failed to find packed tarball under dist`)
-      process.exit(1)
+    // Safety check: ensure distDir is exactly the expected directory
+    const expectedDistDir = path.join(suiteDir, 'dist')
+    const resolvedDistDir = path.resolve(distDir)
+    const resolvedExpectedDistDir = path.resolve(expectedDistDir)
+    if (resolvedDistDir !== resolvedExpectedDistDir) {
+      throw new Error(`${LOG_PREFIX} Refusing to delete unexpected distDir: ${distDir}`)
     }
+    if (resolvedDistDir === root || resolvedDistDir === suiteDir) {
+      throw new Error(`${LOG_PREFIX} Refusing to delete root or suiteDir: ${distDir}`)
+    }
+    fs.rmSync(distDir, { recursive: true, force: true })
+    fs.mkdirSync(distDir, { recursive: true })
+
+    const buildLog = path.join(logsRoot, 'package-build.log')
+    const buildRes = sh('pnpm build', root, buildLog)
+    if (!buildRes.ok) {
+      throw new Error(`${LOG_PREFIX} pnpm build failed (see ${buildLog})`)
+    }
+
+    const packLog = path.join(logsRoot, 'pack.log')
+    const packRes = sh('pnpm pack --pack-destination version-compatibility-tests/dist', root, packLog)
+    if (!packRes.ok) {
+      throw new Error(`${LOG_PREFIX} pnpm pack failed (see ${packLog})`)
+    }
+    const packOutputLines = packRes.out.trim().split(/\r?\n/).filter(Boolean)
+    let tgzPath = packOutputLines.at(-1)
+    if (tgzPath && !tgzPath.endsWith('.tgz')) tgzPath = null
+    if (tgzPath && !path.isAbsolute(tgzPath)) {
+      tgzPath = path.resolve(root, tgzPath)
+    }
+    if (!tgzPath || !fs.existsSync(tgzPath)) {
+      const tarballs = fs.readdirSync(distDir).filter(f => f.endsWith('.tgz'))
+      if (tarballs.length === 1) {
+        tgzPath = path.join(distDir, tarballs[0])
+      } else {
+        const reason = tarballs.length
+          ? `multiple candidates: ${tarballs.join(', ')}`
+          : 'no tarballs were produced'
+        throw new Error(
+          `${LOG_PREFIX} Could not determine packed tarball path (${reason}). Clean version-compatibility-tests/dist and retry.`
+        )
+      }
+    }
+    const tgz = tgzPath
 
     const scenarios = listScenarios()
     const scenariosByRuntime = new Map()
@@ -597,10 +687,10 @@ async function main() {
       results.push(...batchResults)
     }
 
-    const summaryPath = path.join(logsRoot, 'MATRIX_SUMMARY.json')
+    summaryPath = path.join(logsRoot, 'MATRIX_SUMMARY.json')
     fs.writeFileSync(summaryPath, JSON.stringify(results, null, 2))
 
-    const counts = {
+    counts = {
       total: results.length,
       pass: results.filter(s => s.outcome === 'PASS').length,
       fail: results.filter(s => s.outcome === 'FAIL').length,
@@ -622,15 +712,20 @@ async function main() {
     const summaryRes = sh(summarizeCmd, root, summaryLog)
     if (!summaryRes.ok) {
       console.error(`${LOG_PREFIX} Failed to generate Markdown summary. See ${summaryLog}`)
-      process.exit(1)
+      const error = new Error('Markdown summary generation failed')
+      error.summaryLog = summaryLog
+      throw error
     }
 
-    const hasBlockingOutcome = counts.fail > 0 || counts.xpass > 0
+    hasBlockingOutcome = counts.fail > 0 || counts.xpass > 0
     if (hasBlockingOutcome) {
       console.error(
         `${LOG_PREFIX} Blocking scenarios detected (FAIL=${counts.fail}, XPASS=${counts.xpass}). See logs under ${logsRoot}`
       )
-      process.exit(1)
+      const error = new Error('Blocking scenarios detected')
+      error.summaryPath = summaryPath
+      error.counts = counts
+      throw error
     }
 
     if (counts.xfail > 0) {
@@ -638,6 +733,62 @@ async function main() {
     }
   } finally {
     restoreNodeRuntime()
+    if (originalPnpmHome !== undefined) process.env.PNPM_HOME = originalPnpmHome
+    else delete process.env.PNPM_HOME
+    process.env.PATH = originalPath
+    if (runtimePnpmHome) {
+      const tmpRoot = os.tmpdir()
+      const normalizedHome = path.resolve(runtimePnpmHome)
+      const normalizedTmp = path.resolve(tmpRoot)
+      if (normalizedHome.startsWith(normalizedTmp)) {
+        try {
+          fs.rmSync(runtimePnpmHome, { recursive: true, force: true })
+        } catch (error) {
+          console.warn(`${LOG_PREFIX} Failed to clean temporary PNPM home: ${error?.message || error}`)
+        }
+      }
+    }
+
+    if (hasBlockingOutcome && summaryPath && counts) {
+      console.error(
+        `${LOG_PREFIX} Blocking scenarios detected (FAIL=${counts.fail}, XPASS=${counts.xpass}). Summary: ${summaryPath}`
+      )
+      try {
+        const summaryRaw = fs.readFileSync(summaryPath, 'utf8')
+        const lines = summaryRaw.split(/\r?\n/)
+        if (lines.length <= MAX_INLINE_LOG_LINES) {
+          console.error(`${LOG_PREFIX} ===== MATRIX SUMMARY BEGIN =====`)
+          console.error(summaryRaw)
+          console.error(`${LOG_PREFIX} ===== MATRIX SUMMARY END =====`)
+        } else {
+          console.error(
+            `${LOG_PREFIX} Summary has ${lines.length} lines; showing first ${MAX_INLINE_LOG_LINES} lines:`
+          )
+          console.error(lines.slice(0, MAX_INLINE_LOG_LINES).join('\n'))
+          console.error(`${LOG_PREFIX} ===== TRUNCATED MATRIX SUMMARY =====`)
+        }
+
+        const logDir = path.dirname(summaryPath)
+        const scenarioLogs = fs
+          .readdirSync(logDir)
+          .filter(name => name.startsWith('runtime') || name.endsWith('.log') || name.endsWith('.txt'))
+        for (const logName of scenarioLogs) {
+          const logPath = path.join(logDir, logName)
+          if (!fs.existsSync(logPath) || !fs.statSync(logPath).isFile()) continue
+          const logContent = fs.readFileSync(logPath, 'utf8')
+          const logLines = logContent.split(/\r?\n/)
+          console.error(`${LOG_PREFIX} ===== ${logName} =====`)
+          if (logLines.length <= MAX_INLINE_LOG_LINES) {
+            console.error(logContent)
+          } else {
+            console.error(logLines.slice(0, MAX_INLINE_LOG_LINES).join('\n'))
+            console.error(`${LOG_PREFIX} ===== ${logName} (truncated) =====`)
+          }
+        }
+      } catch (logError) {
+        console.error(`${LOG_PREFIX} Failed to print matrix logs: ${logError?.message || logError}`)
+      }
+    }
   }
 }
 
