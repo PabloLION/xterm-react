@@ -210,7 +210,7 @@ function slug(parts) {
     .toLowerCase()
 }
 
-function readLogTail(logFile, label, maxLines = 400) {
+function readLogTail(logFile, label, maxLines = MAX_INLINE_LOG_LINES) {
   if (!logFile) return
   try {
     const content = fs.readFileSync(logFile, 'utf8')
