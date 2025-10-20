@@ -1,21 +1,26 @@
 #!/usr/bin/env node
 // NOTE: This script remains ESM JavaScript to execute directly via `node`
 // inside CI runners without a compilation step. Shared helpers are covered by tests.
-import { execSync, exec } from 'node:child_process'
 import fs from 'node:fs'
 import path from 'node:path'
 import { pathToFileURL } from 'node:url'
 import os from 'node:os'
+import { runCommand, runCommandAsync } from '../lib/cli/run-command.mjs'
+import {
+  rootDir,
+  suiteDir,
+  appDir,
+  distDir,
+  createLogsRoot,
+  logsPath,
+  ensureWorkDir,
+  writeLatestSummaryPointer
+} from '../lib/fs/paths.mjs'
 
-const root = process.cwd()
 const LOG_PREFIX = '[matrix]'
-const MAX_EXEC_BUFFER = 10 * 1024 * 1024
 const MAX_INLINE_LOG_LINES = 1000
-const suiteDir = path.join(root, 'version-compatibility-tests')
-const appDir = path.join(suiteDir, 'consumer-app')
-const distDir = path.join(suiteDir, 'dist')
-const logsRoot = path.join(suiteDir, 'logs', new Date().toISOString().replace(/[:.]/g, '-'))
-fs.mkdirSync(logsRoot, { recursive: true })
+const root = rootDir
+const logsRoot = createLogsRoot()
 const originalPnpmHome = process.env.PNPM_HOME
 const originalPath = process.env.PATH || ''
 let runtimePnpmHome = null
@@ -210,21 +215,12 @@ function slug(parts) {
     .toLowerCase()
 }
 
-<<<<<<< Updated upstream
 function shellQuote(value) {
   if (!value || /^[A-Za-z0-9_.\-\/]+$/.test(value)) return value
   return `"${value.replace(/(["\\$`])/g, '\\$1')}"`
 }
 
 function readLogTail(logFile, label, maxLines = MAX_INLINE_LOG_LINES) {
-=======
-function shellQuote(value) {
-  if (!value || /^[A-Za-z0-9_.\-\/]+$/.test(value)) return value
-  return `"${value.replace(/(["\\$`])/g, '\\$1')}"`
-}
-
-function readLogTail(logFile, label, maxLines = 400) {
->>>>>>> Stashed changes
   if (!logFile) return
   try {
     const content = fs.readFileSync(logFile, 'utf8')
@@ -239,29 +235,21 @@ function readLogTail(logFile, label, maxLines = 400) {
 }
 
 function sh(cmd, cwd, logFile) {
-  try {
-    const out = execSync(cmd, { cwd, stdio: 'pipe' }).toString()
-    if (logFile) fs.writeFileSync(logFile, out)
-    return { ok: true, out }
-  } catch (error) {
-    const out = `${error.stdout?.toString() || ''}${error.stderr ? '\n' + error.stderr.toString() : ''}`
-    if (logFile) fs.writeFileSync(logFile, out)
-    return { ok: false, out }
-  }
+  const result = runCommand(cmd, { cwd, logFile })
+  return { ok: result.ok, out: result.out }
 }
 
 function shAsync(cmd, cwd, logFile, label) {
-  return new Promise(resolve => {
-    exec(cmd, { cwd, maxBuffer: MAX_EXEC_BUFFER }, (error, stdout, stderr) => {
-      const out = `${stdout || ''}${stderr ? '\n' + stderr : ''}`
-      if (logFile) fs.writeFileSync(logFile, out)
-      const ok = !error
-      if (!ok && logFile && label) {
+  return runCommandAsync(cmd, {
+    cwd,
+    logFile,
+    onFailure: () => {
+      if (logFile && label) {
         readLogTail(logFile, label)
       }
-      resolve({ ok, out })
-    })
+    }
   })
+    .then(result => ({ ok: result.ok, out: result.out }))
 }
 
 /**
@@ -673,8 +661,7 @@ async function main() {
       const parallel = Math.min(requestedParallel, batch.length)
       console.log(`${LOG_PREFIX} Runtime ${runtime.label}: ${batch.length} scenarios (parallel ${parallel})`)
 
-      const workRoot = path.join(suiteDir, '.work', `${path.basename(logsRoot)}-${runtime.id}`)
-      fs.mkdirSync(workRoot, { recursive: true })
+      const workRoot = ensureWorkDir(runtime.id, logsRoot)
       const workerAppDirs = Array.from({ length: parallel }, (_, i) => prepareWorkerDir(workRoot, i))
 
       let next = 0
@@ -702,7 +689,7 @@ async function main() {
       results.push(...batchResults)
     }
 
-    summaryPath = path.join(logsRoot, 'MATRIX_SUMMARY.json')
+    summaryPath = logsPath(logsRoot, 'MATRIX_SUMMARY.json')
     fs.writeFileSync(summaryPath, JSON.stringify(results, null, 2))
 
     counts = {
@@ -713,16 +700,15 @@ async function main() {
       xpass: results.filter(s => s.outcome === 'XPASS').length
     }
 
-    const latest = {
+    writeLatestSummaryPointer({
       generatedAt: new Date().toISOString(),
       summaryPath,
       totals: counts
-    }
-    fs.writeFileSync(path.join(suiteDir, 'MATRIX_LATEST.json'), JSON.stringify(latest, null, 2))
+    })
     console.log(`${LOG_PREFIX}\nMatrix results written to ${summaryPath}`)
     console.log(`${LOG_PREFIX} Latest summary pointer written to version-compatibility-tests/MATRIX_LATEST.json`)
 
-    const summaryLog = path.join(logsRoot, 'summarize.log')
+    const summaryLog = logsPath(logsRoot, 'summarize.log')
     const summarizeCmd = `node version-compatibility-tests/scripts/summarize-matrix.mjs ${summaryPath}`
     const summaryRes = sh(summarizeCmd, root, summaryLog)
     if (!summaryRes.ok) {
