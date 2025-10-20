@@ -590,6 +590,13 @@ async function main() {
   try {
     fs.rmSync(distDir, { recursive: true, force: true })
     fs.mkdirSync(distDir, { recursive: true })
+
+    const buildLog = path.join(logsRoot, 'package-build.log')
+    const buildRes = sh('pnpm build', root, buildLog)
+    if (!buildRes.ok) {
+      throw new Error(`${LOG_PREFIX} pnpm build failed (see ${buildLog})`)
+    }
+
     const packLog = path.join(logsRoot, 'pack.log')
     const packRes = sh('pnpm pack --pack-destination version-compatibility-tests/dist', root, packLog)
     if (!packRes.ok) {
