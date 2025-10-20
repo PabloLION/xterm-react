@@ -75,8 +75,11 @@ I'll add a full docs later.
 For development purposes, this project uses `vite` for a streamlined and efficient workflow.
 
 ## Compatibility
+
 <!-- compat-matrix-badge:begin -->
+
 Compatibility status: PASS 2 · FAIL 0 · XFAIL 0 · XPASS 0 — latest: version-compatibility-tests/MATRIX_SUMMARY.md
+
 <!-- compat-matrix-badge:end -->
 
 This library officially supports and is continuously tested against the following toolchain matrix via an in-repo consumer app (see docs/compatibility-testing.md):
@@ -99,9 +102,11 @@ pnpm compat:matrix:summary # generate Markdown summary for the latest run
 # Examples: `pnpm compat:matrix -- --linter biome` (Biome-only) or `--linter eslint-prettier --eslint 9.13.0 --prettier 3.6.2`
 ```
 
-> Migration: legacy scripts such as `pnpm run test:versions`, `pnpm run test:react`,
-> `pnpm run test:eslint`, and `pnpm run test:biome` have been removed. Use the
-> filtered `pnpm run compat:matrix` commands above instead.
+> **Compatibility tooling note:** the in-repo runner and consumer scripts are authored in TypeScript and compiled as native ESM via `module: "NodeNext"`. No `.mts` files are used; the build pipeline guarantees ESM output while keeping a single `.ts` extension across the codebase.
+
+Migration: legacy scripts such as `pnpm run test:versions`, `pnpm run test:react`,
+`pnpm run test:eslint`, and `pnpm run test:biome` have been removed. Use the
+filtered `pnpm run compat:matrix` commands above instead.
 
 For a quick smoke on the latest combo:
 
