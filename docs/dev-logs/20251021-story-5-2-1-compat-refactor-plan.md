@@ -61,7 +61,7 @@ version-compatibility-tests/
 
    - [x] Move runtime catalogue + validation to `runtime/catalog.mjs`; implement process-scoped activation in `runtime/activation.mjs` (no more `pnpm env use --global`).
    - [x] Extract argument parsing + quick mode to `cli/args.mjs`; scenarios/cartesian logic to `matrix/scenarios.mjs`; executor loop (including xfail/xpass) to `matrix/executor.mjs`.
-   - [ ] Keep `matrix-run-consumer.mjs` as a 40–60 line file orchestrating the pieces (follow-up: file still ~700 lines; future iterations should continue slicing worker and summary orchestration helpers).
+   - [ ] Keep `matrix-run-consumer.ts` lean (target <300 lines) by delegating orchestration to lib helpers; continue breaking out worker and summary coordination in follow-up stories.
 
 4. **Restructure consumer pin & build**
 

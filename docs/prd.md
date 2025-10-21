@@ -257,6 +257,8 @@ Implementation Notes:
 - Branch: `feat/story-5-2-runtime-ci-strategy`
 - Commit outline:
 
+  1. `refactor(compat): thin CLI entrypoints`
+     - Refactor compatibility scripts so TypeScript entry files remain lean (target <300 lines) and delegate heavy logic into lib modules for easier testing.
   1. `ci(compat): run latest LTS smoke during release checks`
      - Extend compatibility workflows so the latest Node LTS lane (currently `node24`) runs automatically on release/publish triggers in addition to the scheduled weekly job.
      - Share pnpm caches with the scheduled job and keep runtime batches sequential (no `--parallel` flag).
