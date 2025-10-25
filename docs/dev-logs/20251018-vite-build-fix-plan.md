@@ -7,7 +7,7 @@ Ensure compatibility matrix scenarios can build the consumer app under isolated 
 ## Plan (atomic steps)
 
 1. **worker-clone:update-file-handling**  
-   Adjust `prepareWorkerDir` in `matrix-run-consumer.mjs` so key project files/directories (e.g., `index.html`, `src`, `tsconfig.json`, `vite.config.ts`, `eslint.config.mjs`) are copied instead of symlinked. This deliberately favors copies despite the earlier symlink optimization (see reviewer note) because ESLint 8 rejects glob patterns that traverse symlinked `src/` trees. The copy keeps the worker app self-contained and avoids absolute paths when Vite emits assets.
+   Adjust `prepareWorkerDir` in `matrix-run-consumer.ts` so key project files/directories (e.g., `index.html`, `src`, `tsconfig.json`, `vite.config.ts`, `eslint.config.mjs`) are copied instead of symlinked. This deliberately favors copies despite the earlier symlink optimization (see reviewer note) because ESLint 8 rejects glob patterns that traverse symlinked `src/` trees. The copy keeps the worker app self-contained and avoids absolute paths when Vite emits assets.
 
 2. **worker-clone:verify-matrix**  
    Run the targeted scenario locally:  

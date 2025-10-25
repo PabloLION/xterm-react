@@ -51,7 +51,7 @@
 - Sunset `version-compatibility-tests/MATRIX_LATEST.json` and `version-compatibility-tests/MATRIX_SUMMARY.md` once replacement tooling is in place (update `compat:matrix:record`, docs, and workflows).
 - Implementation sketch:
   - Extend summarizer to append a compact record `{ date, totals, byReact, summaryPath }`.
-  - Add a `scripts/history-aggregate.mjs` to rebuild markdown from JSON snapshots under `logs/`.
+  - Add a `scripts/history-aggregate.ts` to rebuild markdown from JSON snapshots under `logs/`.
   - Add a README link to the history page when enabled.
 
 ## Matrix Improvements
@@ -65,9 +65,9 @@
 
 ## Consumer App Architecture
 
-- Investigate migrating compatibility scripts (`consumer-pin-and-build`, `matrix-run-consumer`, `summarize-matrix`) from `.mjs` to TypeScript:
-  - Decide on build flow (tsc output, distribution paths) and ensure CI keeps zero-build execution simple.
-  - Retain current JS entry points until the TypeScript toolchain is solid to avoid workflow breakage.
+- Ensure compatibility scripts (`consumer-pin-and-build.ts`, `matrix-run-consumer.ts`, `summarize-matrix.ts`) stay ergonomic:
+  - Keep the zero-build `tsx` flow lightweight so scripts execute directly in CI and locally.
+  - Periodically audit shared helpers (logging, worker orchestration) for further extraction and unit tests.
 - Evaluate maintaining dual consumer apps (JS + TS) to exercise both ecosystems:
   - Ensure each app is a full React project using `.jsx` / `.tsx` files as appropriate.
   - Reuse shared configuration where possible; document differences in `docs/compatibility-testing.md`.

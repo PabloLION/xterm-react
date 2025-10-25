@@ -5,10 +5,10 @@ This repo ships an in‑repo “consumer app” plus scripts to test the publish
 ## What’s Included
 
 - Consumer app: `version-compatibility-tests/consumer-app` (Vite + React) that imports `@pablo-lion/xterm-react`.
-- Pin + build script: `version-compatibility-tests/scripts/consumer-pin-and-build.mjs`
+- Pin + build script: `version-compatibility-tests/scripts/consumer-pin-and-build.ts`
   - Resolves and pins exact versions, aligns `@types/*` to the React major, installs, and builds.
   - Flags: `--react`, `--react-dom`, `--typescript`, `--vite`, `--plugin-react`, `--types-react`, `--types-react-dom`, `--biome`, `--eslint`, `--eslint-js`, `--ts-eslint-parser`, `--prettier`, `--eslint-config-prettier`, `--tarball <path>`, `--app-dir <dir>`, `--keep-pins`.
-- Matrix runner: `version-compatibility-tests/scripts/matrix-run-consumer.mjs`
+- Matrix runner: `version-compatibility-tests/scripts/matrix-run-consumer.ts`
   - Packs the library once, iterates curated React × TypeScript × lint-tool scenarios (Biome and ESLint + Prettier families), builds the consumer app, runs the relevant lint/format checks, and emits per-scenario logs plus a JSON summary.
 
 ## Quick Start
@@ -127,9 +127,9 @@ _ESLint entries use matching `@eslint/js` and `@typescript-eslint/parser` majors
 
 ## Extending the Matrix
 
-- Edit `version-compatibility-tests/scripts/matrix-run-consumer.mjs` arrays:
+- Edit `version-compatibility-tests/scripts/matrix-run-consumer.ts` arrays:
   - `DEFAULT_REACTS`, `DEFAULT_TYPESCRIPT`, `DEFAULT_BIOMES`, `DEFAULT_ESLINTS`, `DEFAULT_PRETTIERS`.
-- Add new linter families by extending the runner’s `listScenarios()` helper and teaching `consumer-pin-and-build.mjs` how to pin/install the required packages.
+- Add new linter families by extending the runner’s `listScenarios()` helper and teaching `consumer-pin-and-build.ts` how to pin/install the required packages.
 
 ## Status Semantics (PASS / FAIL / XFAIL / XPASS)
 

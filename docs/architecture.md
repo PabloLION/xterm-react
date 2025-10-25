@@ -100,14 +100,14 @@ No persistent data models. Outputs remain generated JSON/Markdown summaries and 
 - **Dependencies:** React, @xterm/xterm, optional addons (fit, web links) consumed by integrators.
 - **Technology Stack:** TypeScript + React 19 component.
 
-#### Compatibility Runner (`version-compatibility-tests/scripts/matrix-run-consumer.mjs`)
+#### Compatibility Runner (`version-compatibility-tests/scripts/matrix-run-consumer.ts`)
 
 - **Purpose:** Pack library once, iterate curated matrices (React, TypeScript, linter toolchain, soon runtime) using consumer app installs.
-- **Integration:** Invokes `consumer-pin-and-build.mjs` per scenario, writes per-scenario logs, summary JSON/MD, updates `MATRIX_LATEST.json` pointer.
+- **Integration:** Invokes `consumer-pin-and-build.ts` per scenario, writes per-scenario logs, summary JSON/MD, updates `MATRIX_LATEST.json` pointer.
 - **Dependencies:** Node child_process, pnpm CLI, summarizer script.
 - **Technology Stack:** Node 18+ (ESM script), to be refactored into TypeScript `.mts` per backlog.
 
-#### Consumer Pin & Build (`version-compatibility-tests/scripts/consumer-pin-and-build.mjs`)
+#### Consumer Pin & Build (`version-compatibility-tests/scripts/consumer-pin-and-build.ts`)
 
 - **Purpose:** Prepare consumer workspace by installing scenario-specific React/TS/lint deps, injecting packed tarball, running build/check commands.
 - **Integration:** Called by matrix runner, ensures packages stay within repo tree, normalizes overrides, writes log bundles.
@@ -187,9 +187,9 @@ xterm-react/
 │   ├── _consumer-app-js_/            # Planned JS consumer (Vite + JSX)
 │   ├── _shared_/                     # Planned utilities shared by runners/consumers
 │   ├── scripts/
-│   │   ├── consumer-pin-and-build.mjs
-│   │   ├── matrix-run-consumer.mjs
-│   │   └── summarize-matrix.mjs
+│   │   ├── consumer-pin-and-build.ts
+│   │   ├── matrix-run-consumer.ts
+│   │   └── summarize-matrix.ts
 │   └── logs/
 ├── docs/
 │   ├── architecture.md               # This document

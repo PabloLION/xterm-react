@@ -9,37 +9,37 @@
 
 ## Target layout & ownership
 
-**Stage 1 (ESM JS, post-split)** – keep `.mjs` entry points so existing `node …/script.mjs` calls continue to run while we refactor internals.
+**Stage 1 (post-split TypeScript wrappers)** – keep `.ts` entry points lean so the CLI delegates to shared lib helpers while we refactor internals.
 
 ```text
 version-compatibility-tests/
   lib/
     cli/
-      args.mjs              # shared flag parsing + deprecation warnings
-      logging.mjs           # prefix/tag formatting, inline log truncation helpers
-      run-command.mjs       # exec wrappers (shared buffer limits, error tagging)
+      args.ts              # shared flag parsing + deprecation warnings
+      logging.ts           # prefix/tag formatting, inline log truncation helpers
+      run-command.ts       # exec wrappers (shared buffer limits, error tagging)
     fs/
-      paths.mjs             # root/app/dist/log path helpers, pointer writers
-      worker-clone.mjs      # prepareWorkerDir, copy/symlink policy, cleanup
+      paths.ts             # root/app/dist/log path helpers, pointer writers
+      worker-clone.ts      # prepareWorkerDir, copy/symlink policy, cleanup
     runtime/
-      catalog.mjs           # runtime catalogue + validation helpers
-      activation.mjs        # pnpm env activation/restore (process-scoped)
+      catalog.ts           # runtime catalogue + validation helpers
+      activation.ts        # pnpm env activation/restore (process-scoped)
     matrix/
-      config.mjs            # default version sets & quick mode handling
-      scenarios.mjs         # cartesian product builder, slug/label helpers
-      executor.mjs          # scenario loop, xfail/xpass detection, summary data
+      config.ts            # default version sets & quick mode handling
+      scenarios.ts         # cartesian product builder, slug/label helpers
+      executor.ts          # scenario loop, xfail/xpass detection, summary data
     consumer/
-      pin-config.mjs        # allowed package list + validation
-      resolve-versions.mjs  # pnpm view wrappers + major matching logic
-      apply-pins.mjs        # package.json mutation + lock handling
-      build.mjs             # install/build steps for the consumer app
+      pin-config.ts        # allowed package list + validation
+      resolve-versions.ts  # pnpm view wrappers + major matching logic
+      apply-pins.ts        # package.json mutation + lock handling
+      build.ts             # install/build steps for the consumer app
     summary/
-      render.mjs            # markdown + json summary formatters
-      artifacts.mjs         # HISTORY.md append + badge updates (if any)
+      render.ts            # markdown + json summary formatters
+      artifacts.ts         # HISTORY.md append + badge updates (if any)
   scripts/
-    matrix-run-consumer.mjs     # thin CLI: parse args -> call lib/matrix executor
-    consumer-pin-and-build.mjs  # thin CLI: args -> consumer helpers
-    summarize-matrix.mjs        # thin CLI: delegates to summary helpers
+    matrix-run-consumer.ts     # thin CLI: parse args -> call lib/matrix executor
+    consumer-pin-and-build.ts  # thin CLI: args -> consumer helpers
+    summarize-matrix.ts        # thin CLI: delegates to summary helpers
 ```
 
 **Stage 2 (TypeScript finish line)** – rename the same layout to `.ts` modules, introduce a lean build/`tsx` runner for CLI execution, and centralise types under `version-compatibility-tests/types/`.
@@ -53,14 +53,14 @@ version-compatibility-tests/
 
 2. **Extract shared utilities**
 
-   - [x] Create `lib/cli/run-command.mjs` and move `execSync`/`exec` wrappers with buffer limits and logging.
-   - [x] Create `lib/fs/paths.mjs` for `suiteDir`, `appDir`, `distDir`, log folder creation, pointer writers.
+   - [x] Create `lib/cli/run-command.ts` and move `execSync`/`exec` wrappers with buffer limits and logging.
+   - [x] Create `lib/fs/paths.ts` for `suiteDir`, `appDir`, `distDir`, log folder creation, pointer writers.
    - [x] Update scripts to import from these helpers; ensure no behavior change (commit: `refactor(shared): extract CLI+FS helpers`).
 
 3. **Module-ise matrix runner**
 
-   - [x] Move runtime catalogue + validation to `runtime/catalog.mjs`; implement process-scoped activation in `runtime/activation.mjs` (no more `pnpm env use --global`).
-   - [x] Extract argument parsing + quick mode to `cli/args.mjs`; scenarios/cartesian logic to `matrix/scenarios.mjs`; executor loop (including xfail/xpass) to `matrix/executor.mjs`.
+   - [x] Move runtime catalogue + validation to `runtime/catalog.ts`; implement process-scoped activation in `runtime/activation.ts` (no more `pnpm env use --global`).
+   - [x] Extract argument parsing + quick mode to `cli/args.ts`; scenarios/cartesian logic to `matrix/scenarios.ts`; executor loop (including xfail/xpass) to `matrix/executor.ts`.
    - [ ] Keep `matrix-run-consumer.ts` lean (target <300 lines) by delegating orchestration to lib helpers; continue breaking out worker and summary coordination in follow-up stories.
 
 4. **Restructure consumer pin & build**
@@ -71,7 +71,7 @@ version-compatibility-tests/
 
 5. **Align summarizer with shared modules**
 
-   - [x] Reuse `fs/paths.mjs` and `summary/render.mjs`; ensure markdown/json outputs unaffected.
+   - [x] Reuse `fs/paths.ts` and `summary/render.ts`; ensure markdown/json outputs unaffected.
    - [x] Prepare hooks so Story 5.2.2 can snapshot summary objects before file IO.
 
 6. **Stage 2 – migrate modules to TypeScript**
