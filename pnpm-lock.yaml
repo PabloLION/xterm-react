@@ -42,7 +42,7 @@ devDependencies:
     version: 19.1.1(react@19.1.1)
   rimraf:
     specifier: ^6.0.1
-    version: 6.0.1
+    version: 6.1.0
   tsx:
     specifier: ^4.19.0
     version: 4.20.6
@@ -2077,8 +2077,8 @@ packages:
       signal-exit: 3.0.7
     dev: true
 
-  /rimraf@6.0.1:
-    resolution: {integrity: sha512-9dkvaxAsk/xNXSJzMgFqqMCuFgt2+KsOFek3TMLfo8NCPfWpBmqwyNn5Y+NX56QUYfCtsyhF3ayiboEoUmJk/A==}
+  /rimraf@6.1.0:
+    resolution: {integrity: sha512-DxdlA1bdNzkZK7JiNWH+BAx1x4tEJWoTofIopFo6qWUU94jYrFZ0ubY05TqH3nWPJ1nKa1JWVFDINZ3fnrle/A==}
     engines: {node: 20 || >=22}
     hasBin: true
     dependencies:
