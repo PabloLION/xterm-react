@@ -116,7 +116,7 @@ test("validateXfailEntry rejects unknown runtime id", () => {
         linter: "biome",
         biome: "2.2.4",
       },
-      new Set([runtime.id])
+      new Set([runtime.id]),
     ),
   );
 });

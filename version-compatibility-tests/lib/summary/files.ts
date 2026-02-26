@@ -1,17 +1,22 @@
-import * as fs from 'node:fs'
-import * as path from 'node:path'
+import * as fs from "node:fs";
+import * as path from "node:path";
 
 interface FindLatestOptions {
-  logsDir: string
-  latestPointerPath?: string
+  logsDir: string;
+  latestPointerPath?: string;
 }
 
-export function findLatestSummary({ logsDir, latestPointerPath }: FindLatestOptions): string {
+export function findLatestSummary({
+  logsDir,
+  latestPointerPath,
+}: FindLatestOptions): string {
   if (latestPointerPath && fs.existsSync(latestPointerPath)) {
     try {
-      const payload = JSON.parse(fs.readFileSync(latestPointerPath, 'utf8')) as { summaryPath?: string }
-      const pointer = payload.summaryPath
-      if (pointer && fs.existsSync(pointer)) return pointer
+      const payload = JSON.parse(
+        fs.readFileSync(latestPointerPath, "utf8"),
+      ) as { summaryPath?: string };
+      const pointer = payload.summaryPath;
+      if (pointer && fs.existsSync(pointer)) return pointer;
     } catch {
       // fall through to directory scan
     }
@@ -20,20 +25,20 @@ export function findLatestSummary({ logsDir, latestPointerPath }: FindLatestOpti
   const entries = fs
     .readdirSync(logsDir, { withFileTypes: true })
     .filter((entry): entry is fs.Dirent => entry.isDirectory())
-    .map(entry => {
-      const full = path.join(logsDir, entry.name)
-      const t = fs.statSync(full).mtimeMs
-      return { full, t }
+    .map((entry) => {
+      const full = path.join(logsDir, entry.name);
+      const t = fs.statSync(full).mtimeMs;
+      return { full, t };
     })
-    .sort((a, b) => b.t - a.t)
+    .sort((a, b) => b.t - a.t);
 
   if (!entries.length) {
-    throw new Error(`No logs found in ${logsDir}`)
+    throw new Error(`No logs found in ${logsDir}`);
   }
 
-  const candidate = path.join(entries[0].full, 'MATRIX_SUMMARY.json')
+  const candidate = path.join(entries[0].full, "MATRIX_SUMMARY.json");
   if (!fs.existsSync(candidate)) {
-    throw new Error(`No MATRIX_SUMMARY.json in ${entries[0].full}`)
+    throw new Error(`No MATRIX_SUMMARY.json in ${entries[0].full}`);
   }
-  return candidate
+  return candidate;
 }
